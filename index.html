@@ -102,14 +102,24 @@ body.desk #tracker { width: max-content; max-width: 250px; font-size: 17px; }
 }
 #pad button { position: absolute; border-radius: 50%; padding: 0; display: grid; place-items: center; line-height: 1; }
 #btnAttack { right: 0; bottom: 0; width: 92px; height: 92px; font-size: 22px; background: var(--ink); color: var(--card); }
-#btnDodge { right: 102px; bottom: 0; width: 62px; height: 62px; font-size: 16px; }
-#btnSkill { right: 94px; bottom: 76px; width: 62px; height: 62px; font-size: 16px; }
-#btnPotion { right: 18px; bottom: 108px; width: 60px; height: 60px; font-size: 15px; }
+/* inner ring around Attack: Dodge left, Whirl on the diagonal, Potion above. The skill arc sits outside it */
+#btnDodge { right: 105px; bottom: 19px; width: 54px; height: 54px; font-size: 15px; }
+#btnSkill { right: 80px; bottom: 80px; width: 54px; height: 54px; font-size: 15px; }
+#btnPotion { right: 19px; bottom: 105px; width: 54px; height: 54px; font-size: 15px; }
+/* Lee: phone controls take less room. Locked skills stay hidden, and small phones shrink the whole cluster */
+#pad, #pad2 { transform-origin: 100% 100%; scale: var(--padk, 1); }
+#btnSkill[hidden] { display: none; }
+#btnMore { display: none; }
+@media (max-width: 699px) {
+  #btnSound { display: none; } #btnMore { display: inline-block; }
+  #minimap { width: 104px; height: 128px; } #zoneTag { width: 104px; font-size: 14px; }
+  #menu { max-width: calc(100vw - 132px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
+}
 #abar { left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 8px; padding: 8px 0 0; }
 #abar[hidden] { display: none; }
 /* Phone skills fan out in an arc around Attack (Lee picked it), with a More button for items */
 #pad2 { right: max(14px, env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 0; height: 0; }
-#pad2 button { position: absolute; width: 52px; height: 52px; padding: 0; font-size: 13px; }
+#pad2 button { position: absolute; width: 50px; height: 50px; padding: 0; font-size: 13px; }
 #pad2 .nb .ic { top: 5px; width: 24px; height: 24px; margin-left: -12px; }
 #pad2 .nb .l { font-size: 12px; bottom: 3px; }
 #pad2 .nb.more { border-radius: 50%; width: 46px; height: 46px; }
@@ -290,6 +300,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
   <button id="btnChar" type="button">Hero</button>
   <button id="btnRide" type="button" hidden>Ride</button>
   <button id="btnSound" type="button" aria-label="Sound on">&#9835;</button>
+  <button id="btnMore" type="button">More</button>
 </div>
 <div id="mapbox" class="ui">
   <canvas id="minimap" width="192" height="256" aria-label="Minimap. Tap for the full map."></canvas>
@@ -4256,7 +4267,9 @@ const joy = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const keys = new Set();
 canvas.addEventListener("pointerdown", ev => {
   if (paused) return;
-  if (ev.clientX > window.innerWidth * 0.62 && ev.clientY > window.innerHeight * 0.5) return;
+  // Lee: more room to steer. Only the area right around the buttons is off limits
+  { const k = +getComputedStyle(document.body).getPropertyValue("--padk") || 1, r = (pad2.children.length ? 205 : 175) * k;
+    if (Math.hypot(window.innerWidth - 60 * k - ev.clientX, window.innerHeight - 64 * k - ev.clientY) < r) return; }
   joy.active = true; joy.id = ev.pointerId; joy.ox = joy.x = ev.clientX; joy.oy = joy.y = ev.clientY;
   canvas.setPointerCapture(ev.pointerId);
 });
@@ -4775,22 +4788,18 @@ function abarHud(pots) {
 // Phones: one small round button per unlocked ability, stacked above the main buttons
 const pad2 = document.getElementById("pad2"); let pad2Lv = -1;
 // Arc slots: angles measured from the Attack button's center, 180 = straight left, 90 = straight up
-const ARC_R = 178, ARC_ANG = [178, 156, 134, 112, 90];
+const ARC_R = 154, ARC_ANG = [180, 157, 134, 111, 88];
 function pad2Hud() {
   const p = player;
   if (pad2Lv !== p.level) {
     pad2Lv = p.level; pad2.innerHTML = "";
-    const place = (b, i) => { const a = ARC_ANG[i] * Math.PI / 180, dx = Math.cos(a) * ARC_R, dy = Math.sin(a) * ARC_R; b.style.right = `${46 - dx - 26}px`; b.style.bottom = `${46 + dy - 26}px`; };
-    Object.keys(SKILLS).forEach((k, i) => {
-      const S = SKILLS[k], lock = p.level < S.lv, b = document.createElement("button"); b.type = "button"; b.className = "nb" + (lock ? " nlock" : ""); b.dataset.k = k; b.setAttribute("aria-label", lock ? `${S.name}, unlocks at level ${S.lv}` : S.name);
+    const place = (b, i) => { const a = ARC_ANG[i] * Math.PI / 180, dx = Math.cos(a) * ARC_R, dy = Math.sin(a) * ARC_R; b.style.right = `${46 - dx - 25}px`; b.style.bottom = `${46 + dy - 25}px`; };
+    Object.keys(SKILLS).filter(k => p.level >= SKILLS[k].lv).forEach((k, i) => {
+      const S = SKILLS[k], lock = false, b = document.createElement("button"); b.type = "button"; b.className = "nb" + (lock ? " nlock" : ""); b.dataset.k = k; b.setAttribute("aria-label", lock ? `${S.name}, unlocks at level ${S.lv}` : S.name);
       b.innerHTML = `<span class="ic">${NB_ICON(lock ? "lock" : S.short)}</span><span class="l">${lock ? "Lv " + S.lv : S.short}</span><i class="cd"></i>`;
       b.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); if (lock) toast(`${S.name} unlocks at level ${S.lv}`); else useSkill(k); });
-      place(b, i); pad2.appendChild(b);
+      b.style.right = b.style.bottom = ""; place(b, i); pad2.appendChild(b);
     });
-    const m = document.createElement("button"); m.type = "button"; m.className = "nb more"; m.setAttribute("aria-label", "More: items, relics and your steed");
-    m.innerHTML = `<span class="ic">${NB_ICON("Relic")}</span><span class="l">More</span><i class="cd"></i>`;
-    m.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); showMore(); });
-    m.style.right = "22px"; m.style.bottom = "268px"; pad2.appendChild(m);
   }
   for (const b of pad2.children) if (b.dataset.k && SKILLS[b.dataset.k]) b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, (p.acd[b.dataset.k] || 0) / SKILLS[b.dataset.k].cd) * 100}%`);
 }
@@ -4798,9 +4807,10 @@ function pad2Hud() {
 function showMore() {
   const items = Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id));
   openPanel(`<h2>More</h2><div class="list">${items.map(id => `<div class="item"><div>${ITEMS[id].name}${player.bag[id] > 1 ? ` x${player.bag[id]}` : ""}<small>${ITEMS[id].desc}</small></div><button type="button" data-act="use" data-arg="${id}">${POTIONS.includes(id) ? "Drink" : "Use"}</button></div>`).join("") || '<p class="soft">No potions, stew or relics in your bag right now.</p>'}</div>
-    <div class="row">${bestSteed() ? `<button type="button" data-act="ride">${player.mounted ? "Walk" : "Ride"}</button>` : ""}<button type="button" data-act="map">Map</button><button type="button" data-act="pets">Pets</button><button data-act="close" type="button">Close</button></div>`,
-    { use: id => { POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
+    <div class="row">${bestSteed() ? `<button type="button" data-act="ride">${player.mounted ? "Walk" : "Ride"}</button>` : ""}<button type="button" data-act="map">Map</button><button type="button" data-act="pets">Pets</button><button type="button" data-act="sound">Sound ${soundOn ? "on" : "off"}</button><button data-act="close" type="button">Close</button></div>`,
+    { sound: () => { btnSound.click(); showMore(); }, use: id => { POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
 }
+{ const fit = () => document.body.style.setProperty("--padk", desk ? 1 : Math.max(0.78, Math.min(1, innerHeight / 820, innerWidth / 430)).toFixed(3)); fit(); addEventListener("resize", fit); }
 if (desk) { document.body.classList.add("desk"); abar.el.hidden = false; buildBar(); }
 // the menu row sits just under the HUD box, which grew a mana bar with classes
 { const hud = document.getElementById("hud"); new ResizeObserver(() => document.body.style.setProperty("--hudb", `${hud.offsetTop + hud.offsetHeight + 8}px`)).observe(hud); }
@@ -4841,6 +4851,7 @@ const press = (id, fn) => document.getElementById(id).addEventListener("pointerd
 document.getElementById("btnQuests").addEventListener("click", showQuestLog);
 const btnSound = document.getElementById("btnSound");
 function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off"); btnSound.style.textDecoration = soundOn ? "none" : "line-through"; }
+document.getElementById("btnMore").addEventListener("click", () => showMore());
 btnSound.addEventListener("click", () => { soundOn = !soundOn; try { localStorage.setItem("lol-sound", soundOn ? "on" : "off"); } catch {} audioCtx(); syncSoundBtn(); });
 syncSoundBtn();
 document.getElementById("btnBag").addEventListener("click", () => showBag());
@@ -7207,7 +7218,8 @@ function drawHud() {
     // computers show the hotkey in each name
     const hk = c => desk ? ` (${c})` : "";
     el("btnQuests").textContent = "Quests" + hk("Q"); el("btnChar").textContent = "Hero" + hk("C"); el("btnBag").textContent = "Bag" + hk("B");
-    el("btnTalents").innerHTML = (p.level < 2 ? "&#128274; " : "") + "Talents" + hk("T") + (tp > 0 ? '<span class="tdot" aria-label="Talent points to spend"></span>' : "");
+    el("btnTalents").innerHTML = (p.level < 2 && desk ? "&#128274; " : "") + "Talents" + hk("T") + (tp > 0 ? '<span class="tdot" aria-label="Talent points to spend"></span>' : "");
+    el("btnTalents").style.opacity = p.level < 2 && !desk ? 0.55 : "";
   }
   // Zone name under the minimap (Lee)
   const zt = map.id === "world" ? ((map.zoneAt && map.zoneAt(p.x, p.y)) || {}).name || "The Wilds" : map.id === "home" ? "Home" : map.id === "inn" ? "The Inn" : map.name || "";
@@ -7216,7 +7228,7 @@ function drawHud() {
   { const ba = el("btnAttack"), lb = o ? (o.kind === "npc" ? "Talk" : o.label) : "Attack", L = ba.querySelector(".l");
     if (L.textContent !== lb) L.textContent = lb; setIcon(ba, !o ? "Attack" : o.kind === "npc" ? "Talk" : "Use");
     const bs = el("btnSkill"), sk = ABIL.whirl.label(p), SL = bs.querySelector(".l"); if (SL.textContent !== sk) SL.textContent = sk;
-    setIcon(bs, ABIL.whirl.icon(p)); bs.classList.toggle("nlock", p.level < 3); setIcon(el("btnDodge"), "Dodge"); setIcon(el("btnPotion"), "Potion"); }
+    setIcon(bs, ABIL.whirl.icon(p)); bs.classList.toggle("nlock", p.level < 3); if (bs.hidden !== (p.level < 3 && !desk)) bs.hidden = p.level < 3 && !desk; setIcon(el("btnDodge"), "Dodge"); setIcon(el("btnPotion"), "Potion"); }
   el("cdSkill").style.setProperty("--p", `${p.skillCd / skillCdMax() * 100}%`);
   el("cdDodge").style.setProperty("--p", `${p.dodgeCd / 1.0 * 100}%`);
   el("cdPotion").style.setProperty("--p", `${p.potionCd / 10 * 100}%`);
@@ -7266,6 +7278,8 @@ function setCoach(t) {
 function tutUpdate() {
   if (cine || !panel.hidden || clock < 4.5) return;
   // the keyboard card comes first for everyone, old saves too, until "Got it"
+  // phones have no keyboard, so they skip the keyboard card
+  if (!player.tut.includes("keys") && !desk) player.tut.push("keys");
   if (!player.tut.includes("keys")) { if (!tip) { tip = KEYS_TIP; setCoach(tip); } return; }
   if (player.tut.includes("all")) return;
   const p = player;
