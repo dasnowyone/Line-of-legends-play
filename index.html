@@ -908,12 +908,14 @@ function near(m, x0, y0, x1, y1, grid) {
     for (let cy = Math.floor(y0 / CELL) - 1; cy <= Math.floor(y1 / CELL) + 1; cy++) { const a = (grid || m.grid).get(cx + "," + cy); if (a) for (const o of a) out.add(o); }
   return out;
 }
-function blocked(m, x, y, r) {
+function blocked(m, x, y, r, shot) {
   if (x < r || y < r || x > m.w - r || y > m.h - r) return true;
   // Dungeons: you can only stand on the floor
   if (m.floors) { const k = m.fall ? 3 : r; if (!(onFloor(m, x - k, y - k) && onFloor(m, x + k, y - k) && onFloor(m, x - k, y + k) && onFloor(m, x + k, y + k))) return true; }
   const cv = m.collapse; if (cv && cv.front != null && x > cv.x - 80 && x < cv.x + cv.w + 80 && y < cv.front + 30 && y > cv.y0 - 420) return true;
   for (const o of near(m, x - 1, y - 1, x + 1, y + 1)) {
+    // shots fly over ore veins (Lee): they only block walking
+    if (shot && o.kind === "nodeblock") continue;
     if (o.r !== undefined) { if (o.kind === "gate" && o.open > 0.5) continue; if (Math.hypot(o.x - x, o.y - y) < o.r + r) return true; }
     else if (!o.ghost && x + r > o.x && x - r < o.x + o.w && y + r > o.y && y - r < o.y + o.h) return true;
   }
@@ -3106,6 +3108,16 @@ function move(e, dx, dy, r) {
   if (!blocked(map, e.x + dx, e.y, r)) e.x += dx;
   if (!blocked(map, e.x, e.y + dy, r)) e.y += dy;
 }
+// Enemies walk around trees, rocks and ore when the straight way is blocked (Lee). Once they pick a side they keep to it for a moment, so they don't jitter
+function chase(f, dx, dy, r, dt) {
+  const step = Math.hypot(dx, dy); if (!step) return; const a0 = Math.atan2(dy, dx);
+  const tryA = a => { const nx = f.x + Math.cos(a) * step, ny = f.y + Math.sin(a) * step; if (blocked(map, nx, ny, r)) return false; f.x = nx; f.y = ny; return true; };
+  if (f.detT > 0) { f.detT -= dt; if (tryA(a0 + f.detA)) return; }
+  if (tryA(a0)) return;
+  const sides = f.detS ? [f.detS, -f.detS] : [1, -1];
+  for (const k of [0.5, 1, 1.5, 2.1]) for (const sd of sides) if (tryA(a0 + sd * k)) { f.detA = sd * k; f.detS = sd; f.detT = 0.7; return; }
+  move(f, dx, dy, r);
+}
 
 // =====================================================================
 // Enemies
@@ -3253,7 +3265,7 @@ function foeUpdate(f, dt) {
     if (d.ranged) {
       // Archers and casters keep their distance and shoot
       const R0 = d.ranged.range;
-      if (dist > R0 * 0.85) move(f, px / dist * speed * dt, py / dist * speed * dt, d.r);
+      if (dist > R0 * 0.85) chase(f, px / dist * speed * dt, py / dist * speed * dt, d.r, dt);
       else if (dist < 130) move(f, -px / dist * speed * 0.7 * dt, -py / dist * speed * 0.7 * dt, d.r);
       else move(f, -py / dist * speed * 0.3 * dt * (f.ox > 0 ? 1 : -1), px / dist * speed * 0.3 * dt * (f.ox > 0 ? 1 : -1), d.r);
       if (dist < R0 && f.shotCd <= 0) { f.state = "aim"; f.timer = Math.max(0.35, d.ranged.windup * WIND_K); f.wmax = f.timer; }
@@ -3263,7 +3275,7 @@ function foeUpdate(f, dt) {
     if (d.charge && dist > 140 && dist < 560 && f.shotCd <= 0) { f.state = "cwind"; f.timer = f.enraged ? 0.45 : 0.6; f.wmax = f.timer; f.cang = Math.atan2(py, px); return; }
     if (d.throws && dist > 140 && dist < d.throws.range && f.shotCd <= 0) { f.state = "aim"; f.timer = 0.5; f.wmax = 0.5; return; }
     const reach = d.r + 26;
-    if (dist > reach) move(f, px / dist * speed * dt, py / dist * speed * dt, d.r);
+    if (dist > reach) chase(f, px / dist * speed * dt, py / dist * speed * dt, d.r, dt);
     else { f.state = "windup"; f.timer = d.boss ? (f.enraged ? 0.42 : 0.55) : 0.32; f.wmax = f.timer; }
   } else if (f.state === "aim") {
     f.timer -= dt;
@@ -3310,7 +3322,7 @@ function foeUpdate(f, dt) {
   } else if (f.state === "return") {
     const hx = f.hx - f.x, hy = f.hy - f.y, hd = Math.hypot(hx, hy);
     f.hp = Math.min(d.hp, f.hp + d.hp * dt * 0.5);
-    if (hd < 8) { f.state = "idle"; f.aggro = false; f.enraged = false; } else move(f, hx / hd * d.speed * 1.4 * dt, hy / hd * d.speed * 1.4 * dt, d.r);
+    if (hd < 8) { f.state = "idle"; f.aggro = false; f.enraged = false; } else chase(f, hx / hd * d.speed * 1.4 * dt, hy / hd * d.speed * 1.4 * dt, d.r, dt);
   }
 }
 // Enemies give a short red warning before they strike (Lee: long enough to react, short enough that you have to Dodge)
@@ -3424,6 +3436,7 @@ function sightClear(m, x1, y1, x2, y2) {
   for (let i = 1; i < n; i++) {
     const t = i / n, x = x1 + (x2 - x1) * t, y = y1 + (y2 - y1) * t;
     for (const o of near(m, x - 1, y - 1, x + 1, y + 1)) {
+      if (o.kind === "nodeblock") continue; // ore veins are low: you can see and shoot over them
       if (o.r !== undefined) { if (o.r >= 10 && Math.hypot(o.x - x, o.y - y) < o.r - 2) return false; }
       else if (!o.ghost && x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h) return false;
     }
@@ -5129,7 +5142,7 @@ function update(dt) {
   for (const sh of map.shots) {
     sh.x += sh.vx * dt; sh.y += sh.vy * dt; sh.life -= dt;
     if (sh.grace > 0) sh.grace -= dt;
-    else if (!map.openShots && blocked(map, sh.x, sh.y + 30, 2) && !(sh.kind === "rock" && sh.life > 0.3)) sh.life = 0;
+    else if (!map.openShots && blocked(map, sh.x, sh.y + 30, 2, true) && !(sh.kind === "rock" && sh.life > 0.3)) sh.life = 0;
     if (!p.dead && Math.abs(sh.x - p.x) < (map.vehicle ? 26 : 14) && sh.y > p.y - 70 && sh.y < p.y - 5) {
       if (p.dodgeT > 0) continue;
       hurtPlayer(sh.atk, sh.lv); sh.life = 0;
@@ -6723,7 +6736,7 @@ function vehicleFire(volley) {
 function pshotsUpdate(dt) {
   for (const sh of map.pshots) {
     sh.x += sh.vx * dt; sh.y += sh.vy * dt; sh.life -= dt;
-    if (sh.cls && blocked(map, sh.x, sh.y + 30, 2)) sh.life = 0;
+    if (sh.cls && blocked(map, sh.x, sh.y + 30, 2, true)) sh.life = 0;
     for (const f of [...map.foes]) {
       if (Math.hypot(f.x - sh.x, f.y - 10 * (f.d.scale || 1) - sh.y) < f.d.r * (f.d.scale || 1) * 0.75 + 16) {
         sh.life = 0; hitFoe(f, sh.dmg, sh.crit); sh.hitDone = true;
