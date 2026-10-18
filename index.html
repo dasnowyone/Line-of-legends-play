@@ -6648,12 +6648,14 @@ function drawBossBar(m) {
   let b = null, bd = 1500;
   for (const f of m.foes) if (f.d.boss && f.aggro && f.hp > 0) { const dd = Math.hypot(f.x - player.x, f.y - player.y); if (dd < bd) { bd = dd; b = f; } }
   if (!b) return;
-  const d = b.d, w = Math.min(460, cssW - 40), x = (cssW - w) / 2, y = 112, k = Math.max(0, b.hp) / d.hp;
-  ctx.fillStyle = "rgba(27,27,32,.78)"; ctx.fillRect(x - 4, y - 4, w + 8, 22);
-  ctx.fillStyle = "#3a1a1e"; ctx.fillRect(x, y, w, 14);
-  ctx.fillStyle = b.enraged ? "#e0503a" : BLOOD; ctx.fillRect(x, y, w * k, 14);
-  ctx.font = `16px ${FONT}`; ctx.textAlign = "center"; ctx.lineWidth = 3; ctx.strokeStyle = INK; const t = `${d.name}  Lv${d.lv}  ${Math.ceil(k * 100)}%`;
-  ctx.strokeText(t, cssW / 2, y + 36); ctx.fillStyle = "#fff"; ctx.fillText(t, cssW / 2, y + 36);
+  // Lee: a slim bar. Phones keep it left of the minimap, under the menu row
+  const hb = parseFloat(getComputedStyle(document.body).getPropertyValue("--hudb")) || 100;
+  const d = b.d, phone = !desk && cssW < 700, w = phone ? Math.min(220, cssW - 150) : Math.min(300, cssW - 40), x = phone ? 12 : (cssW - w) / 2, y = phone ? hb + 34 : 64, k = Math.max(0, b.hp) / d.hp;
+  ctx.fillStyle = "rgba(27,27,32,.7)"; ctx.fillRect(x - 2, y - 2, w + 4, 11);
+  ctx.fillStyle = "#3a1a1e"; ctx.fillRect(x, y, w, 7);
+  ctx.fillStyle = b.enraged ? "#e0503a" : BLOOD; ctx.fillRect(x, y, w * k, 7);
+  ctx.font = `13px ${FONT}`; ctx.textAlign = "left"; ctx.lineWidth = 3; ctx.strokeStyle = INK; const t = `${d.name}  Lv${d.lv}  ${Math.ceil(k * 100)}%`;
+  ctx.strokeText(t, x, y + 23); ctx.fillStyle = "#fff"; ctx.fillText(t, x, y + 23);
 }
 
 const MINI_THEME = { forest: ["#0e150d", "#5a6e48"], river: ["#86a866", "#3f7fa6"], mine: ["#120e0a", "#7a6248"], snow: ["#2a3448", "#e8eef4"], sky: ["#7aa6d6", "#b8d4f0"], library: ["#1b1020", "#fffdf6"] };
