@@ -1435,6 +1435,17 @@ function buildWorld() {
     ? [-0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9].some(u => [0, 0.25, 0.5].some(v => distToPaths(c.x + u * c.w * (1 - v), c.by - v * c.h) < ROAD))
     : c.kind !== "well" && distToPaths(c.x, c.y) < (c.kind === "tree" ? c.size * 0.6 : c.r || 0) + ROAD;
   for (let i = circles.length - 1; i >= 0; i--) if (onRoad(circles[i])) circles.splice(i, 1);
+  // Tents never sit on a road (Lee): one that does steps straight away from the road until it's clear, without bumping into anything else
+  { const edge = q => { let m = 1e9; for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) m = Math.min(m, distToPaths(q.x + q.w * i / 4, q.y + q.h * j / 4)); return m; };
+    const hits = q => rects.some(o => o !== q && o.kind !== "sea" && q.x < o.x + o.w + 12 && q.x + q.w > o.x - 12 && q.y < o.y + o.h + 12 && q.y + q.h > o.y - 12);
+    for (const q of rects) { if (q.kind !== "tent" || edge(q) >= 40) continue;
+      const cx = q.x + q.w / 2, cy = q.y + q.h / 2; let best = null, bd = 1e9;
+      for (const L of PATHS) for (let j = 0; j < L.length - 1; j++) { const [ax, ay] = L[j], [bx, by] = L[j + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / (dx * dx + dy * dy || 1))), qx = ax + t * dx, qy = ay + t * dy, d = Math.hypot(cx - qx, cy - qy);
+        if (d < bd) { bd = d; best = [qx, qy, dx, dy]; } }
+      const [qx, qy, dx, dy] = best, dl = Math.hypot(dx, dy) || 1; let ux = -dy / dl, uy = dx / dl; if ((cx - qx) * ux + (cy - qy) * uy < 0) { ux = -ux; uy = -uy; }
+      const x0 = q.x, y0 = q.y; let ok = false;
+      for (const sgn of [1, -1]) { for (let k = 1; k <= 30 && !ok; k++) { q.x = x0 + ux * sgn * k * 10; q.y = y0 + uy * sgn * k * 10; if (edge(q) >= 40 && !hits(q)) ok = true; } if (ok) break; }
+      if (!ok) { q.x = x0; q.y = y0; } else { q.x = Math.round(q.x); q.y = Math.round(q.y); } } }
   // Camps get real ground instead of a tan square (Lee): grass, dirt or shoveled snow, gravel where the roads run through,
   // stepping stones to the tents and waystone, and a fence (or snowbanks in the cold) around parts of the edge
   // Pip's Camp and Hillwatch get the same ground and fence, without becoming zones of their own
@@ -3216,7 +3227,8 @@ function foeUpdate(f, dt) {
   if (f.kx || f.ky) { move(f, f.kx * dt * 6, f.ky * dt * 6, d.r); f.kx *= 0.8; f.ky *= 0.8; if (Math.abs(f.kx) + Math.abs(f.ky) < 1) f.kx = f.ky = 0; }
   const px = player.x - f.x, py = player.y - f.y, dist = Math.hypot(px, py);
   const home = Math.hypot(f.x - f.hx, f.y - f.hy);
-  const safe = map.zoneAt(player.x, player.y).safe;
+  const safe = inSafe();
+  if (safe && ["windup", "aim", "cwind"].includes(f.state)) { f.state = "return"; f.ax = null; return; }
   const alive = !player.dead;
   if (f.stunT > 0) { f.stunT -= dt; if (f.stunT <= 0) f.frozen = f.rooted = false; if (f.state === "windup" || f.state === "aim") { f.state = "recover"; f.timer = 0.3; } return; }
   if (f.slowT > 0) f.slowT -= dt;
@@ -3397,7 +3409,10 @@ const resetTemple = () => resetDungeon("temple");
 // =====================================================================
 // Player actions
 // =====================================================================
+// Camps and the village are safe (Lee): the whole camp ground you can see, not just its square, and nothing can hurt you there
+function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05))); }
 function hurtPlayer(raw, lv) {
+  if (inSafe()) return;
   if (player.dead || player.dodgeT > 0 || player.dashT > 0) return;
   const s = stats();
   const gap = Math.max(0, lv - player.level);
@@ -4286,7 +4301,7 @@ function toast(msg, item) {
   if (!item && now < toastHold) { toastWait = msg; return; }
   toasts.textContent = "";
   const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; toasts.appendChild(el);
-  const ms = item ? 5000 : 2700; if (item) { toastHold = now + ms; el.classList.add("item"); }
+  const ms = item ? 5000 : 5400; if (item) { toastHold = now + ms; el.classList.add("item"); }
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.remove(); if (toastWait) { const w = toastWait; toastWait = null; toast(w); } }, ms);
 }
