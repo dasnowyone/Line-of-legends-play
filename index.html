@@ -7281,7 +7281,7 @@ function frame(now) {
 // =====================================================================
 const KEYS_TIP = { id: "keys", text: "Keyboard controls\nMove: WASD or arrow keys\nAttack / Talk: Space, J or E\n" + (desk ? "Ability bar: keys 1 to 9 (Dodge 1, Whirl 2, Potion 3). Drag the slots to rearrange them" : "Dodge: K or Shift\nWhirl: L\nPotion: H") + "\nBag B, Map M, Quests Q, Talents T, Achievements Y, Pets P", target: null };
 const TIPS = [
-  { id: "move", text: desk ? "Use WASD or the arrow keys to walk." : "Drag on the left side of the screen (or use WASD) to walk.", target: null, when: () => true },
+  { id: "move", text: "Welcome! Tips like this one will pop up as you need them.\n" + (desk ? "Use WASD or the arrow keys to walk." : "Drag on the left side of the screen to walk."), target: null, when: () => true },
   { id: "talk", text: "Walk up to Elder Quill by the well (the gold ! over the head) and tap Talk.", target: "btnAttack", when: () => true, done: () => !!quests.q1 },
   { id: "attack", text: "Head north to the meadow and tap Attack on a scribble. Every third hit lands harder.", target: "btnAttack", when: () => !!quests.q1 },
   { id: "dodge", text: "Enemies turn red right before they hit. " + (desk ? "Press Dodge on the ability bar" : "Tap Dodge") + " to roll out of the way.", target: "btnDodge", when: () => player.tut.includes("attack") },
