@@ -1397,6 +1397,32 @@ function buildWorld() {
   const riverGap = (x, y) => { let g = 1e9; for (const r of rivers) { const hw = (r.w + 26) / 2; if (x < r.box[0] - 400 || x > r.box[2] + 400 || y < r.box[1] - 400 || y > r.box[3] + 400) continue;
     for (let i = 0; i < r.pts.length - 1; i++) { const [ax, ay] = r.pts[i], [bx, by] = r.pts[i + 1], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
       g = Math.min(g, Math.hypot(x - ax - t * dx, y - ay - t * dy) - hw); } } return g; };
+  // Lakes and ponds join their streams (Lee): a stream that only clips a pond pulls the pond onto it, so the water runs in one side and out the other.
+  // A pond that can't move there safely dries up instead. The east lake and the wreck's lake stay where they are
+  const riverPts = rivers.map(r => { const out = []; for (let i = 0; i < r.pts.length - 1; i++) { const [ax, ay] = r.pts[i], [bx, by] = r.pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 30));
+    for (let k = 0; k < n; k++) out.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]); } out.push(r.pts[r.pts.length - 1]); return out; });
+  const fixedPool = e => (e.x === LAKE[0] && e.y === LAKE[1]) || (e.x === WRECK[0] && e.y === WRECK[1] - 20);
+  const poolOk = (e, x, y) => distToPaths(x, y) > Math.max(e.rx, e.ry) + 60 && !bridges.some(b => Math.hypot(b.x - x, b.y - y) < e.rx + b.len / 2 + 60)
+    && !camps.some(([cx, cy, cr]) => Math.hypot(x - cx, y - cy) < cr + e.rx + 40) && !nearTown(x, y) && !mounts.some(m => Math.hypot(m.x - x, m.by - y) < (m.w + e.rx) * 0.8)
+    && !ellipses.some(o => o !== e && Math.hypot(o.x - x, o.y - y) < o.rx + e.rx + 60) && !objs.some(o => Math.hypot(o.x - x, o.y - y) < e.rx + 80)
+    && !spawners.some(sp => Math.hypot(sp.x - x, sp.y - y) < sp.r + e.rx + 40) && !circles.some(c => c.kind !== "mountain" && (c.r || 0) >= 60 && Math.hypot(c.x - x, c.y - y) < c.r + e.rx + 30) && !ZONES.some(z => (z.sealed || z.sea) && x > z.x - e.rx && x < z.x + z.w + e.rx && y > z.y - e.ry && y < z.y + z.h + e.ry);
+  for (let i = ellipses.length - 1; i >= 0; i--) { const e = ellipses[i]; if (!["lake", "pond", "oasis", "ice", "glow", "inkpool"].includes(e.kind) || fixedPool(e)) continue;
+    let touch = false, best = null, bq = 1e9;
+    rivers.forEach((r, ri) => { const hw = r.w / 2 + 20; for (const [px, py] of riverPts[ri]) {
+      if (((px - e.x) / (e.rx + hw)) ** 2 + ((py - e.y) / (e.ry + hw)) ** 2 < 1) touch = true;
+      const q = ((px - e.x) / e.rx) ** 2 + ((py - e.y) / e.ry) ** 2; if (q < bq) { bq = q; best = [px, py]; } } });
+    if (!touch || bq < 0.12) continue;
+    const [nx, ny] = best.map(Math.round);
+    if (poolOk(e, nx, ny)) { e.x = nx; e.y = ny; } else ellipses.splice(i, 1);
+  }
+  // where a stream meets a lake or pond: the shoreline opens there and the stream runs right into the water
+  for (const e of ellipses) { e.mouths = []; rivers.forEach((r, ri) => { const pts = riverPts[ri], ins = ([x, y]) => ((x - e.x) / e.rx) ** 2 + ((y - e.y) / e.ry) ** 2 < 1;
+    for (let k = 1; k < pts.length; k++) { const a = ins(pts[k - 1]), b = ins(pts[k]); if (a === b) continue;
+      const [ox, oy] = a ? pts[k] : pts[k - 1], [ix, iy] = a ? pts[k - 1] : pts[k], d = Math.hypot(ix - ox, iy - oy) || 1, path = [];
+      for (let j = 0; j < 6; j++) { const p = pts[a ? k + j : k - 1 - j]; if (p) path.unshift(p); }
+      path.push([ix + (ix - ox) / d * 30, iy + (iy - oy) / d * 30]);
+      e.mouths.push({ x: (ox + ix) / 2, y: (oy + iy) / 2, dx: (ix - ox) / d, dy: (iy - oy) / d, w: r.w, kind: r.kind, path: path.map(p => p.map(Math.round)) }); } }); }
+  for (let i = circles.length - 1; i >= 0; i--) { const c = circles[i]; if (c.kind !== "mountain" && c.kind !== "well" && (c.r || 0) < 60 && ellipses.some(e => ((c.x - e.x) / (e.rx + 25)) ** 2 + ((c.y - e.y) / (e.ry + 25)) ** 2 < 1)) circles.splice(i, 1); }
   const onBed = c => c.kind === "mountain"
     ? [-0.85, -0.45, 0, 0.45, 0.85].some(u => [0, 0.3, 0.6].some(v => riverGap(c.x + u * c.w * (1 - v), c.by - v * c.h) < 12))
     : c.kind !== "well" && riverGap(c.x, c.y) < (c.kind === "tree" ? c.size * 0.5 : c.r) + 10;
@@ -1492,7 +1518,7 @@ function buildWorld() {
   });
 
   return makeMap({
-    id: "world", w: W, h: H, ZONES, CAMPS, PATHS, rects, circles, ellipses, spawners, decor, objs, rivers, bridges,
+    id: "world", w: W, h: H, ZONES, CAMPS, PATHS, rects, circles, ellipses, spawners, decor, objs, rivers, bridges, riverGap,
     doors: [
       { ...Pd(3440, 9050), w: 40, h: 18, to: "home", tx: 320, ty: 410, label: "Your house" },
       { ...Pd(4070, 9600), w: 40, h: 18, to: "inn", tx: 450, ty: 560, label: "The Leaky Inkwell" },
@@ -2328,7 +2354,7 @@ const CRAFT_SPOTS = { sange: VAT(1112, 410), clegg: VAT(700, 872), vein: VAT(133
     if (Math.min(ax, bx) - 200 > x || Math.max(ax, bx) + 200 < x || Math.min(ay, by) - 200 > y || Math.max(ay, by) + 200 < y) continue;
     const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1))); g = Math.min(g, Math.hypot(x - ax - t * dx, y - ay - t * dy)); } return g; };
   const inCampAt = (x, y) => (W.CAMPS || []).some(z => ((x - z.cx) / (z.rx * 1.2)) ** 2 + ((y - z.cy) / (z.ry * 1.2)) ** 2 < 1) || (x > VZ.x - 150 && x < VZ.x + VZ.w + 150 && y > VZ.y - 150 && y < VZ.y + VZ.h + 150);
-  const okAt = (x, y, r, gap) => !blocked(W, x, y, r) && roadD(x, y) > 70 && !inCampAt(x, y) && !W.objs.some(o => Math.hypot(o.x - x, o.y - y) < gap) && !(W.props || []).some(p => Math.hypot(p.x - x, p.y - y) < 90);
+  const okAt = (x, y, r, gap) => !blocked(W, x, y, r) && W.riverGap(x, y) > r + 16 && roadD(x, y) > 70 && !inCampAt(x, y) && !W.objs.some(o => Math.hypot(o.x - x, o.y - y) < gap) && !(W.props || []).some(p => Math.hypot(p.x - x, p.y - y) < 90);
   const putC = c => { W.circles.push(c); const k = Math.floor(c.x / CELL) + "," + Math.floor(c.y / CELL); if (!W.grid.has(k)) W.grid.set(k, []); W.grid.get(k).push(c); };
   let nid = 0;
   const node = (kind, item, x, y, extra) => { const o = { kind: "node", node: kind, item, id: "nd" + nid++, x: Math.round(x), y: Math.round(y), until: 0, ...extra };
@@ -2355,7 +2381,7 @@ const CRAFT_SPOTS = { sange: VAT(1112, 410), clegg: VAT(700, 872), vein: VAT(133
   node("ore", "copper_ore", ...CRAFT_SPOTS.vein, { practice: true });
   const [gx, gy] = CRAFT_SPOTS.dig; W.props.push({ kind: "digsign", x: gx - 20, y: gy - 120 });
   for (let i = 0, t = 0; i < 6 && t < 200; t++) { const a = rnd() * 6.28, d = 60 + rnd() * 170, x = gx + Math.cos(a) * d, y = gy + Math.sin(a) * d * 0.7;
-    if (blocked(W, x, y, 14) || roadD(x, y) < 50 || W.objs.some(o => Math.hypot(o.x - x, o.y - y) < 70)) continue; node("ore", "copper_ore", x, y, { loose: true }); i++; }
+    if (blocked(W, x, y, 14) || W.riverGap(x, y) < 30 || roadD(x, y) < 50 || W.objs.some(o => Math.hypot(o.x - x, o.y - y) < 70)) continue; node("ore", "copper_ore", x, y, { loose: true }); i++; }
   for (let i = 0, t = 0; i < 3 && t < 200; t++) { const a = rnd() * 6.28, d = 260 + rnd() * 200, x = gx + Math.cos(a) * d, y = gy + Math.sin(a) * d * 0.7;
     if (!okAt(x, y, 24, 120)) continue; node("log", "wood", x, y); i++; }
   for (const [zid, list] of Object.entries(SPREAD)) for (const [k, item, n] of list) scatter(zid, k, item, n);
@@ -2364,7 +2390,7 @@ const CRAFT_SPOTS = { sange: VAT(1112, 410), clegg: VAT(700, 872), vein: VAT(133
   for (const e of W.ellipses) { if (!["lake", "pond", "oasis", "ice", "glow"].includes(e.kind)) continue;
     const z = W.zoneAt(e.x, e.y), fish = FISH[z.id.replace(/_camp$/, "")] || "perch", many = e.rx > 300 ? 2 : 1;
     for (let k = 0, a0 = rnd() * 6.28; k < many; k++) for (let s = 0; s < 12; s++) { const a = a0 + k * 3.1 + s * 0.52, x = e.x + Math.cos(a) * (e.rx + 30), y = e.y + Math.sin(a) * (e.ry + 26);
-      if (blocked(W, x, y, 14) || roadD(x, y) < 40 || W.objs.some(o => Math.hypot(o.x - x, o.y - y) < 120)) continue;
+      if (blocked(W, x, y, 14) || W.riverGap(x, y) < 30 || roadD(x, y) < 40 || W.objs.some(o => Math.hypot(o.x - x, o.y - y) < 120)) continue;
       node("fish", fish, x, y, { wx: e.x + Math.cos(a) * (e.rx - 34), wy: e.y + Math.sin(a) * (e.ry - 26), ice: e.kind === "ice" }); break; } }
   // Patterns for the higher crafted sets, sold at the camps further out
   const sell = (zid, t) => { const z = MAINLAND.find(m => m.id === zid), o = z && W.objs.find(o => o.id === z.merchant[0]); if (o && o.shop && !o.shop.includes("pattern_" + t)) o.shop.push("pattern_" + t); };
@@ -5527,7 +5553,13 @@ function drawWorldGround(m, x0, y0, x1, y1) {
     if (e.kind === "pond" || e.kind === "lake" || e.kind === "oasis") for (let i = 0; i < 5; i++) { const a = hash2(e.x + i, e.y) * 6.28, d = 0.45 + hash2(i, e.x) * 0.4, lx = e.x + Math.cos(a) * e.rx * d, ly = e.y + Math.sin(a) * e.ry * d;
       ctx.fillStyle = "#6f9a4a"; ctx.strokeStyle = "rgba(27,27,32,.5)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, ly); ctx.arc(lx, ly, 11, a, a + 5.6); ctx.closePath(); ctx.fill(); ctx.stroke();
       if (i % 2 === 0) { ctx.fillStyle = "#f2a6bf"; ctx.beginPath(); ctx.arc(lx + 3, ly - 3, 3.5, 0, 7); ctx.fill(); } }
-    ctx.restore(); ctx.strokeStyle = wc; for (let i = 0; i < 6; i++) { const a = i * 1.1 + clock * 0.3; ctx.beginPath(); ctx.arc(e.x + Math.cos(a) * e.rx * 0.5, e.y + Math.sin(a) * e.ry * 0.5, 16, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); } }
+    ctx.restore(); ctx.strokeStyle = wc; for (let i = 0; i < 6; i++) { const a = i * 1.1 + clock * 0.3; ctx.beginPath(); ctx.arc(e.x + Math.cos(a) * e.rx * 0.5, e.y + Math.sin(a) * e.ry * 0.5, 16, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+    // a stream flowing in: its last stretch runs over the sandy shore, and the shoreline is open where it meets the water
+    for (const mo of e.mouths || []) { const [c1, c2] = RIVER_COL[mo.kind] || RIVER_COL.water, path = () => { ctx.beginPath(); mo.path.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); };
+      ctx.save(); ctx.beginPath(); ctx.rect(mo.x - 400, mo.y - 400, 800, 800); ctx.ellipse(e.x, e.y, e.rx - 1, e.ry - 1, 0, 0, 7); ctx.clip("evenodd");
+      ctx.lineCap = "butt"; ctx.lineJoin = "round"; path(); ctx.strokeStyle = "rgba(27,27,32,.6)"; ctx.lineWidth = mo.w + 5; ctx.stroke(); ctx.strokeStyle = c1; ctx.lineWidth = mo.w; ctx.stroke(); ctx.strokeStyle = c2; ctx.lineWidth = mo.w * 0.45; ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.ellipse(e.x, e.y, e.rx + 2, e.ry + 2, 0, 0, 7); ctx.clip(); ctx.strokeStyle = pc; ctx.lineWidth = mo.w; ctx.lineCap = "butt";
+      ctx.beginPath(); ctx.moveTo(mo.x - mo.dx * 12, mo.y - mo.dy * 12); ctx.lineTo(mo.x + mo.dx * 26, mo.y + mo.dy * 26); ctx.stroke(); ctx.restore(); } }
   // Temple bridge: planks rise from the water, temple first, shore last
   const bridge = temple.risen ? 1 : temple.bridge;
   if (bridge > 0 && m.id === "world") {
