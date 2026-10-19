@@ -125,6 +125,19 @@ body.desk #tracker { width: max-content; max-width: 250px; font-size: 17px; }
 #pad2 .nb.more { border-radius: 50%; width: 46px; height: 46px; }
 #pad2 .nb.more .ic { top: 3px; }
 body.desk #pad2 { display: none; }
+/* Lee: class skills line up down the right side, under the quest box, one by one as they unlock. Hold one to swap places */
+#skillcol { right: max(10px, env(safe-area-inset-right, 0px)); top: var(--skt, 300px); display: flex; flex-direction: column; gap: 9px; align-items: flex-end; transform-origin: 100% 0; scale: var(--skk, 1); }
+#skillcol button { position: relative; width: 52px; height: 52px; padding: 0; font-size: 13px; }
+#skillcol .nb .ic { top: 5px; width: 24px; height: 24px; margin-left: -12px; }
+#skillcol .nb .l { font-size: 12px; bottom: 3px; }
+#skillcol .nb:nth-child(odd) { rotate: -1.4deg; }
+body.desk #skillcol, body.cine #skillcol, body.mapopen #skillcol, body.charopen #skillcol { display: none; }
+body.skedit #skillcol .nb { animation: skwig .3s ease-in-out infinite alternate; }
+body.skedit #skillcol .nb.pick { outline: 3px solid var(--gold); outline-offset: 2px; animation: none; }
+@keyframes skwig { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+.skdemo { display: flex; gap: 14px; justify-content: center; align-items: center; margin: 8px 0; font-size: 15px; color: var(--ink-soft); }
+.skdemo span { display: inline-grid; place-items: center; width: 46px; height: 46px; border: 1.6px solid var(--ink); border-radius: 6px; background: #fffef8; color: #2c3e7a; font-size: 13px; }
+.skdemo span.pick { outline: 3px solid var(--gold); outline-offset: 2px; }
 #abar { z-index: 6; }
 .sheet .item[draggable="true"] { cursor: grab; }
 #abar button { position: relative; width: 58px; height: 58px; padding: 0; font-size: 14px; line-height: 1.05; }
@@ -316,6 +329,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="pencilfx"><feTurbulence type="fractalNoise" baseFrequency=".06" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter></svg>
 </div>
 <div id="pad2" class="ui"></div>
+<div id="skillcol" class="ui"></div>
 <div id="abar" class="ui" hidden aria-label="Ability bar. Keys 1 to 9. Drag to rearrange."></div>
 <div id="banner" class="ui"><div class="big" id="bannerBig"></div><div class="small" id="bannerSmall"></div></div>
 <div id="toasts" class="ui"></div>
@@ -1498,6 +1512,11 @@ function buildWorld() {
       if (distToPaths(x, y) < r + 40 || inR(x, y, 14) || z.steps.some(s => Math.hypot(s[0] - x, s[1] - y) < r + 16) || z.patches.some(p => Math.hypot(p.x - x, p.y - y) < (p.r + r) * 1.1)) continue;
       z.patches.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r), kind: kinds[Math.floor(rnd() * kinds.length)], s: rnd() }); i++; }
   }
+  // No enemy group lives in or against a camp (Lee: camps are safe): a group too close moves straight out, and keeps a tighter patch
+  for (const sp of spawners) for (const z of CAMPS) { const m = Math.min(z.rx, z.ry), q = Math.hypot((sp.x - z.cx) / z.rx, (sp.y - z.cy) / z.ry);
+    if (q > 1 + (sp.r + 120) / m) continue;
+    sp.r = Math.min(sp.r, 220); const a = Math.atan2((sp.y - z.cy) / z.ry, (sp.x - z.cx) / z.rx), need = 1 + (sp.r + 120) / m;
+    for (let k = need; k < need + 1.5; k += 0.05) { const x = z.cx + Math.cos(a) * z.rx * k, y = z.cy + Math.sin(a) * z.ry * k; if (x > 200 && y > 200 && x < W - 200 && y < H - 200 && distToPaths(x, y) > 60 && !inPool(x, y) && !circles.some(c => Math.hypot(c.x - x, (c.by || c.y) - y) < (c.w || c.r || 0) + 40)) { sp.x = Math.round(x); sp.y = Math.round(y); break; } } }
   // snow is shoveled off the cold camps, so no drifts lie inside them
   const shoveled = d => (d.kind === "snow" || d.kind === "drift") && ZONES.some(z => z.ground === "snow" && ((d.x - z.cx) / (z.rx || 600)) ** 2 + ((d.y - z.cy) / (z.ry || 470)) ** 2 < 1);
   for (const e of ellipses) if (e.kind === "pond" || e.kind === "lake") { const pk = ML("peaks"); if (e.x >= pk.x && e.x < pk.x + pk.w && e.y >= pk.y && e.y < pk.y + pk.h) e.kind = "ice"; }
@@ -1520,9 +1539,9 @@ function buildWorld() {
     const g = z.giver[0], where = pt => `${z.name}, ${dirWord(pt[0] - z.camp[0], pt[1] - z.camp[1])} of ${z.campName}`, nz = MAINLAND[i + 1];
     const ma = z.marks[z.qa.foe] || z.lair, mb = z.marks[z.qb.foe] || z.lair;
     QUESTS.push(
-      { id: z.id + "_a", where: where(ma), giver: g, title: z.qa.title, needs: [], text: z.qa.text, goal: { type: "kill", foe: z.qa.foe, n: z.qa.n },
+      { id: z.id + "_a", where: where(ma), giver: g, title: z.qa.title, needs: [], req: () => player.level >= z.lo - 2, text: z.qa.text, goal: { type: "kill", foe: z.qa.foe, n: z.qa.n },
         reward: { xp: FOES[z.qa.foe].xp * 12, coins: Math.round(foeCoin(z.lo) * 15), item: "greater_potion", qty: 2 }, mark: ma, done: z.qa.done },
-      { id: z.id + "_b", where: where(mb), giver: g, title: z.qb.title, needs: [], text: z.qb.text, goal: { type: "kill", foe: z.qb.foe, n: z.qb.n },
+      { id: z.id + "_b", where: where(mb), giver: g, title: z.qb.title, needs: [], req: () => player.level >= z.lo - 2, text: z.qb.text, goal: { type: "kill", foe: z.qb.foe, n: z.qb.n },
         reward: { xp: FOES[z.qb.foe].xp * 12, coins: Math.round(foeCoin(z.lo + 2) * 15) }, mark: mb, done: z.qb.done },
       { id: z.id + "_c", where: where(z.lair), giver: g, title: z.qc.title, needs: [z.id + "_a", z.id + "_b"], text: z.qc.text.replace("{dir}", dirWord(z.lair[0] - z.camp[0], z.lair[1] - z.camp[1])),
         goal: { type: "kill", foe: z.boss, n: 1 }, reward: { xp: FOES[z.boss].xp * 2, coins: Math.round(foeCoin(z.lo + 5) * 30), item: z.qc.item }, mark: z.lair, done: z.qc.done });
@@ -3078,7 +3097,7 @@ function save() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       level: player.level, xp: player.xp, coins: player.coins, gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
       map: player.map, x: player.x, y: player.y, wv: 2, cls: player.cls || null, gearConv: player.gearConv || null,
-      tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
+      skOrder: player.skOrder || null, tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
     }));
   } catch {}
 }
@@ -3093,7 +3112,7 @@ function load() {
     if (s.templeRisen) setRisen(true);
     if (s.hollowRisen) setHollow(true);
     for (const id of s.dgRisen || []) if (DG[id]) setDg(DG[id], true);
-    player.cls = CLASSES_OK(s.cls); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
+    player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
     player.tools = s.tools || []; player.recipes = s.recipes || []; player.up = s.up || {}; player.glows = s.glows || []; player.glow = s.glow || null; player.pouch = s.pouch || 0; player.gemRec = s.gemRec || [];
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
@@ -3938,7 +3957,7 @@ function openPanel(html, acts) {
   delete sheet.dataset.shop; sheet.innerHTML = html; panelActs = acts || {}; panel.hidden = false;
   const b = sheet.querySelector("button:last-of-type"); b && b.focus({ preventScroll: true });
 }
-function closePanel() { if (classPicking) return; document.body.classList.remove("mapopen", "charopen"); panel.hidden = true; joy.active = false; }
+function closePanel() { if (classPicking) return; if (skTutPause) { skTutPause = false; paused = false; } document.body.classList.remove("mapopen", "charopen"); panel.hidden = true; joy.active = false; }
 sheet.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b) return;
   const act = b.dataset.act;
@@ -4295,15 +4314,24 @@ function showMap(from) {
 const toasts = document.getElementById("toasts");
 // One notice at a time: a new one replaces the old so they never stack over the view
 // One notice at a time. Item finds stay up for 5 seconds (Lee); other notices wait their turn instead of covering one
-let toastHold = 0, toastWait = null, toastTimer = 0;
+let toastHold = 0, toastTimer = 0, toastFlush = 0, toastCur = "", toastQ = [];
+// Lee: notices stay up long enough to read. Each one stays at least 3 seconds before the next replaces it (5 for items),
+// long ones stay longer, and the same notice twice in a row doesn't restart
 function toast(msg, item) {
   const now = performance.now();
-  if (!item && now < toastHold) { toastWait = msg; return; }
-  toasts.textContent = "";
-  const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; toasts.appendChild(el);
-  const ms = item ? 5000 : 5400; if (item) { toastHold = now + ms; el.classList.add("item"); }
+  if (msg === toastCur || toastQ.some(q => q[0] === msg)) return;
+  if (toastCur && now < toastHold) { toastQ.push([msg, item]); if (toastQ.length > 3) toastQ.shift();
+    clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length) { const [m, it] = toastQ.shift(); showToast(m, it); } }, toastHold - now + 20); return; }
+  showToast(msg, item);
+}
+function showToast(msg, item) {
+  const now = performance.now(); toasts.textContent = "";
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; toasts.appendChild(el); if (item) el.classList.add("item");
+  const ms = item ? 5000 : Math.max(5400, msg.length * 70);
+  toastCur = msg; toastHold = now + (item ? 5000 : 3000);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.remove(); if (toastWait) { const w = toastWait; toastWait = null; toast(w); } }, ms);
+  toastTimer = setTimeout(() => { el.remove(); toastCur = ""; if (toastQ.length) { const [m, it] = toastQ.shift(); showToast(m, it); } }, ms);
+  if (toastQ.length) { clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length && performance.now() >= toastHold) { const [m, it] = toastQ.shift(); showToast(m, it); } }, toastHold - now + 20); }
 }
 let bannerTimer = 0;
 function banner(big, small) {
@@ -4322,7 +4350,7 @@ const keys = new Set();
 canvas.addEventListener("pointerdown", ev => {
   if (paused) return;
   // Lee: more room to steer. Only the area right around the buttons is off limits
-  { const k = +getComputedStyle(document.body).getPropertyValue("--padk") || 1, r = (pad2.children.length ? 205 : 175) * k;
+  { const k = +getComputedStyle(document.body).getPropertyValue("--padk") || 1, r = 175 * k;
     if (Math.hypot(window.innerWidth - 60 * k - ev.clientX, window.innerHeight - 64 * k - ev.clientY) < r) return; }
   joy.active = true; joy.id = ev.pointerId; joy.ox = joy.x = ev.clientX; joy.oy = joy.y = ev.clientY;
   canvas.setPointerCapture(ev.pointerId);
@@ -4842,21 +4870,45 @@ function abarHud(pots) {
 // Phones: one small round button per unlocked ability, stacked above the main buttons
 const pad2 = document.getElementById("pad2"); let pad2Lv = -1;
 // Arc slots: angles measured from the Attack button's center, 180 = straight left, 90 = straight up
-const ARC_R = 154, ARC_ANG = [180, 157, 134, 111, 88];
+const skillcol = document.getElementById("skillcol"); let skHold = null, skPick = null, skTutPause = false, skTop = -1, skK = -1;
+const skOrder = () => { const have = Object.keys(SKILLS).filter(k => player.level >= SKILLS[k].lv), o = (player.skOrder || []).filter(k => have.includes(k));
+  for (const k of have) if (!o.includes(k)) o.push(k); return o; };
+function skEditOff() { document.body.classList.remove("skedit"); skPick = null; for (const x of skillcol.children) x.classList.remove("pick"); }
 function pad2Hud() {
   const p = player;
   if (pad2Lv !== p.level) {
-    pad2Lv = p.level; pad2.innerHTML = "";
-    const place = (b, i) => { const a = ARC_ANG[i] * Math.PI / 180, dx = Math.cos(a) * ARC_R, dy = Math.sin(a) * ARC_R; b.style.right = `${46 - dx - 25}px`; b.style.bottom = `${46 + dy - 25}px`; };
-    Object.keys(SKILLS).filter(k => p.level >= SKILLS[k].lv).forEach((k, i) => {
-      const S = SKILLS[k], lock = false, b = document.createElement("button"); b.type = "button"; b.className = "nb" + (lock ? " nlock" : ""); b.dataset.k = k; b.setAttribute("aria-label", lock ? `${S.name}, unlocks at level ${S.lv}` : S.name);
-      b.innerHTML = `<span class="ic">${NB_ICON(lock ? "lock" : S.short)}</span><span class="l">${lock ? "Lv " + S.lv : S.short}</span><i class="cd"></i>`;
-      b.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); if (lock) toast(`${S.name} unlocks at level ${S.lv}`); else useSkill(k); });
-      b.style.right = b.style.bottom = ""; place(b, i); pad2.appendChild(b);
-    });
+    pad2Lv = p.level; skillcol.innerHTML = ""; skEditOff();
+    for (const k of skOrder()) {
+      const S = SKILLS[k], b = document.createElement("button"); b.type = "button"; b.className = "nb"; b.dataset.k = k; b.setAttribute("aria-label", S.name + ". Hold to move it");
+      b.innerHTML = `<span class="ic">${NB_ICON(S.short)}</span><span class="l">${S.short}</span><i class="cd"></i>`;
+      b.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation();
+        // picking where it goes: tap another skill to swap, or the same one to stop
+        if (skPick) { if (skPick !== k) { const o = skOrder(), i = o.indexOf(skPick), j = o.indexOf(k); [o[i], o[j]] = [o[j], o[i]]; player.skOrder = o; save(); sfx("coin"); pad2Lv = -1; } skEditOff(); return; }
+        clearTimeout(skHold); skHold = setTimeout(() => { skHold = null; document.body.classList.add("skedit"); skPick = k; b.classList.add("pick"); sfx("coin"); toast("Now tap the skill to swap with. Tap this one again to stop"); }, 550); });
+      const up = () => { if (skHold) { clearTimeout(skHold); skHold = null; useSkill(k); } };
+      b.addEventListener("pointerup", ev => { ev.stopPropagation(); up(); });
+      for (const e of ["pointercancel", "pointerleave"]) b.addEventListener(e, () => { clearTimeout(skHold); skHold = null; });
+      skillcol.appendChild(b);
+    }
+    // the first one: stop the game and show how it works (Lee)
+    if (skillcol.children.length && !p.tut.includes("skillcol") && window.__started) {
+      p.tut.push("skillcol"); save(); const S = SKILLS[skillcol.children[0].dataset.k];
+      setTimeout(() => { paused = true; skTutPause = true;
+        openPanel(`<h2>New skill: ${S.name}</h2><p>${S.desc || ""}</p><p>New skills line up down the right side of the screen, under your quest, one at a time as you unlock them. Tap one to use it.</p>
+          <p><b>Want them in a different order?</b> Press and hold a skill until it wiggles, then tap the skill you want it to trade places with.</p>
+          <div class="skdemo"><span class="pick">Hold</span>&#8644;<span>Tap</span></div><p class="soft">The game is paused until you tap Got it.</p>
+          <div class="row"><button data-act="close" type="button">Got it</button></div>`); }, 900);
+    }
   }
-  for (const b of pad2.children) if (b.dataset.k && SKILLS[b.dataset.k]) b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, (p.acd[b.dataset.k] || 0) / SKILLS[b.dataset.k].cd) * 100}%`);
+  // sit just under the quest box, and shrink if the column would run into the main buttons
+  const top = Math.round(document.getElementById("mapbox").getBoundingClientRect().bottom + 12), padTop = document.getElementById("pad").getBoundingClientRect().top - 10;
+  const n = skillcol.children.length, need = n * 61, k = n ? Math.max(0.6, Math.min(+getComputedStyle(document.body).getPropertyValue("--padk") || 1, (padTop - top) / need)) : 1;
+  if (top !== skTop) { skTop = top; document.body.style.setProperty("--skt", top + "px"); }
+  if (Math.abs(k - skK) > 0.01) { skK = k; document.body.style.setProperty("--skk", k.toFixed(3)); }
+  for (const b of skillcol.children) if (b.dataset.k && SKILLS[b.dataset.k]) b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, (p.acd[b.dataset.k] || 0) / SKILLS[b.dataset.k].cd) * 100}%`);
 }
+// tapping anywhere else while moving a skill stops it
+addEventListener("pointerdown", ev => { if (skPick && !skillcol.contains(ev.target)) skEditOff(); }, true);
 // More (phone): everything that isn't a skill, one tap each
 function showMore() {
   const items = Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id));
