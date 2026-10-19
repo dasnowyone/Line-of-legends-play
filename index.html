@@ -5119,6 +5119,7 @@ document.getElementById("hud").addEventListener("click", () => {
       <div class="item"><div>Crafting kit<small>Pick, axe and rod, all crafting quests done, every pattern, 40 of each material</small></div><button type="button" data-act="kit">Go</button></div>
       <div class="item"><div>Pet rescues<small>Level 12, Inky already rescued, at Sorrel's Watch where the fox kit rescue starts</small></div><button type="button" data-act="rescue">Go</button></div>
       <div class="item"><div>Go to Miner Sange<small>Level 5, at the start of the pick quest</small></div><button type="button" data-act="sange">Go</button></div>
+      <div class="item"><div>Go to Angler Tobin<small>Level 6, no rod yet, at the start of the fishing rod quest</small></div><button type="button" data-act="tobin">Go</button></div>
       <div class="item"><div>Unlock every waystone<small>Travel anywhere from any waystone</small></div><button type="button" data-act="ways">Go</button></div></div>
     <div class="row"><button data-act="close" type="button">Close</button></div>`,
     { rescue: () => { if (player.level < 12) { player.level = 12; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["pet_a", "pet_b", "pet_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
@@ -5127,6 +5128,9 @@ document.getElementById("hud").addEventListener("click", () => {
       kit: () => { player.tools = ["pick", "axe", "rod"]; for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) quests[id] = { state: "done", n: 0, at: Date.now() };
         player.recipes = [3, 4, 5].map(t => "pattern_" + t); player.pouch = 2; for (const id of Object.keys(MATS)) player.bag[id] = 40; player.coins += 200000;
         save(); renderTracker(); closePanel(); banner("Crafting kit", "Every tool, pattern and plenty of materials"); },
+      tobin: () => { if (player.level < 6) { player.level = 6; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
+        for (const id of ["fish_r", "fish_b"]) delete quests[id]; quests.fish_a = { state: "done", n: 0, at: Date.now() }; delete player.bag.lucky_lure;
+        player.tools = (player.tools || []).filter(t => t !== "rod"); goTo("world", TOBIN.at[0] + 70, TOBIN.at[1] + 50, true); save(); renderTracker(); closePanel(); },
       sange: () => { if (player.level < 5) { player.level = 5; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) delete quests[id];
         player.tools = []; goTo("world", CRAFT_SPOTS.sange[0] - 60, CRAFT_SPOTS.sange[1] + 40, true); save(); renderTracker(); closePanel(); },
       lv7: () => {
