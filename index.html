@@ -576,7 +576,7 @@ const PATTERNS = { 3: ["Deeptide Patterns", 15000], 4: ["Wyrmforged Patterns", 6
 for (const [t, [name, price]] of Object.entries(PATTERNS)) ITEMS["pattern_" + t] = { name, scroll: +t, price, desc: `Teaches Brand, Carly and Clegg every tier ${t} crafted piece` };
 // Weapon glows: recipes bought with gems, brewed by Fizz. Looks only
 const GLOWS = { star: ["Starlight Glow", "#dff4ff", 120], ember: ["Emberheart Glow", "#ff8a3a", 120], void: ["Voidflame Glow", "#a56af2", 120] };
-// The crafted sets: a little stronger than the best piece the shops sell in that tier, and only made by hand
+// The crafted sets: stronger than the best piece the shops sell in that tier (about 15%, 25% from tier 3), with a cape, and only made by hand
 const CRAFT_SETS = [null, ["Ironheart", "#6d737c", "#c27a3a"], ["Moonsilver", "#dfe8f0", "#7aa6d6"], ["Deeptide", "#2f6f86", "#9fe0e8"], ["Wyrmforged", "#7a2a22", "#f2b134"], ["Legendforged", "#efe2b8", "#d4a92a"]];
 {
   const tierOf = it => it.tier || Math.min(5, Math.floor(it.lvl / 10) + 1);
@@ -585,11 +585,12 @@ const CRAFT_SETS = [null, ["Ironheart", "#6d737c", "#c27a3a"], ["Moonsilver", "#
     const pool = Object.values(ITEMS).filter(it => it.slot === s && it.cls === c && tierOf(it) === t && !it.premium && !it.rare && !it.set && !it.crafted);
     if (!pool.length) continue;
     const top = pool.sort((a, b) => b.lvl - a.lvl || val(b) - val(a))[0], [set, col, trim] = CRAFT_SETS[t], base = `cr${t}_${s}`, id = c === "warrior" ? base : c[0] + "_" + base;
-    const up = (v, k) => v ? Math.round(v * k) : v, look = { ...(top.look || {}) };
+    // From tier 3 on the crafted piece is clearly better, about 25% (Lee); every crafted body comes with a cape in its set colors
+    const up = (v, k) => v ? Math.round(v * k) : v, k = t >= 3 ? 1.25 : 1.15, look = { ...(top.look || {}) };
     if (s === "weapon") { look.glow = trim; look.color = c === "warrior" && t === 1 ? "#9aa0aa" : col; if (c === "warrior") look.guard = trim; }
-    else { look.color = col; if (s === "body") look.trim = trim; if (look.hat === "plume" || look.hat === "feather") look.plume = trim; if (look.hat === "crown") look.spikes = trim; }
+    else { look.color = col; if (s === "body") { look.trim = trim; look.cape = trim; } if (look.hat === "plume" || look.hat === "feather") look.plume = trim; if (look.hat === "crown") look.spikes = trim; }
     const it = { name: `${set} ${top.name.split(" ").pop()}`, slot: s, cls: c, lvl: top.lvl, tier: t, crafted: true, base: c === "warrior" ? undefined : base,
-      atk: up(top.atk, 1.12), def: up(top.def, 1.15), hp: up(top.hp, 1.15), mp: up(top.mp, 1.15), pow: top.pow ? top.pow + 1 : undefined, spd: top.spd, reach: top.reach, range: top.range, look };
+      atk: up(top.atk, t >= 3 ? 1.22 : 1.12), def: up(top.def, k), hp: up(top.hp, k), mp: up(top.mp, k), pow: top.pow ? top.pow + (t >= 3 ? 2 : 1) : undefined, spd: top.spd, reach: top.reach, range: top.range, look };
     for (const k of Object.keys(it)) if (it[k] === undefined) delete it[k];
     ITEMS[id] = it;
   }
@@ -6344,7 +6345,7 @@ function heroLook(gearOverride) {
     ink: p.hurtT > 0 ? BLOOD : INK, filledHead: p.level >= 5 };
   const L = k => g[k] && ITEMS[g[k]] && ITEMS[g[k]].look;
   const col = (k, base) => dye[k] && DYES[dye[k]] ? DYES[dye[k]][1] : base;
-  if (L("body")) look.body = { ...L("body"), color: col("body", L("body").color) };
+  if (L("body")) { look.body = { ...L("body"), color: col("body", L("body").color) }; if (L("body").cape) look.cape = L("body").cape; }
   if (L("hands")) look.hands = col("hands", L("hands").color);
   if (L("feet")) look.feet = col("feet", L("feet").color);
   const hl = L("head");
