@@ -691,7 +691,8 @@ FOES.bloom = { name: "Mother Bloom", art: "jelly", fill: "rgba(225,120,185,.75)"
   throws: { range: 380, speed: 230, cd: 2.4, kind: "bubble", fan: 3 }, drops: [["greater_potion", 1], ["tide_helm", .3], ["tide_gauntlets", .2]] };
 
 // Gulp's Grotto under Angler Tobin's pond (Lee): small water folk, and the fish that stole his rod
-FOES.pond_crab = { name: "Pond Crab", art: "crab", lv: 5, hp: 90, atk: 18, xp: 45, coins: [3, 6], speed: 80, r: 18, scale: 0.8, drops: [["potion", .08]] };
+FOES.pond_pike = { name: "Pond Pike", art: "angler", fill: "#6a8a5a", lv: 5, hp: 90, atk: 18, xp: 45, coins: [3, 6], speed: 95, r: 18, scale: 0.75, drops: [["potion", .08]] };
+FOES.pond_puffer = { name: "Bubble Puffer", art: "puffer", lv: 6, hp: 70, atk: 14, xp: 50, coins: [3, 7], speed: 70, r: 16, scale: 0.8, ranged: { range: 260, speed: 300, windup: 0.9, cd: 2.4, kind: "bubble" }, drops: [["potion", .08]] };
 FOES.pond_eel = { name: "Reed Eel", art: "eel", lv: 6, hp: 70, atk: 20, xp: 50, coins: [3, 7], speed: 200, r: 14, scale: 0.85, drops: [["potion", .08]] };
 FOES.gulp = { id: "gulp", name: "Old Gulp", art: "angler", lv: 7, hp: 1000, atk: 30, xp: 450, coins: [40, 60], speed: 85, r: 34, scale: 2, boss: true,
   throws: { range: 320, speed: 260, cd: 3.4, kind: "bubble", fan: 3 }, drops: [["potion", 2]] };
@@ -1713,8 +1714,8 @@ function buildPond() {
   const circles = [[380, 640], [1020, 640], [300, 1300], [1100, 1580]].map(([x, y]) => ({ x, y, r: 22, kind: "pillar" }));
   const S = (room, foe, x, y, r, n, extra) => ({ room, foe, x, y, r, n, respawn: 1e9, ...extra });
   const spawners = [
-    S(0, "pond_crab", 580, 2070, 50, 2), S(0, ["pond_crab", "pond_eel"], 830, 2090, 50, 2),
-    S(1, "pond_eel", 450, 1400, 90, 3), S(1, ["pond_crab", "pond_eel"], 960, 1450, 90, 3),
+    S(0, "pond_pike", 580, 2070, 50, 2), S(0, ["pond_pike", "pond_eel"], 830, 2090, 50, 2),
+    S(1, ["pond_eel", "pond_puffer"], 450, 1400, 90, 3), S(1, ["pond_pike", "pond_puffer"], 960, 1450, 90, 3),
     S(2, "gulp", 700, 520, 0, 1, { fixed: true, questOnly: "fish_r" }),
   ];
   const gate = (room, y, label) => ({ x: 640, y, w: 120, h: 40, kind: "coralgate", room, label });
