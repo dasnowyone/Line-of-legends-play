@@ -41,13 +41,14 @@ body {
 .bar { position: relative; height: 12px; border: 1.5px solid var(--ink); border-radius: 3px; background: rgba(0,0,0,.06); overflow: hidden; }
 .bar > b { position: absolute; inset: 0; font: 10px/10px system-ui, sans-serif; font-weight: 600; text-align: center; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; }
 .bar.mana { height: 10px; margin-top: 3px; } .bar.mana > i { background: #3b6fb6; }
-.cpick { display: flex; gap: 8px; justify-content: center; }
-.ccard { flex: 1 1 0; min-width: 0; max-width: 230px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 10px; border: 2px solid var(--ink); border-radius: 12px; background: var(--card); text-align: center; font-family: inherit; color: var(--ink); cursor: pointer; }
-.ccard:hover, .ccard:focus-visible { border-color: var(--cc); box-shadow: 0 0 0 3px var(--cc); }
+.cpick { display: grid; grid-template-columns: repeat(3, minmax(0, 230px)); justify-content: center; column-gap: 8px; }
+.ccard { grid-row: span 6; display: grid; grid-template-rows: subgrid; row-gap: 4px; justify-items: center; align-items: start; min-width: 0; padding: 8px 6px 10px; border: 2px solid var(--ink); border-radius: 12px; background: var(--card); text-align: center; font-family: inherit; color: var(--ink); cursor: pointer; }
+@media (hover: hover) { .ccard:hover { border-color: var(--cc); box-shadow: 0 0 0 3px var(--cc); } }
+.ccard:focus-visible { border-color: var(--cc); box-shadow: 0 0 0 3px var(--cc); }
 .ccard canvas { width: 100%; max-width: 150px; height: auto; }
-.ccard b { font-size: 22px; color: var(--cc); } .ccard small { font-size: 14px; color: var(--ink-soft); } .ccard em { font-style: normal; font-size: 13px; border: 1px solid var(--ink-soft); border-radius: 8px; padding: 0 6px; }
-.ccard span { font-size: 14px; line-height: 1.25; margin-top: 4px; }
-.ccard .perk { font-weight: normal; font-size: 14px; line-height: 1.25; margin-top: 6px; padding: 4px 6px; border-radius: 8px; background: color-mix(in srgb, var(--cc) 16%, transparent); color: var(--cc); }
+.ccard b { font-size: 22px; line-height: 1.1; color: var(--cc); } .ccard small { font-size: 14px; color: var(--ink-soft); } .ccard em { font-style: normal; font-size: 13px; border: 1px solid var(--ink-soft); border-radius: 8px; padding: 0 6px; }
+.ccard span { font-size: 14px; line-height: 1.25; }
+.ccard .perk { align-self: stretch; display: flex; align-items: center; justify-content: center; font-weight: normal; font-size: 14px; line-height: 1.25; padding: 4px 6px; border-radius: 8px; background: color-mix(in srgb, var(--cc) 16%, transparent); color: var(--cc); }
 .bar > i { display: block; height: 100%; width: 50%; background: var(--blood); transition: width .15s; }
 .bar.xp { height: 5px; border-width: 1px; }
 .bar.xp > i { background: var(--xp); }
@@ -4754,9 +4755,9 @@ function showPets() {
 }
 // ---------- Classes (Lee): Warrior, Hunter or Mage. The class decides how you attack and which six abilities you learn ----------
 const CLASSES = {
-  warrior: { name: "Warrior", role: "Melee fighter in plate", diff: "Easy", pitch: "Wade in with cleaving combos. The most health, hard to kill.", perk: "Takes 10% less damage", color: "#a0503a", hp: 1.2 },
-  hunter: { name: "Hunter", role: "Archer in leather", diff: "Medium", pitch: "Shoot from range, move fast, trap anything that gets close.", perk: "Earns a wolf companion that fights at your side", color: "#3f7a3a", hp: 1, range: 330 },
-  mage: { name: "Mage", role: "Spellcaster in cloth", diff: "Hard", pitch: "Huge bursts and area damage, but fragile.", perk: "Spells cost mana. Carry Mana Ink", color: "#3b6fb6", hp: 0.85, range: 300 },
+  warrior: { name: "Warrior", role: "Melee, plate", diff: "Easy", pitch: "Cleaving combos and the most health.", perk: "Takes 10% less damage from all foes", color: "#a0503a", hp: 1.2 },
+  hunter: { name: "Hunter", role: "Ranged, leather", diff: "Medium", pitch: "Fast shots and traps for foes up close.", perk: "Earns a wolf that fights beside you", color: "#3f7a3a", hp: 1, range: 330 },
+  mage: { name: "Mage", role: "Spells, cloth", diff: "Hard", pitch: "Huge area damage, but fragile.", perk: "Spells cost mana, so carry Mana Ink", color: "#3b6fb6", hp: 0.85, range: 300 },
 };
 // The ability slots keep their old keys (whirl, dash, shield, bomb, rally, storm) so ability bars and phone buttons carry over
 const CLASS_SK = {
@@ -4912,6 +4913,7 @@ function showClassPick() {
     <div class="cpick">${keys.map(k => { const C = CLASSES[k]; return `<button type="button" class="ccard" data-act="pick" data-arg="${k}" style="--cc:${C.color}"><canvas width="240" height="260" data-k="${k}"></canvas><b>${C.name}</b><small>${C.role}</small><em>${C.diff}</em><span>${C.pitch}</span><strong class="perk">&#9733; ${C.perk}</strong></button>`; }).join("")}</div>`,
     { pick: k => { if (!CLASSES[k]) return; player.cls = k; convertGear(); player.mp = maxMana(); if (k === "mage" && !player.bag.mana_potion) player.bag.mana_potion = 3; applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; classPicking = false; paused = false; clearInterval(cpTimer); closePanel(); save();
       banner(CLASSES[k].name, player.level >= 3 ? `Your abilities: ${WHIRL().name}${Object.values(SKILLS).filter(S => player.level >= S.lv).map(S => ", " + S.name).join("")}` : "Your path is chosen"); sfx("level"); } });
+  document.activeElement && document.activeElement.blur(); // no card looks preselected
   const t0 = performance.now();
   const draw = () => {
     if (panel.hidden || !classPicking) return clearInterval(cpTimer);
@@ -4920,15 +4922,15 @@ function showClassPick() {
       const k = cv.dataset.k, C = CLASSES[k], g = cv.getContext("2d"), old = ctx; ctx = g;
       try {
         g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height);
-        g.fillStyle = "rgba(27,27,32,.12)"; g.beginPath(); g.ellipse(95, 230, 34, 10, 0, 0, 7); g.fill();
+        g.fillStyle = "rgba(27,27,32,.12)"; g.beginPath(); g.ellipse(107, 230, 34, 10, 0, 0, 7); g.fill();
         const cyc = (T * 1.1) % 1, swing = k === "warrior" ? (cyc < 0.3 ? 1 - cyc / 0.3 : 0) : cyc < 0.25 ? 0.55 : 0;
-        stickFigure(95, 228, { w: 2.6, scale: 2.1, facing: 1, ink: INK, filledHead: true, moving: false, swing, body: { color: C.color, long: k !== "warrior", robe: k === "mage", chain: k === "warrior", belt: true },
+        stickFigure(107, 228, { w: 2.6, scale: 2.1, facing: 1, ink: INK, filledHead: true, moving: false, swing, body: { color: C.color, long: k !== "warrior", robe: k === "mage", chain: k === "warrior", belt: true },
           hat: k === "mage" ? hy => HATS.cone(C.color, 1, hy) : k === "hunter" ? hy => HATS.hood(C.color, 1, hy) : hy => HATS.helm("#9aa0aa", 1, hy),
           weapon: k === "hunter" ? drawBow : k === "mage" ? drawStaff : (hx, hy, f, sw) => { const a = sw > 0 ? -1.2 + (1 - sw) * 2 : -1; ctx.strokeStyle = "#b8bec8"; ctx.lineWidth = 4; line(hx, hy, hx + Math.cos(a) * 34, hy + Math.sin(a) * 34); ctx.strokeStyle = INK; ctx.lineWidth = 2; line(hx - Math.sin(a) * 7, hy + Math.cos(a) * 7, hx + Math.sin(a) * 7, hy - Math.cos(a) * 7); } });
-        if (k !== "warrior" && cyc > 0.1) { const u = (cyc - 0.1) / 0.9, px = 150 + u * 120, py = 120;
+        if (k !== "warrior" && cyc > 0.1) { const u = (cyc - 0.1) / 0.9, px = 162 + u * 108, py = 120;
           if (k === "hunter") { g.strokeStyle = "#5a4024"; g.lineWidth = 3; line(px - 22, py, px, py); g.fillStyle = "#8d939c"; g.beginPath(); g.moveTo(px + 8, py); g.lineTo(px, py - 5); g.lineTo(px, py + 5); g.fill(); }
           else { g.fillStyle = "rgba(122,192,224,.35)"; g.beginPath(); g.arc(px - 12, py - 40, 10, 0, 7); g.fill(); g.fillStyle = "#3b3366"; g.beginPath(); g.arc(px, py - 40, 8, 0, 7); g.fill(); } }
-        if (k === "warrior" && cyc < 0.3) { g.strokeStyle = "rgba(27,27,32,.35)"; g.lineWidth = 3; g.beginPath(); g.arc(110, 130, 70, -1.3, -1.3 + (1 - cyc / 0.3) * 1.8); g.stroke(); }
+        if (k === "warrior" && cyc < 0.3) { g.strokeStyle = "rgba(27,27,32,.35)"; g.lineWidth = 3; g.beginPath(); g.arc(122, 130, 70, -1.3, -1.3 + (1 - cyc / 0.3) * 1.8); g.stroke(); }
       } finally { ctx = old; }
     }
   };
