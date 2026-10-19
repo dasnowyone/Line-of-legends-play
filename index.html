@@ -561,6 +561,7 @@ for (const [id, [name, mat, tier, lvl, price, color]] of Object.entries(MATS)) I
   desc: { ore: `For smithing. Mined from veins from level ${lvl}, or won from enemies. Can't be bought`, wood: "For handles, bows and staffs. From fallen logs, dead trees, or trees cut with an axe",
     hide: "Leather for Tailor Carly. Beasts drop it", cloth: "Cloth for Tailor Carly. Dropped by people and spiders", herb: "Picked by hand. Alchemist Fizz brews with it", fish: "Caught with a rod. Innkeeper Mara cooks with it" }[mat] };
 const ORE_T = [null, "iron_ore", "mithril_ore", "tidesteel_ore", "drakestone", "inkstone"], HIDE_T = [null, "hide1", "hide2", "hide3", "hide4", "hide5"], CLOTH_T = [null, "cloth1", "cloth2", "cloth3", "cloth4", "cloth5"];
+ITEMS.lucky_lure = { name: "Lucky Lure", price: 0, quest: true, desc: "Angler Tobin's lucky lure, carved by his father. He wants it back" };
 ITEMS.pick_head = { name: "Copper Pick Head", price: 0, quest: true, desc: "Smith Brand's work, for Miner Sange's lesson" };
 ITEMS.pick_handle = { name: "Pick Handle", price: 0, quest: true, desc: "Carpenter Clegg's work, for Miner Sange's lesson" };
 const TOOLS = { pick: ["Miner's Pick", "Mine ore veins. Better ores need a higher level"], axe: ["Woodcutter's Axe", "Chop trees for wood. They grow back"], rod: ["Fishing Rod", "Fish at ripples on lakes and ponds. Tap when the fish bites"] };
@@ -689,8 +690,17 @@ FOES.voltfin = { name: "Voltfin, the Storm Eel", art: "eel", fill: "#3a6a9a", lv
 FOES.bloom = { name: "Mother Bloom", art: "jelly", fill: "rgba(225,120,185,.75)", lv: 10, hp: 1800, atk: 48, xp: 750, coins: [140, 180], speed: 55, r: 28, scale: 2.3, boss: true, ring: true, adds: "jelly",
   throws: { range: 380, speed: 230, cd: 2.4, kind: "bubble", fan: 3 }, drops: [["greater_potion", 1], ["tide_helm", .3], ["tide_gauntlets", .2]] };
 
+// Gulp's Grotto under Angler Tobin's pond (Lee): small water folk, and the fish that stole his rod
+FOES.pond_crab = { name: "Pond Crab", art: "crab", lv: 5, hp: 90, atk: 18, xp: 45, coins: [3, 6], speed: 80, r: 18, scale: 0.8, drops: [["potion", .08]] };
+FOES.pond_eel = { name: "Reed Eel", art: "eel", lv: 6, hp: 70, atk: 20, xp: 50, coins: [3, 7], speed: 200, r: 14, scale: 0.85, drops: [["potion", .08]] };
+FOES.gulp = { id: "gulp", name: "Old Gulp", art: "angler", lv: 7, hp: 1000, atk: 30, xp: 450, coins: [40, 60], speed: 85, r: 34, scale: 2, boss: true,
+  throws: { range: 320, speed: 260, cd: 3.4, kind: "bubble", fan: 3 }, drops: [["potion", 2]] };
+// The first lands drop less coin (Lee): every enemy below level 10 gives 70% of what it used to
+for (const d of Object.values(FOES)) if (d.lv < 10) d.coins = d.coins.map(c => Math.max(1, Math.round(c * 0.7)));
+
 // ---------- mainland enemies: stats climb with level, so armor has to keep up ----------
-const foeAtk = lv => 46 * Math.pow(lv / 10, 1.4), foeCoin = lv => 14 * Math.pow(1.17, lv - 10);
+// Coins are halved up to level 15 and climb back to full by level 35 (Lee: less coin early on)
+const foeAtk = lv => 46 * Math.pow(lv / 10, 1.4), foeCoin = lv => 14 * Math.pow(1.17, lv - 10) * Math.min(1, 0.5 + Math.max(0, lv - 15) / 40);
 function mkFoe(id, name, lv, art, o = {}) {
   const k = o.boss ? [8, 1.4, 12, 12] : o.elite ? [5, 1.3, 6, 6] : [1, 1, 1, 1], c = foeCoin(lv) * k[3];
   FOES[id] = { name, lv, art, speed: 120, r: 18, ...o,
@@ -1531,6 +1541,25 @@ function buildWorld() {
   PAGES.forEach(([x, y], i) => objs.push({ kind: "pickup", thing: "page", quest: "q3", id: "page" + i, x: P(x, y)[0], y: P(x, y)[1] }));
   BERRIES.forEach(([x, y], i) => objs.push({ kind: "bush", thing: "berry", quest: "q12", id: "berry" + i, x: P(x, y)[0], y: P(x, y)[1], regrow: 0 }));
 
+  // Extra hunts per camp: [title, how many, ask, thanks]
+  const MORE_HUNTS = {
+    briar_spider: ["Webbed Trails", 8, "Briar spiders string their webs right across the trails, and my wardens keep walking into them. Clear out eight.", "I can see the trail again. Thank you."],
+    treant: ["Walking Wood", 6, "Some of the trees out there walk. Bramble Treants, older than this camp, and they've started pulling down our fences. Fell six of them.", "Good timber, at least. Clegg would be jealous."],
+    mire_crab: ["Snipped Nets", 8, "Mire crabs keep snipping our fishing nets to ribbons. Eight fewer crabs means eight fewer holes.", "Crab supper tonight, then."],
+    leech: ["Leech Hunt", 8, "Fen leeches the size of a dog lie under the mud and wait. Drag eight of them out.", "Brr. Check your boots before you sleep."],
+    sand_raider: ["Raiders on the Ridge", 8, "Sand raiders keep hitting our water carts from the ridges. Stop eight of them and the carts might get through.", "The carts are rolling again."],
+    dust_golem: ["Dust and Stone", 6, "Dust golems wake whenever the wind blows hard, and they've buried two of my dig sites. Break six.", "Good. Now we just have to dig it all out again."],
+    yeti: ["Cheese Thieves", 8, "Peak yetis keep raiding the lodge stores. They like our cheese. I like our cheese. Eight yetis, please.", "The cheese is safe. Mostly."],
+    ice_troll: ["Troll Toll", 6, "Ice trolls have taken the high bridges and want a toll. We pay in steel. Six of them.", "No more tolls. Brilliant."],
+    magma_golem: ["Molten Rock", 6, "Magma golems are rolling toward the bastion walls. Cool six of them down for good.", "The walls stopped glowing. Good."],
+    ash_knight: ["Knights of Ash", 8, "The Ash Knights were a fine order once. Whatever wears their armor now isn't. Put eight of them to rest.", "May they find something better than ash."],
+    shard_golem: ["Shattered", 6, "Shard golems walk through the camp as if it were empty air. Break six before someone gets cut.", "The camp hums a little quieter."],
+    sentinel: ["Glass Watchers", 6, "Glass sentinels stand at every crossing and stare. Then they shoot. Shatter six.", "I saw it in a crystal. Still nice to hear it."],
+    blot_hound: ["Hounds of the Blot", 8, "Blot hounds hunt by smell, and we all smell of lantern oil. Eight of them.", "The night's a little less loud."],
+    horror: ["The Horrors", 6, "Blot Horrors. I won't describe them. You'll know. Six, and the lantern stays lit.", "You did it. The lantern burns on."],
+    rubber_knight: ["Bounce Back", 6, "Rubber knights bounce right off a shield wall. Six of them, before our shields give out.", "Good. Our shields thank you."],
+    eraser_hound: ["Lost Scouts", 8, "Eraser hounds rub out the trail behind our scouts. Eight hounds, and our scouts come home.", "Every scout came home tonight."],
+  };
   // Each mainland zone: two hunts, its boss, then a pointer to the next camp
   const q17 = QUESTS.find(q => q.id === "q17"); q17.mark = MAINLAND[0].camp;
   QUESTS.find(q => q.id === "q18").mark = [HOLLOW[0], HOLLOW[1] + 100];
@@ -1547,6 +1576,10 @@ function buildWorld() {
         goal: { type: "kill", foe: z.boss, n: 1 }, reward: { xp: FOES[z.boss].xp * 2, coins: Math.round(foeCoin(z.lo + 5) * 30), item: z.qc.item }, mark: z.lair, done: z.qc.done });
     if (nz) QUESTS.push({ id: z.id + "_d", where: `${nz.campName}, in ${nz.name}`, giver: g, title: `On to ${nz.name}`, needs: [z.id + "_c"], text: z.onward,
       goal: { type: "talk", npc: nz.giver[0] }, reward: { xp: FOES[nz.qa.foe].xp * 4, coins: Math.round(foeCoin(nz.lo) * 5) }, mark: nz.camp, done: nz.greet });
+    // Two more hunts per camp (Lee: more quests), for the zone's other two enemies. They open a little later, so the zone lasts longer
+    z.foes.filter(f => f !== z.qa.foe && f !== z.qb.foe && MORE_HUNTS[f]).forEach((f, j) => { const h = MORE_HUNTS[f], pt = z.marks[f] || z.lair;
+      QUESTS.push({ id: z.id + (j ? "_f" : "_e"), where: where(pt), giver: g, title: h[0], needs: [], req: () => player.level >= z.lo + 1 + j * 2, text: h[2], goal: { type: "kill", foe: f, n: h[1] },
+        reward: { xp: FOES[f].xp * 10, coins: Math.round(foeCoin(z.lo + 1 + j * 2) * 10) }, mark: pt, done: h[3] }); });
   });
 
   return makeMap({
@@ -1665,6 +1698,37 @@ function buildTemple() {
     ],
     doors: [{ x: 1470, y: 5166, w: 60, h: 12, to: "world", tx: TEMPLE_OUT[0], ty: TEMPLE_OUT[1] }],
     zoneAt(x, y) { let best = 0, bd = Infinity; ROOMS.forEach((r, i) => { const d = dist(r, x, y); if (d < bd) { bd = d; best = i; } }); const r = ROOMS[best]; return { id: "room" + best, name: r.name, lv: r.lv, armor: r.armor, room: best }; },
+  });
+}
+// ---------- Gulp's Grotto (Lee): a small cave under Angler Tobin's pond. Two chambers, then Old Gulp ----------
+const PROOMS = [
+  { name: "The Shallows", lv: "Under Tobin's pond. Something big lives deeper in", x: 450, y: 1950, w: 500, h: 560 },
+  { name: "Reed Tunnel", lv: "Eels hide in the reeds", x: 200, y: 1150, w: 1000, h: 560 },
+  { name: "Gulp's Deep", lv: "Old Gulp's den", x: 150, y: 130, w: 1100, h: 820 },
+];
+function buildPond() {
+  const floors = [...PROOMS.map(({ x, y, w, h }) => ({ x, y, w, h })), { x: 640, y: 1690, w: 120, h: 280 }, { x: 640, y: 930, w: 120, h: 240 }];
+  const ellipses = [{ x: 700, y: 290, rx: 300, ry: 100, kind: "pool" }, { x: 530, y: 2330, rx: 60, ry: 28, kind: "pool" }, { x: 880, y: 2300, rx: 55, ry: 26, kind: "pool" },
+    { x: 320, y: 1600, rx: 80, ry: 34, kind: "pool" }, { x: 1080, y: 1260, rx: 70, ry: 30, kind: "pool" }];
+  const circles = [[380, 640], [1020, 640], [300, 1300], [1100, 1580]].map(([x, y]) => ({ x, y, r: 22, kind: "pillar" }));
+  const S = (room, foe, x, y, r, n, extra) => ({ room, foe, x, y, r, n, respawn: 1e9, ...extra });
+  const spawners = [
+    S(0, "pond_crab", 580, 2070, 50, 2), S(0, ["pond_crab", "pond_eel"], 830, 2090, 50, 2),
+    S(1, "pond_eel", 450, 1400, 90, 3), S(1, ["pond_crab", "pond_eel"], 960, 1450, 90, 3),
+    S(2, "gulp", 700, 520, 0, 1, { fixed: true, questOnly: "fish_r" }),
+  ];
+  const gate = (room, y, label) => ({ x: 640, y, w: 120, h: 40, kind: "coralgate", room, label });
+  const rects = [gate(0, 1760, "Clear the Shallows to open"), gate(1, 1000, "Clear the Reed Tunnel to open")];
+  const inFloor = (x, y) => floors.some(f => x > f.x + 20 && x < f.x + f.w - 20 && y > f.y + 20 && y < f.y + f.h - 20) && !ellipses.some(e => ((x - e.x) / (e.rx + 20)) ** 2 + ((y - e.y) / (e.ry + 20)) ** 2 < 1);
+  const decor = [];
+  for (let i = 0; i < 700; i++) { const x = R() * 1400, y = R() * 2600; if (!inFloor(x, y)) continue; const k = R(); decor.push({ x, y, kind: k < 0.4 ? "weed" : k < 0.55 ? "shell" : k < 0.75 ? "puddle" : "crack", s: R() }); }
+  const dist = (r, x, y) => Math.hypot(Math.max(r.x - x, 0, x - r.x - r.w), Math.max(r.y - y, 0, y - r.y - r.h));
+  return makeMap({
+    id: "pond", name: "Gulp's Grotto", dungeon: true, w: 1400, h: 2600, floors, ellipses, circles, spawners, decor, rects,
+    IN: [700, 2440], OUT: [0, 0], rooms: PROOMS, deathText: "at the grotto entrance", exitText: "Back up to the pond", prize: [[], []],
+    objs: [{ kind: "object", id: "dexit", art: "portal", x: 700, y: 780, label: "Leave", name: "Way out", hidden: true, endOnly: true }],
+    doors: [{ x: 670, y: 2496, w: 60, h: 12, to: "world", tx: 0, ty: 0 }],
+    zoneAt(x, y) { let best = 0, bd = Infinity; PROOMS.forEach((r, i) => { const d = dist(r, x, y); if (d < bd) { bd = d; best = i; } }); const r = PROOMS[best]; return { id: "proom" + best, name: r.name, lv: r.lv, room: best }; },
   });
 }
 // ---------- The Hollow (second dungeon): a dark forest trail. Light lanterns to see, rest and save your place ----------
@@ -2225,7 +2289,7 @@ QUESTS.push({ id: "rq_keep", where: "Inkstone Keep, through the gate on its sout
   text: "The Keep's gate has opened. He knows you're coming. Fight through his guard, past the Twins, and up to the Blank Throne. Erase the Eraser King, and the map is ours again.",
   done: "You did it. Listen: no more scrubbing sounds. Just pens scratching, everywhere, drawing the world back in. Legend.",
   goal: { type: "kill", foe: "eraserking", n: 1 }, reward: { xp: FOES.eraserking.xp, coins: Math.round(foeCoin(50) * 60), item: "greater_potion", qty: 5 } });
-const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: buildTemple(), hollow: buildHollow(), wreck: buildWreck(), mine: buildMine(), summit: buildSummit(), sky: buildSky(), library: buildLibrary(), keep: buildKeep() };
+const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: buildTemple(), pond: buildPond(), hollow: buildHollow(), wreck: buildWreck(), mine: buildMine(), summit: buildSummit(), sky: buildSky(), library: buildLibrary(), keep: buildKeep() };
 // Named quest bosses out in the world only show up once you've taken their quest (Lee)
 for (const s of MAPS.world.spawners) { const q = !Array.isArray(s.foe) && QUESTS.find(q => q.goal.type === "kill" && q.goal.n === 1 && q.goal.foe === s.foe); if (q) s.quest = q.id; }
 // ---------- Villagers going about their day (Lee): cooks, fishers, card games, drinkers, kids at play and folk out walking ----------
@@ -2428,6 +2492,25 @@ const CRAFT_SPOTS = { sange: VAT(1112, 410), clegg: VAT(700, 872), vein: VAT(133
   const sell = (zid, t) => { const z = MAINLAND.find(m => m.id === zid), o = z && W.objs.find(o => o.id === z.merchant[0]); if (o && o.shop && !o.shop.includes("pattern_" + t)) o.shop.push("pattern_" + t); };
   sell("canyon", 3); sell("peaks", 3); sell("ember", 4); sell("shard", 4); sell("blot", 5); sell("reach", 5);
 })();
+// ---------- Angler Tobin (Lee): fishes the biggest pond in Margin Woods and lost his rod to Old Gulp ----------
+const TOBIN = (() => {
+  const W = MAPS.world, e = W.ellipses.filter(e => e.kind === "pond" && W.zoneAt(e.x, e.y).id === "woods").sort((a, b) => b.rx * b.ry - a.rx * a.ry)[0];
+  const shore = (a, pad) => [Math.round(e.x + Math.cos(a) * (e.rx + pad)), Math.round(e.y + Math.sin(a) * (e.ry + pad * 0.8))];
+  const free = ([x, y], gap) => !blocked(W, x, y, 18) && W.riverGap(x, y) > 40 && !W.objs.some(o => Math.hypot(o.x - x, o.y - y) < gap);
+  let at = null, dive = null, aT = 0;
+  for (let i = 0; i < 24 && !at; i++) { const a = Math.PI / 2 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.26; const pt = shore(a, 40); if (free(pt, 110)) { at = pt; aT = a; } }
+  at ||= shore(Math.PI / 2, 40);
+  for (let i = 1; i < 16 && !dive; i++) for (const sg of [1, -1]) { const a = aT + sg * (0.5 + i * 0.12), pt = shore(a, 34); if (!dive && free(pt, 90) && Math.hypot(pt[0] - at[0], pt[1] - at[1]) > 130) dive = { pt, a }; }
+  dive ||= { pt: shore(aT + 0.8, 34), a: aT + 0.8 };
+  const tob = npc("tobin", "Angler Tobin", ...at, "#4a6a5a", "Old Gulp's been in this pond longer than I have. Bigger, too.");
+  tob.fishing = { reel: 0, look: { scale: 1 }, x: at[0], y: at[1], bx: Math.round(e.x + Math.cos(aT) * (e.rx - 40)), by: Math.round(e.y + Math.sin(aT) * (e.ry - 30)), t: 0 };
+  const [dx, dy] = dive.pt;
+  W.objs.push(tob, { kind: "object", art: "dive", id: "pond_dive", name: "Dive into the pond", label: "Dive", x: dx, y: dy,
+    wx: Math.round(e.x + Math.cos(dive.a) * (e.rx - 50)), wy: Math.round(e.y + Math.sin(dive.a) * (e.ry - 36)), get hidden() { return quests.fish_r?.state !== "active"; } });
+  const P2 = MAPS.pond; P2.OUT = [dx, dy + 30]; P2.doors[0].tx = dx; P2.doors[0].ty = dy + 30;
+  const spot = W.objs.filter(o => o.node === "fish" && Math.hypot(o.x - e.x, o.y - e.y) < e.rx + 120)[0];
+  return { at, dive: [dx, dy], spot: spot ? [spot.x, spot.y] : at };
+})();
 const perchSpot = () => MAPS.world.objs.filter(o => o.node === "fish" && o.item === "perch").sort((a, b) => Math.hypot(a.x - VZ.x - 600, a.y - VZ.y - 500) - Math.hypot(b.x - VZ.x - 600, b.y - VZ.y - 500))[0];
 // The pick and axe quest (from level 5), then the rod and Mara's kitchen
 QUESTS.push(
@@ -2447,13 +2530,19 @@ QUESTS.push(
   { id: "craft_e", giver: "sange", title: "First Swing", needs: ["craft_d"], where: "The copper vein outside the east gate", goal: { type: "collect", thing: "mine", n: 3 }, onAccept: () => startLesson(),
     text: "Follow me to the copper vein outside the east gate. Watch how I swing, then mine 3 ore yourself.", reward: { xp: 400, coins: 150 }, mark: CRAFT_SPOTS.vein,
     done: "Not bad at all! Veins come back about three minutes after you mine them. Copper and iron need level 5, mithril 10, tidesteel 20, drakestone 30 and inkstone 40. Ore can't be bought, only mined or won from enemies. Brand, Carly, Clegg and Fizz can all craft for you now." },
-  { id: "fish_a", giver: "mara", title: "Catch of the Day", needs: ["craft_c"], where: "Inkwell Village, Clegg's workshop", goal: { type: "talk", npc: "clegg" },
-    text: "My stew pot's empty and my fisherman ran off to the mainland. Ask Carpenter Clegg to make you a fishing rod, would you?", reward: { xp: 100, tool: "rod" }, mark: CRAFT_SPOTS.clegg,
-    done: "A rod for Mara's fish? Easy. Here, the line's already strung. Cast at the ripples, wait for the splash, then pull!" },
-  { id: "fish_b", giver: "clegg", title: "Fresh Fish for Mara", needs: ["fish_a"], where: "The lake south of Inkwell Village", goal: { type: "mats", need: { perch: 3 } }, turnin: "mara", take: { perch: 3 },
-    text: "Catch 3 Inkfin Perch at the ripples on the lake and bring them to Innkeeper Mara. Cast, wait for the splash, then tap!", reward: { xp: 250, item: "grilled_perch", qty: 3 }, mark: [perchSpot().x, perchSpot().y],
+  { id: "fish_a", giver: "mara", title: "Catch of the Day", needs: ["craft_c"], where: "Angler Tobin's pond, western Margin Woods", goal: { type: "talk", npc: "tobin" },
+    text: "My stew pot's empty and my fisherman ran off to the mainland. Old Tobin fishes the big pond out in the Margin Woods. Ask him how a body gets a fishing rod round here.", reward: { xp: 100 }, mark: TOBIN.at,
+    done: "Mara sent you? Ha! I'd lend you a rod gladly, if I still had one. Sit down a moment and I'll tell you what happened." },
+  { id: "fish_r", giver: "tobin", title: "The One That Got Away", needs: ["fish_a"], where: "Gulp's Grotto, under Tobin's pond", goal: { type: "kill", foe: "gulp", n: 1 }, take: { lucky_lure: 1 },
+    text: "This morning Old Gulp, the biggest fish in this pond, took my rod clean out of my hands and dragged it down to his grotto under the water. Get it back and the rod is yours. I only want the Lucky Lure on the end of it. My father carved it. The ripples by the shore are where he went down.",
+    reward: { xp: 500, coins: 20 }, mark: TOBIN.dive,
+    done: "My Lucky Lure! Not a scratch on it. Keep the rod, you've earned it. Cast at the ripples, wait for the splash, then pull." },
+  { id: "fish_b", giver: "tobin", title: "Fresh Fish for Mara", needs: ["fish_r"], where: "Tobin's pond, or any lake or pond", goal: { type: "mats", need: { perch: 3 } }, turnin: "mara", take: { perch: 3 },
+    text: "Now, Mara's stew pot. Catch 3 Inkfin Perch at the ripples and take them back to her. Cast, wait for the splash, then tap!", reward: { xp: 250, item: "grilled_perch", qty: 3 }, mark: TOBIN.spot,
     done: "Beautiful fish! Now I'll teach you my kitchen. Bring me fish and herbs any time and we'll cook something that keeps you going." },
 );
+// Early quests pay less coin (Lee): the first lands hand out about 60% of what they used to
+for (const q of QUESTS) if (q.reward?.coins && /^(q\d+|pet_[abc]|craft_[a-e])$/.test(q.id)) q.reward.coins = Math.max(10, Math.round(q.reward.coins * 0.6 / 5) * 5);
 // ---------- Gathering: mine, chop, pick, fish (Lee) ----------
 const pouchCap = () => [60, 120, 250][player.pouch || 0];
 const matCount = () => Object.entries(player.bag).reduce((a, [id, n]) => a + (ITEMS[id] && ITEMS[id].mat ? n : 0), 0);
@@ -3119,6 +3208,8 @@ function load() {
     player.gearConv = s.gearConv || null; if (player.cls && player.gearConv !== player.cls) convertGear();
     Object.assign(quests, s.quests || {}); taken = s.taken || []; found = s.found || found; if (s.bounty && s.bounty.boards) bounty = s.bounty;
     map = MAPS[player.map] || MAPS.world;
+    // The grotto starts fresh each visit, so a save made inside it wakes up back at the pond
+    if (map.id === "pond") { map = MAPS.world; player.map = "world"; [player.x, player.y] = MAPS.pond.OUT; }
   } catch {}
 }
 function setRisen(quiet) {
@@ -3398,6 +3489,7 @@ function killFoe(f) {
   if (f.type === "squiggle" && quests.q2?.state === "active" && Math.random() < 0.5) questEvent("collect", "ink");
   if (f.type === "spider" && quests.q11?.state === "active" && Math.random() < 0.5) questEvent("collect", "silk");
   if (d.boss) banner(`${d.name} defeated!`, "");
+  if (f.type === "gulp") pondPrize();
   if (tr("drink")) player.hp = Math.min(stats().maxHp, player.hp + stats().maxHp * 0.02 * tr("drink"));
   if (f.room != null && !map.foes.some(o => o.room === f.room)) openGate(f.room);
   if (d.final) {
@@ -3407,6 +3499,12 @@ function killFoe(f) {
     setTimeout(() => banner(`${map.name} is cleared!`, "A chest and a way out have appeared"), 3000);
   }
   save();
+}
+// Old Gulp drops Tobin's rod with the Lucky Lure still on it
+function pondPrize() {
+  addItem("lucky_lure", 1, true); if (!hasTool("rod")) player.tools.push("rod");
+  for (const o of map.objs) if (o.endOnly) o.hidden = false;
+  setTimeout(() => banner("Tobin's rod is yours!", "The Lucky Lure is still on it. A way out has appeared"), 2600);
 }
 // A chamber is cleared when its last enemy falls: its gate crumbles
 function openGate(room) {
@@ -3657,7 +3755,7 @@ const TRACKS = {
   battle: { step: 0.2, root: 196, scale: [0, 2, 3, 5, 7, 8, 10, 12], lead: "sawtooth", vol: 0.016, pat: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], patB: [7, 7, 6, 5, 4, 4, 3, 2, 3, 3, 2, 1, 0, 1, 2, 4], bass: [0, 5, 3, 4], bassWave: "square", perc: [1, 2, 1, 2, 1, 2, 1, 1] },
 };
 const ZONE_TRACK = { village: "village", meadow: "meadow", glade: "meadow", woods: "forest", thorn: "forest", hills: "hills", canyon: "hills", fens: "water", sea: "water", peaks: "frost", ember: "ember", shard: "crystal", blot: "dread", reach: "dread", keep: "dread" };
-const MAP_TRACK = { home: "hearth", inn: "hearth", temple: "deep", hollow: "forest", wreck: "shanty", mine: "mine", summit: "frost", sky: "sky", library: "library", keep: "dread" };
+const MAP_TRACK = { home: "hearth", inn: "hearth", temple: "deep", pond: "deep", hollow: "forest", wreck: "shanty", mine: "mine", summit: "frost", sky: "sky", library: "library", keep: "dread" };
 let curTrack = "";
 function pickTrack() {
   const p = player;
@@ -3810,6 +3908,7 @@ function interact(o) {
     save(); return;
   }
   if (o.id === "temple_exit" || o.id === "dexit") return goTo("world", ...map.OUT);
+  if (o.id === "pond_dive") return goTo("pond", ...MAPS.pond.IN);
   if (o.id === "letter") return openPanel(`<h2>A letter on the table</h2><p>"Welcome home. The meadow has gone scribbly again, and I could use a steady hand. Come find me by the well."</p><p class="soft">Elder Quill</p><div class="row"><button data-act="close" type="button">Put it down</button></div>`);
   if (o.id === "stairs") return openPanel(`<h2>Upstairs</h2><p>The rooms upstairs are being drawn. They open in a later update.</p><div class="row"><button data-act="close" type="button">OK</button></div>`);
 }
@@ -4199,7 +4298,7 @@ function showChar(pick) {
 const GRID = 2000, GCOLS = "ABCDEFGHIJKL";
 const gref = (x, y) => `${GCOLS[Math.max(0, Math.min(11, Math.floor(x / GRID)))]}${Math.max(1, Math.min(16, Math.floor(y / GRID) + 1))}`;
 function worldPos() {
-  const pos = { world: [player.x, player.y], home: P(3460, 9060), inn: P(4090, 9610), temple: LAKE, hollow: HOLLOW, keep: [12000, ROWS[2]], ...Object.fromEntries(DGL.map(g => [g.id, g.pos])) };
+  const pos = { world: [player.x, player.y], home: P(3460, 9060), inn: P(4090, 9610), temple: LAKE, pond: MAPS.pond.OUT, hollow: HOLLOW, keep: [12000, ROWS[2]], ...Object.fromEntries(DGL.map(g => [g.id, g.pos])) };
   return pos[player.map] || [player.x, player.y];
 }
 function npcWorldPos(n) { return MAPS.inn.objs.includes(n) ? P(4090, 9620) : MAPS.home.objs.includes(n) ? P(3460, 9060) : [n.x, n.y]; }
@@ -5025,10 +5124,10 @@ document.getElementById("hud").addEventListener("click", () => {
     { rescue: () => { if (player.level < 12) { player.level = 12; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["pet_a", "pet_b", "pet_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
         if (!player.pets.includes("pup")) player.pets.push("pup"); if (!player.petNames.pup) player.petNames.pup = "Inky"; const c = MAPS.world.ZONES.find(z => z.id === "thorn_camp");
         goTo("world", c.cx + 80, c.cy + 120, true); save(); renderTracker(); closePanel(); },
-      kit: () => { player.tools = ["pick", "axe", "rod"]; for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_b"]) quests[id] = { state: "done", n: 0, at: Date.now() };
+      kit: () => { player.tools = ["pick", "axe", "rod"]; for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) quests[id] = { state: "done", n: 0, at: Date.now() };
         player.recipes = [3, 4, 5].map(t => "pattern_" + t); player.pouch = 2; for (const id of Object.keys(MATS)) player.bag[id] = 40; player.coins += 200000;
         save(); renderTracker(); closePanel(); banner("Crafting kit", "Every tool, pattern and plenty of materials"); },
-      sange: () => { if (player.level < 5) { player.level = 5; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_b"]) delete quests[id];
+      sange: () => { if (player.level < 5) { player.level = 5; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) delete quests[id];
         player.tools = []; goTo("world", CRAFT_SPOTS.sange[0] - 60, CRAFT_SPOTS.sange[1] + 40, true); save(); renderTracker(); closePanel(); },
       lv7: () => {
       player.level = 7; player.xp = xpToNext(7) - 1; player.hp = stats().maxHp;
@@ -6498,9 +6597,9 @@ function drawObj(o) {
   if (o.kind === "node") return drawNode(o);
   if (o.kind === "npc") {
     shadow(o.x, o.y, 12);
-    const L = npcLook(o), fc = o.moving ? o.f : player.x < o.x ? -1 : 1, H = HATS[L.hat[0]];
+    const L = npcLook(o), fs = o.fishing, fc = o.moving ? o.f : fs && Math.hypot(player.x - o.x, player.y - o.y) > 150 ? (fs.bx < o.x ? -1 : 1) : player.x < o.x ? -1 : 1, H = HATS[L.hat[0]];
     stickFigure(o.x, o.y, { w: 2.4, scale: L.scale, facing: fc, moving: o.moving, walk: o.walk || 0, hair: L.hair, lashes: L.lashes, ink: INK, filledHead: false, body: { color: L.body, long: L.long, robe: L.robe, trim: L.trim, belt: L.belt, chain: L.chain, apron: L.apron, straps: L.straps },
-      cape: L.cape, sleeves: L.sleeves, legs: L.legs, feet: "#4a3424", beard: L.beard, hat: hy => H(L.hat[1], fc, hy, L.hat[2] || {}), weapon: o.swing > 0 ? (hx, hy, f) => drawTool("pick", hx, hy, f, o.swing) : L.tool ? (hx, hy, f) => npcTool(L.tool, hx, hy, f) : null });
+      cape: L.cape, sleeves: L.sleeves, legs: L.legs, feet: "#4a3424", beard: L.beard, hat: hy => H(L.hat[1], fc, hy, L.hat[2] || {}), weapon: o.swing > 0 ? (hx, hy, f) => drawTool("pick", hx, hy, f, o.swing) : fs ? (hx, hy, f) => { fs.t = clock; folkTool(fs, "rod", hx, hy, f, 0.45); } : L.tool ? (hx, hy, f) => npcTool(L.tool, hx, hy, f) : null });
     ctx.font = `16px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = SOFT; ctx.fillText(o.name, o.x, o.y + 18);
     if (o.sayT > 0 && o.say) { const y = o.y - 104; ctx.font = `15px ${FONT}`; const w = ctx.measureText(o.say).width + 14;
       ctx.globalAlpha = Math.min(1, o.sayT * 2); ctx.fillStyle = "#fffdf6"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
@@ -6571,6 +6670,14 @@ function drawObj(o) {
       ctx.beginPath(); ctx.ellipse(0, 0, 15, 26, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1; for (let y = -18; y <= 18; y += 6) line(-13, y, 13, y + 4);
       ctx.fillStyle = INK; ctx.beginPath(); ctx.ellipse(-3, -12, 6, 5, 0, 0, 7); ctx.fill(); ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.arc(-1, -13, 1.6, 0, 7); ctx.fill(); ctx.restore();
       ctx.strokeStyle = `rgba(201,154,23,${0.5 + 0.5 * Math.sin(clock * 4)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y - 10, 60, 24, 0, 0, 7); ctx.stroke();
+    } else if (o.art === "dive") {
+      // Ripples and bubbles where Old Gulp dragged the rod down
+      const X = o.wx, Y = o.wy;
+      ctx.fillStyle = "rgba(20,40,70,.45)"; ctx.beginPath(); ctx.ellipse(X, Y, 18, 7, 0, 0, 7); ctx.fill();
+      for (let i = 0; i < 3; i++) { const p = (clock * 0.5 + i / 3) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.85 * (1 - p)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(X, Y, 12 + p * 44, 5 + p * 17, 0, 0, 7); ctx.stroke(); }
+      ctx.fillStyle = "rgba(255,255,255,.85)"; for (let i = 0; i < 4; i++) { const p = (clock * 0.8 + i * 0.27) % 1; ctx.beginPath(); ctx.arc(X + Math.sin(i * 2.3 + clock) * 8, Y - p * 26, 2 + i % 2, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = `rgba(201,154,23,${0.5 + 0.5 * Math.sin(clock * 4)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(o.x, o.y - 6, 34, 14, 0, 0, 7); ctx.stroke();
+      ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = SOFT; ctx.fillText("Gulp's Grotto", o.x, o.y + 18);
     } else if (o.art === "portal") {
       for (let i = 0; i < 4; i++) { ctx.strokeStyle = `rgba(110,200,220,${0.9 - i * 0.2})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(o.x, o.y - 40, 26 - i * 5 + Math.sin(clock * 4 + i) * 2, 40 - i * 7, 0, clock * (1 + i * 0.4), clock * (1 + i * 0.4) + 4.6); ctx.stroke(); }
       ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = "#e9e4d8"; ctx.fillText("Way out", o.x, o.y + 18);
