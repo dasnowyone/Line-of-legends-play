@@ -47,6 +47,7 @@ body {
 .ccard canvas { width: 100%; max-width: 150px; height: auto; }
 .ccard b { font-size: 22px; color: var(--cc); } .ccard small { font-size: 14px; color: var(--ink-soft); } .ccard em { font-style: normal; font-size: 13px; border: 1px solid var(--ink-soft); border-radius: 8px; padding: 0 6px; }
 .ccard span { font-size: 14px; line-height: 1.25; margin-top: 4px; }
+.ccard .perk { font-weight: normal; font-size: 14px; line-height: 1.25; margin-top: 6px; padding: 4px 6px; border-radius: 8px; background: color-mix(in srgb, var(--cc) 16%, transparent); color: var(--cc); }
 .bar > i { display: block; height: 100%; width: 50%; background: var(--blood); transition: width .15s; }
 .bar.xp { height: 5px; border-width: 1px; }
 .bar.xp > i { background: var(--xp); }
@@ -106,6 +107,7 @@ body.desk #tracker { width: max-content; max-width: 250px; font-size: 17px; }
 #btnDodge { right: 105px; bottom: 19px; width: 54px; height: 54px; font-size: 15px; }
 #btnSkill { right: 80px; bottom: 80px; width: 54px; height: 54px; font-size: 15px; }
 #btnPotion { right: 19px; bottom: 105px; width: 54px; height: 54px; font-size: 15px; }
+#btnMana { right: 23px; bottom: 166px; width: 46px; height: 46px; font-size: 13px; } #btnMana[hidden] { display: none; }
 /* Lee: phone controls take less room. Locked skills stay hidden, and small phones shrink the whole cluster */
 #pad, #pad2 { transform-origin: 100% 100%; scale: var(--padk, 1); }
 #btnSkill[hidden] { display: none; }
@@ -153,7 +155,7 @@ body.skedit #skillcol .nb.pick { outline: 3px solid var(--gold); outline-offset:
 .nb::before { content: ""; position: absolute; top: -6px; left: 50%; width: 24px; height: 10px; margin-left: -12px; background: rgba(240,220,140,.8); transform: rotate(-6deg); pointer-events: none; z-index: 1; }
 .nb .ic { position: absolute; left: 50%; top: 7px; width: 28px; height: 28px; margin-left: -14px; pointer-events: none; }
 .nb .ic svg { width: 100%; height: 100%; display: block; fill: none; stroke: currentColor; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: url(#pencilfx); overflow: visible; }
-.nb .ic .fill { fill: rgba(192,57,43,.55); stroke: none; }
+.nb .ic .fill { fill: rgba(192,57,43,.55); stroke: none; } .nb .ic .fill.mana { fill: rgba(59,111,182,.6); }
 .nb .l { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; }
 .nb .n { position: absolute; top: 2px; right: 5px; color: #c0392b; font-size: 13px; letter-spacing: 1px; line-height: 1; pointer-events: none; }
 .nb .n s { text-decoration-thickness: 1.5px; }
@@ -175,7 +177,7 @@ body.skedit #skillcol .nb.pick { outline: 3px solid var(--gold); outline-offset:
 #pad2 button.nb { overflow: visible; }
 #pad2 .nb .lab { position: absolute; right: calc(100% + 7px); top: 50%; transform: translateY(-50%); font-size: 15px; color: #2c3e7a; white-space: nowrap; pointer-events: none;
   text-shadow: 0 0 3px #fffef8, 0 0 3px #fffef8, 0 0 4px #fffef8; }
-body.desk #btnDodge, body.desk #btnSkill, body.desk #btnPotion { display: none; }
+body.desk #btnDodge, body.desk #btnSkill, body.desk #btnPotion, body.desk #btnMana { display: none; }
 .cd { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(rgba(0,0,0,.35) var(--p, 0%), transparent 0); pointer-events: none; }
 #banner {
   top: 28%; left: 0; right: 0; text-align: center; pointer-events: none; opacity: 0; transition: opacity .4s;
@@ -323,6 +325,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
 </div>
 <div id="pad" class="ui">
   <button id="btnPotion" class="nb" type="button" aria-label="Potion"><span class="ic"></span><span class="l">Potion</span><span class="n" id="potCount"></span><i class="cd" id="cdPotion"></i></button>
+  <button id="btnMana" class="nb" type="button" aria-label="Mana potion" hidden><span class="ic"></span><span class="l">Mana</span><span class="n" id="manaCount"></span><i class="cd" id="cdMana"></i></button>
   <button id="btnSkill" class="nb" type="button"><span class="ic"></span><span class="l">Whirl</span><i class="cd" id="cdSkill"></i></button>
   <button id="btnDodge" class="nb" type="button"><span class="ic"></span><span class="l">Dodge</span><i class="cd" id="cdDodge"></i></button>
   <button id="btnAttack" class="nb" type="button"><span class="ic"></span><span class="l">Attack</span></button>
@@ -469,6 +472,9 @@ const ITEMS = {
   tide_boots: { name: "Tidecaller Treads", slot: "feet", def: 8, hp: 14, lvl: 10, look: { color: "#2f7a86" } },
   greater_potion: { name: "Greater Ink Potion", price: 140, heal: 0.75, lvl: 6, desc: "Restores 75% health, level 6+" },
   potion: { name: "Ink Potion", price: 40, heal: 0.4, desc: "Restores 40% health" },
+  // Mana potions (Lee): spells cost mana, so mages carry these
+  mana_potion: { name: "Mana Ink", price: 40, mana: 0.5, desc: "Restores 50% mana. For mages" },
+  greater_mana: { name: "Greater Mana Ink", price: 140, mana: 1, lvl: 15, desc: "Restores all your mana, level 15+. For mages" },
   stew: { name: "Inn Stew", price: 12, heal: 0.25, desc: "Restores 25% health" },
 };
 const BASE_LOOKS = {
@@ -972,7 +978,7 @@ function P(x, y) {
 }
 const LAKE = P(5900, 7700);
 const dirWord = (dx, dy) => ["east", "northeast", "north", "northwest", "west", "southwest", "south", "southeast"][Math.round(((Math.atan2(-dy, dx) * 180 / Math.PI) + 360) % 360 / 45) % 8];
-const POTS = ["potion", "greater_potion"];
+const POTS = ["potion", "greater_potion", "mana_potion", "greater_mana"];
 const MITHRIL = ["mithril_blade", "mithril_helm", "mithril_gauntlets", "mithril_plate", "mithril_sabatons", "mithril_warblade", "greatsword"];
 const TIDESTEEL = ["tidesteel_sword", "tidesteel_helm", "tidesteel_plate", "tidesteel_gauntlets", "tidesteel_halberd", "tidesteel_sabatons"];
 const DRAGON = ["dragon_blade", "dragon_helm", "dragon_plate", "dragon_gauntlets", "dragon_axe", "dragon_greaves"];
@@ -1285,7 +1291,7 @@ function buildWorld() {
        ...Object.keys(DYES).filter(k => !DYES[k][2]).map(k => "dye_" + k)]), classShop: false },
     { ...npc("ash", "Fletcher Ash", ...at(3380, 9165), "#5a7a3a", "Bows, crossbows and good leather. Hunters, keep your distance and let the string do the work.",
       ["h_practice_bow", "h_hunting_bow", "h_shortbow", "h_yew_longbow", "h_iron_crossbow", "h_iron_helm", "h_chain_shirt", "h_iron_gauntlets", "h_iron_greaves", "h_steel_helm", "h_steel_plate", "h_steel_gauntlets", "h_steel_sabatons"]), classShop: false },
-    { ...npc("fizz", "Alchemist Fizz", ...at(4296, 9452), "#7a5aa6", "Potions! Freshly bottled, mostly safe. And wands, for the sparky types.", ["potion", "greater_potion", "m_apprentice_wand", "m_oak_staff", "m_bone_wand", "m_quartz_staff", "m_runed_wand"]), classShop: false },
+    { ...npc("fizz", "Alchemist Fizz", ...at(4296, 9452), "#7a5aa6", "Potions! Freshly bottled, mostly safe. And wands, for the sparky types.", ["potion", "greater_potion", "mana_potion", "greater_mana", "m_apprentice_wand", "m_oak_staff", "m_bone_wand", "m_quartz_staff", "m_runed_wand"]), classShop: false },
     { ...npc("wick", "Little Wick", ...at(3660, 9170), "#e0742a", "Inky's the best pup in the whole world. Don't tell the cat."), kid: true },
     npc("dot", "Farmer Dot", ...at(5110, 9120), "#d4a22a", "Mind the meadow. Those dashes nip at your ankles, and they never travel alone."),
     npc("pip", "Ranger Pip", ...at(2450, 5620), "#3f7a3a", "The woods are thicker than they look. So are the wolves. Don't go north without iron on you.", ["potion", "hunter_spear", "militia_spear", "bearded_axe", "knight_sword", "leather_vest", "leather_boots", "iron_helm", "iron_gauntlets", "iron_greaves", "chain_shirt", "ranger_hat", "scout_jerkin", "studded_coat", "archer_bracers", "moccasins", "iron_circlet", "iron_knuckles", "runner_greaves"]),
@@ -2513,6 +2519,54 @@ const TOBIN = (() => {
   const spot = W.objs.filter(o => o.node === "fish" && Math.hypot(o.x - e.x, o.y - e.y) < e.rx + 120)[0];
   return { at, dive: [dx, dy], spot: spot ? [spot.x, spot.y] : at };
 })();
+// ---------- Class trainers (Lee): a training ground just west of Inkwell Village, one trainer per class ----------
+const CLASS_CHANGE_GEMS = 250;
+const TRAIN = (() => {
+  const W = MAPS.world, V = W.ZONES.find(z => z.id === "village"), cx = V.x - 330, cy = V.y + 470;
+  // a cleared yard: no trees or rocks on the training ground
+  const gone = new Set(W.circles.filter(c => Math.hypot(c.x - cx, c.y - cy) < 330)); W.circles = W.circles.filter(c => !gone.has(c));
+  for (const [k, a] of W.grid) { const b = a.filter(o => !gone.has(o)); if (b.length !== a.length) W.grid.set(k, b); }
+  const spot = (x, y) => { for (let r = 0; r < 260; r += 20) for (let a = 0; a < 6.28; a += 0.7) { const px = Math.round(x + Math.cos(a) * r), py = Math.round(y + Math.sin(a) * r);
+    if (!blocked(W, px, py, 22) && W.riverGap(px, py) > 40 && !W.objs.some(o => Math.hypot(o.x - px, o.y - py) < 110)) return [px, py]; } return [x, y]; };
+  const T = { rook: spot(cx - 170, cy + 10), kestrel: spot(cx, cy - 50), orrin: spot(cx + 170, cy + 10) };
+  W.objs.push(Object.assign(npc("rook", "Sergeant Rook", ...T.rook, "#a0503a", "Plate on, chin down, swing through. That's the whole lesson. The rest is practice."), { trainer: "warrior" }),
+    Object.assign(npc("kestrel", "Huntress Kestrel", ...T.kestrel, "#3f7a3a", "Watch the wind, watch the grass. The wolf you see is never the one that bites."), { trainer: "hunter" }),
+    Object.assign(npc("orrin", "Archmage Orrin", ...T.orrin, "#2a4a8a", "Ink remembers every word you write with it. Spend it wisely, it does not refill quickly."), { trainer: "mage" }));
+  W.props.push({ kind: "dummy", x: T.rook[0] - 110, y: T.rook[1] - 50 }, { kind: "dummy", x: T.rook[0] - 90, y: T.rook[1] + 80 }, { kind: "archtarget", x: T.kestrel[0] + 10, y: T.kestrel[1] - 90 },
+    { kind: "runestone", x: T.orrin[0] + 60, y: T.orrin[1] - 30 }, { kind: "yardsign", x: cx, y: cy + 110 });
+  // Nothing hunts on the training ground
+  W.SAFE = [{ x: cx, y: cy, r: 360 }];
+  for (const sp of W.spawners) { const d = Math.hypot(sp.x - cx, sp.y - cy); if (d < 700) { const k = 700 / Math.max(1, d); sp.x = Math.round(cx + (sp.x - cx) * k); sp.y = Math.round(cy + (sp.y - cy) * k); } }
+  // Huntress Kestrel's wolf pup, cornered by a pack in Margin Woods
+  const Z = W.ZONES.find(z => z.id === "woods"); let pup = [Z.x + Z.w * 0.6, Z.y + Z.h * 0.55];
+  for (let i = 0; i < 400; i++) { const x = Z.x + Z.w * (0.45 + 0.3 * R()), y = Z.y + Z.h * (0.4 + 0.3 * R()); if (!blocked(W, x, y, 30) && W.riverGap(x, y) > 80 && !W.objs.some(o => Math.hypot(o.x - x, o.y - y) < 300)) { pup = [Math.round(x), Math.round(y)]; break; } }
+  W.objs.push({ kind: "pickup", thing: "wolfpup", quest: "cls_h2", id: "wolfpup", x: pup[0], y: pup[1] });
+  const pack = { foe: "wolf", x: pup[0] + 90, y: pup[1] + 20, r: 110, n: 3, respawn: 60, questOnly: "cls_h2", timer: 0, live: 0, back: [] }; W.spawners.push(pack);
+  return { ...T, center: [cx, cy], pup, pack };
+})();
+const CLS_Q = (id, giver, c, lv, needs, title, goal, text, reward, done, extra) => ({ id, giver, title, needs, req: () => player.cls === c && player.level >= lv, where: extra?.where || "The wilds around Inkwell Village", goal, text, reward, done, ...extra });
+QUESTS.push(
+  CLS_Q("cls_w1", "rook", "warrior", 3, [], "Hold the Line", { type: "kill", foe: "triangle", n: 6 }, "A warrior's first job is to stand there and not fall over. Sharp Corners roam the meadow. Break six of them and come back standing.", { xp: 200, coins: 20 }, "Still standing. Good. Most don't, the first time.", { where: "Blank Meadow" }),
+  CLS_Q("cls_w2", "rook", "warrior", 6, ["cls_w1"], "Bandit Blades", { type: "kill", foe: "bandit", n: 6 }, "Road Bandits think plate is slow. Show six of them it isn't.", { xp: 450, coins: 40, item: "potion", qty: 3 }, "They'll think twice. Well, the ones left will.", { where: "The roads of Scratch Hills" }),
+  CLS_Q("cls_w3", "rook", "warrior", 10, ["cls_w2"], "Stone Breaker", { type: "kill", foe: "golem", n: 5 }, "Last test. Scratch Golems hit like falling walls and throw rocks. Walk through the rocks and break five golems.", { xp: 900, coins: 60, item: "greater_potion", qty: 3 }, "You walked through rocks. That's a warrior. Off you go, the mainland needs you more than I do.", { where: "Scratch Hills" }),
+  CLS_Q("cls_h1", "kestrel", "hunter", 3, [], "Quiet Steps", { type: "kill", foe: "spider", n: 6 }, "A hunter never lets anything get close. Inkspiders are fast and sneaky. Shoot six before they reach you.", { xp: 220, coins: 20 }, "Not one of them touched you? Good eyes.", { where: "Whisper Glade and Margin Woods" }),
+  CLS_Q("cls_h2", "kestrel", "hunter", 5, ["cls_h1"], "A Loyal Friend", { type: "collect", thing: "wolfpup", n: 1 }, "A wolf pack has cornered a lost pup in the Margin Woods, and the pup is not theirs. Drive them off and bring the little one to me. If it takes to you, it is yours. A hunter with a wolf at their side never hunts alone.",
+    { xp: 400, coins: 30 }, "Look at that, it already follows you. Name's Scout. Scout fights beside you now: when something comes for you, Scout bites back.", { where: "Margin Woods", mark: TRAIN.pup, onAccept: () => { const sp = TRAIN.pack; while (sp.live < sp.n) if (!spawnFoe(MAPS.world, sp, true)) break; }, onDone: () => { setTimeout(() => banner("Scout joins you!", "Your wolf fights beside you"), 600); wolf.map = ""; } }),
+  CLS_Q("cls_h3", "kestrel", "hunter", 9, ["cls_h2"], "Hunt Together", { type: "kill", foe: "goblin_archer", n: 6 }, "Goblin archers shoot from the treeline. Send Scout in close while you shoot from range. Six of them.", { xp: 800, coins: 50, item: "greater_potion", qty: 3 }, "You and Scout make a fine pair. The wilds are yours.", { where: "Northern Margin Woods" }),
+  CLS_Q("cls_m1", "orrin", "mage", 3, [], "Ink and Spark", { type: "kill", foe: "triangle", n: 6 }, "Every spell spends ink, and ink refills slowly. Bolts are free, so use them. Burn six Sharp Corners and watch your mana as you go.", { xp: 200, coins: 20, item: "mana_potion", qty: 3 }, "You didn't run dry. Good. Here, a few Mana Ink for when you do.", { where: "Blank Meadow" }),
+  CLS_Q("cls_m2", "orrin", "mage", 6, ["cls_m1"], "Hexers' Lesson", { type: "kill", foe: "goblin_shaman", n: 5 }, "Goblin shamans cast too, and badly. Show five of them how it's done.", { xp: 450, coins: 40, item: "mana_potion", qty: 5 }, "Clean work. A mage who wastes mana is a mage who walks home.", { where: "Margin Woods, the goblin camps" }),
+  CLS_Q("cls_m3", "orrin", "mage", 10, ["cls_m2"], "Unmaking Stone", { type: "kill", foe: "golem", n: 5 }, "Stone doesn't burn, but it breaks. Five Scratch Golems, and keep your distance. They throw.", { xp: 900, coins: 60, item: "mana_potion", qty: 5 }, "Stone, unmade. You're ready for the mainland. Mind your mana out there.", { where: "Scratch Hills" }),
+);
+function classChange(n) {
+  const k = n.trainer, C = CLASSES[k];
+  if (cls() === k) return;
+  if (player.gems < CLASS_CHANGE_GEMS) return openPanel(`<h2>Become a ${C.name}</h2><p>${n.name} can teach you the ${C.name}'s path for ${CLASS_CHANGE_GEMS} gems. You have ${player.gems}.</p><p class="soft">Gems come from leveling, rare elites, bounty chests and the Store.</p><div class="row"><button data-act="close" type="button">OK</button></div>`);
+  openPanel(`<h2>Become a ${C.name}?</h2><p>${C.pitch} ${C.perk}.</p><p class="soft">Costs ${CLASS_CHANGE_GEMS} gems. You keep your level, coins and quests. Your gear turns into ${C.name} gear and your class talents go back to points.</p>
+    <div class="row"><button data-act="close" type="button">Not now</button><button data-act="yes" type="button">Change for ${CLASS_CHANGE_GEMS} gems</button></div>`,
+    { yes: () => { if (player.gems < CLASS_CHANGE_GEMS) return closePanel(); player.gems -= CLASS_CHANGE_GEMS; player.cls = k; convertGear(); pruneTalents(); player.mp = maxMana(); if (k === "mage" && !player.bag.mana_potion) player.bag.mana_potion = 3;
+      applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; closePanel(); save(); sfx("level"); banner(`You are a ${C.name}`, C.perk); } });
+}
+const trainerBtn = n => n.trainer && n.trainer !== cls() ? `<button data-act="becls" type="button">Become a ${CLASSES[n.trainer].name}</button>` : "";
 const perchSpot = () => MAPS.world.objs.filter(o => o.node === "fish" && o.item === "perch").sort((a, b) => Math.hypot(a.x - VZ.x - 600, a.y - VZ.y - 500) - Math.hypot(b.x - VZ.x - 600, b.y - VZ.y - 500))[0];
 // The pick and axe quest (from level 5), then the rod and Mara's kitchen
 QUESTS.push(
@@ -2857,6 +2911,16 @@ function drawCraftProp(p) {
   if (p.kind === "orecart") { shadow(x, y, 26); ctx.fillStyle = "#6a5a4a"; ctx.beginPath(); ctx.moveTo(x - 22, y - 26); ctx.lineTo(x + 22, y - 26); ctx.lineTo(x + 17, y - 8); ctx.lineTo(x - 17, y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
     for (const [dx, c] of [[-10, "#c27a3a"], [0, "#8d939c"], [9, "#c27a3a"]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + dx, y - 28, 5, Math.PI, 0); ctx.fill(); ctx.stroke(); }
     ctx.fillStyle = "#3a3440"; for (const dx of [-11, 11]) { ctx.beginPath(); ctx.arc(x + dx, y - 6, 5, 0, 7); ctx.fill(); ctx.stroke(); } return true; }
+  if (p.kind === "dummy") { shadow(x, y, 16); ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 54); line(x - 18, y - 40, x + 18, y - 40);
+    ctx.fillStyle = "#d8c27a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(x, y - 38, 11, 16, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - 60, 8, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = BLOOD; line(x - 5, y - 42, x + 5, y - 34); line(x + 5, y - 42, x - 5, y - 34); return true; }
+  if (p.kind === "archtarget") { shadow(x, y, 18); ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x - 12, y, x - 4, y - 30); line(x + 12, y, x + 4, y - 30);
+    for (const [r, c] of [[20, "#fffdf6"], [14, BLOOD], [8, "#fffdf6"], [3.5, BLOOD]]) { ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y - 44, r, 0, 7); ctx.fill(); ctx.stroke(); }
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 1.5; line(x + 4, y - 46, x + 22, y - 54); return true; }
+  if (p.kind === "runestone") { shadow(x, y, 16); ctx.fillStyle = "#8a8f9a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.lineTo(x - 9, y - 44); ctx.lineTo(x, y - 52); ctx.lineTo(x + 9, y - 44); ctx.lineTo(x + 12, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = `rgba(90,150,230,${0.6 + 0.4 * Math.sin(clock * 3)})`; ctx.lineWidth = 2; line(x - 4, y - 36, x + 4, y - 28); line(x + 4, y - 36, x - 4, y - 28); line(x, y - 22, x, y - 14); return true; }
+  if (p.kind === "yardsign") { ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 46); ctx.fillStyle = "#c8a476"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x - 58, y - 64, 116, 24); ctx.strokeRect(x - 58, y - 64, 116, 24);
+    ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("Training Grounds", x, y - 47); return true; }
   if (p.kind === "digsign") { ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 46); ctx.fillStyle = "#c8a476"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x - 34, y - 52, 68, 22); ctx.strokeRect(x - 34, y - 52, 68, 22);
     ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("Old Dig", x, y - 36); return true; }
   return false;
@@ -3150,15 +3214,26 @@ let autoSaveT = 5, clock = 0, paused = false, zoneId = "", gateNoticeAt = -99, t
 let map = MAPS.world;
 
 // Talents: a point every 2 levels, 5 ranks each, free to reset. Simple picks, no classes.
+// Talents (Lee): a core list every class shares, plus three of the class's own
 const TALENTS = [
   { id: "sharp", name: "Sharp Lines", desc: "+4% attack per rank" },
   { id: "thick", name: "Thick Ink", desc: "+5% health per rank" },
   { id: "guard", name: "Steady Guard", desc: "+2 armor per rank" },
   { id: "quick", name: "Quick Hands", desc: "+3% speed per rank" },
-  { id: "finisher", name: "Finisher", desc: "The 3rd hit of a combo deals 15% more per rank" },
-  { id: "whirl", name: "Whirlwind", desc: "Whirl recharges 1s faster and hits 10% harder per rank" },
   { id: "drink", name: "Ink Drinker", desc: "Heal 2% of your health per kill, per rank" },
+  { id: "finisher", cls: ["warrior"], name: "Finisher", desc: "The 3rd hit of a combo deals 15% more per rank" },
+  { id: "whirl", cls: ["warrior"], name: "Whirlwind", desc: "Whirl recharges 1s faster and hits 10% harder per rank" },
+  { id: "iron", cls: ["warrior"], name: "Iron Will", desc: "Take 3% less damage per rank" },
+  { id: "finisher", cls: ["hunter"], name: "Sharpshooter", desc: "The 3rd arrow of a combo deals 15% more per rank" },
+  { id: "whirl", cls: ["hunter"], name: "Volley Master", desc: () => `${WHIRL().name} recharges 1s faster and hits 10% harder per rank` },
+  { id: "pack", cls: ["hunter"], name: "Pack Leader", desc: "Your wolf bites 12% harder per rank" },
+  { id: "finisher", cls: ["mage"], name: "Ink Burst", desc: "The 3rd bolt of a combo deals 15% more per rank" },
+  { id: "deep", cls: ["mage"], name: "Deep Well", desc: "+8% mana per rank" },
+  { id: "weave", cls: ["mage"], name: "Spellweaver", desc: "Spells cost 5% less mana per rank" },
 ];
+const myTalents = () => TALENTS.filter(t => !t.cls || t.cls.includes(cls()));
+// Ranks in talents your class doesn't have go back to you as points
+function pruneTalents() { const ok = new Set(myTalents().map(t => t.id)); for (const k of Object.keys(player.talents || {})) if (!ok.has(k)) delete player.talents[k]; }
 const TALENT_MAX = 5;
 const tr = id => (player.talents && player.talents[id]) || 0;
 function talentPoints() { return Math.floor(player.level / 2) - Object.values(player.talents || {}).reduce((a, b) => a + b, 0); }
@@ -3203,7 +3278,7 @@ function load() {
     if (s.templeRisen) setRisen(true);
     if (s.hollowRisen) setHollow(true);
     for (const id of s.dgRisen || []) if (DG[id]) setDg(DG[id], true);
-    player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
+    player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
     player.tools = s.tools || []; player.recipes = s.recipes || []; player.up = s.up || {}; player.glows = s.glows || []; player.glow = s.glow || null; player.pouch = s.pouch || 0; player.gemRec = s.gemRec || [];
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
@@ -3529,14 +3604,14 @@ const resetTemple = () => resetDungeon("temple");
 // Player actions
 // =====================================================================
 // Camps and the village are safe (Lee): the whole camp ground you can see, not just its square, and nothing can hurt you there
-function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05))); }
+function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05)) || (map.SAFE && map.SAFE.some(z => Math.hypot(player.x - z.x, player.y - z.y) < z.r))); }
 function hurtPlayer(raw, lv) {
   if (inSafe()) return;
   if (player.dead || player.dodgeT > 0 || player.dashT > 0) return;
   const s = stats();
   const gap = Math.max(0, lv - player.level);
   raw = raw * (1 + 0.12 * gap) * (0.85 + Math.random() * 0.3);
-  let dmg = Math.max(1, Math.round(raw * 100 / (100 + s.def * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1)));
+  let dmg = Math.max(1, Math.round(raw * 100 / (100 + s.def * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1) * (1 - 0.03 * tr("iron"))));
   if (player.barrier > 0) { const soak = Math.min(player.barrier, dmg); player.barrier -= soak; dmg -= soak; if (!dmg) { floater(player.x, player.y - 76, "Absorbed", "#7a5aa6", 18); return; } }
   player.hp = Math.max(0, player.hp - dmg); player.hurtT = 0.2; player.lastHurt = clock; sfx("hurt");
   floater(player.x, player.y - 76, `-${dmg}`, BLOOD, 22);
@@ -3652,6 +3727,17 @@ function drinkPotion(pick) {
   const heal = Math.ceil(m * ITEMS[id].heal);
   player.hp = Math.min(m, player.hp + heal); player.potionCd = 10; tutEvent("potion"); bump("potions");
   floater(player.x, player.y - 80, `+${heal}`, "#2d7a33", 22); sfx(id === "stew" ? "stew" : ITEMS[id].heal >= 0.6 ? "gulp2" : "gulp"); save();
+}
+// Mana potions: mages only, on their own 10-second timer
+function drinkMana(pick) {
+  if (player.dead || paused || cine || (player.manaCd || 0) > 0) return;
+  if (cls() !== "mage") return toast("Only mages use mana");
+  const id = pick ? (player.bag[pick] ? pick : null) : ["mana_potion", "greater_mana"].find(p => player.bag[p] && (ITEMS[p].lvl || 0) <= player.level);
+  if (!id) return toast("No mana potions. Alchemist Fizz and the camp traders sell Mana Ink");
+  const mx = maxMana(); if ((player.mp ?? mx) >= mx) return toast("Already at full mana");
+  player.bag[id]--; if (!player.bag[id]) delete player.bag[id];
+  const add = Math.ceil(mx * ITEMS[id].mana); player.mp = Math.min(mx, (player.mp ?? mx) + add); player.manaCd = 10;
+  floater(player.x, player.y - 80, `+${add} mana`, "#3b6fb6", 22); sfx("gulp"); save();
 }
 const MAX_LEVEL = 50;
 function gainXp(n) {
@@ -3926,7 +4012,7 @@ function talk(n) {
   if (offerL[0]) return showOffer(n, offerL[0]);
   const active = activeL[0];
   const body = active ? `<p>${active.text}</p><p class="soft">${progressText(active)}</p>` : `<p>${n.line}</p>`;
-  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n) });
+  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n) });
 }
 function rewardText(r) {
   return [r.tool && TOOLS[r.tool][0], r.pet && `${PETS[r.pet].name} (${r.pet === "pup" ? "your first pet" : "a new pet"})`, r.item && ITEMS[r.item].name + (r.qty > 1 ? ` x${r.qty}` : ""), r.coins && `${r.coins} coins`, r.xp && `${r.xp} XP`].filter(Boolean).join(", ");
@@ -3935,8 +4021,8 @@ function showQuestList(n, readyL, offerL, activeL) {
   const row = (q, tag, cls, act) => `<div class="item"><div><span class="${cls}">${tag}</span> ${q.title}<small>${act ? (cls === "qready" ? "Ready to turn in" : q.where) : progressText(q)}</small></div>${act ? `<button type="button" data-act="${act}" data-arg="${q.id}">${act === "turnin" ? "Turn in" : "View"}</button>` : ""}</div>`;
   openPanel(`<h2>${n.name}</h2><p>${n.line}</p>
     <div class="list">${readyL.map(q => row(q, "?", "qready", "turnin")).join("")}${offerL.map(q => row(q, "!", "qnew", "view")).join("")}${activeL.map(q => row(q, "&hellip;", "soft")).join("")}</div>
-    <div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}<button data-act="close" type="button">Goodbye</button></div>`,
-    { shop: () => showShop(n), craft: () => showCraft(n), turnin: id => showTurnIn(n, QUESTS.find(q => q.id === id)), view: id => showOffer(n, QUESTS.find(q => q.id === id), true) });
+    <div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`,
+    { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), turnin: id => showTurnIn(n, QUESTS.find(q => q.id === id)), view: id => showOffer(n, QUESTS.find(q => q.id === id), true) });
 }
 function showOffer(n, q, fromList) {
   openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${q.text}</p><p class="soft">Where: ${q.where}</p><p class="reward">Reward: ${rewardText(q.reward)}</p>
@@ -3956,6 +4042,7 @@ function showTurnIn(n, q) {
       sfx("quest"); const r = q.reward; if (r.tool) grantTool(r.tool); if (r.coins) player.coins += r.coins; if (r.item) addItem(forCls(r.item), r.qty || 1); if (r.xp) gainXp(r.xp);
       if (r.pet) { if (!player.pets.includes(r.pet)) player.pets.push(r.pet); player.pet = r.pet; pet.map = ""; if (!player.petNames[r.pet]) player.petNames[r.pet] = r.petName || "Inky"; sfx("rare");
         setTimeout(() => banner(`${player.petNames[r.pet]} joined you!`, r.pet !== "pup" ? (desk ? "A new pet. Press P to pick who follows you" : "A new pet. Pick who follows you in Bag > Pets") : desk ? "Pets unlocked. Press P to see them" : "Pets unlocked. Find them in your Bag"), 600); }
+      if (q.onDone) q.onDone();
       toast(`Quest complete: ${q.title}`); renderTracker(); save();
       const next = QUESTS.find(x => x.giver === n.id && questAvailable(x)) || QUESTS.find(x => quests[x.id]?.state === "ready" && turnInNpc(x) === n.id);
       if (next) setTimeout(() => talk(n), 350);
@@ -4092,12 +4179,14 @@ function showBag(confirmReset, tab) {
     ${mats ? `<p class="soft">${player.tools.length ? "Tools: " + player.tools.map(k => TOOLS[k][0]).join(", ") + ". " : ""}Materials come from veins, trees, herbs, fishing and enemies. Craft with them at Brand, Carly, Clegg, Fizz and Mara.</p>` : desk ? '<p class="soft">Drag a potion or relic onto the ability bar to put it on a key.</p>' : ""}
     <div class="list">${items.length ? items.map(([id, n]) => `<div class="item"${desk && barItem(id) ? ` draggable="true" data-drag="item:${id}"` : ""}><div>${ITEMS[id].mat ? `<span class="swatch" style="background:${ITEMS[id].color}"></span>` : ""}<span${ITEMS[id].rare ? ' class="rare"' : ITEMS[id].crafted ? ' class="crafted"' : ""}>${itName(id)}</span>${n > 1 ? ` x${n}` : ""}${isUpgrade(id) ? '<span class="up">&#9650; Upgrade</span>' : ""}<small>${ITEMS[id].desc}</small></div>
       ${ITEMS[id].relic && RELICS[ITEMS[id].relic].buff ? `<button type="button" data-act="use" data-arg="${id}">Use</button>` : ""}
+      ${ITEMS[id].mana ? `<button type="button" data-act="mana" data-arg="${id}">Drink</button>` : ""}
       ${POTIONS.includes(id) ? `<button type="button" data-act="drink" data-arg="${id}">${id === "grilled_perch" ? "Eat" : "Drink"}</button>` : ""}
       ${ITEMS[id].buff ? `<button type="button" data-act="eat" data-arg="${id}">${BUFFS[ITEMS[id].buff] && /Stew|Pie|Skewers|Chowder|Feast/.test(ITEMS[id].name) ? "Eat" : "Drink"}</button>` : ""}
       ${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
     <div class="row">${Object.keys(player.bag).some(isUpgrade) ? '<button type="button" data-act="best">Equip best</button>' : ""}<button type="button" data-act="talents">Talents${talentPoints() > 0 ? ` (${talentPoints()})` : ""}</button><button type="button" data-act="pets">Pets${desk ? " (P)" : ""}</button><button type="button" data-act="ach">Achievements${desk ? " (Y)" : ""}</button><button type="button" data-act="dyes">Dyes</button><button type="button" data-act="store">Store</button><button type="button" data-act="savenow">Save</button><button type="button" data-act="heroes">Heroes</button><button type="button" data-act="reset">${confirmReset ? "Tap again to erase your hero" : "Start over"}</button><button data-act="close" type="button">Close</button></div>`,
     {
       use: id => { useRelic(id); showBag(); }, btab: t => showBag(false, t), eat: id => { eatBuff(id); showBag(); },
+      mana: id => { drinkMana(id); showBag(); },
       drink: id => { if (player.potionCd > 0) return toast(`Potions ready again in ${Math.ceil(player.potionCd)}s`); drinkPotion(id); showBag(); },
       equip: id => { if (equipItem(id)) { showBag(); if (gpId === id || !isUpgrade(gpId)) promptEquip(); } },
       best: () => { let id; while ((id = Object.keys(player.bag).filter(isUpgrade).sort((a, b) => gearScore(b) - gearScore(a))[0])) equipItem(id); showBag(); promptEquip(); },
@@ -4135,8 +4224,8 @@ function showTalents() {
   if (player.level < 2) return openPanel(`<h2>Talents</h2><p>Locked until level 2.</p><p class="soft">From level 2 on you earn a talent point every 2 levels to make your hero stronger your way. Resetting is free.</p><div class="row"><button data-act="close" type="button">Close</button></div>`);
   const pts = talentPoints();
   openPanel(`<h2>Talents</h2><p class="soft">You earn a talent point every 2 levels. ${pts > 0 ? `<span class="coins">${pts} point${pts > 1 ? "s" : ""} to spend.</span>` : "No points to spend right now."} Resetting is free.</p>
-    <div class="list">${TALENTS.map(t => { const r = tr(t.id); return `<div class="item"><div>${t.name}<span class="pips">${"\u25CF".repeat(r)}${"\u25CB".repeat(TALENT_MAX - r)}</span><small>${t.desc}</small></div>
-      <button type="button" data-act="add" data-arg="${t.id}" ${pts > 0 && r < TALENT_MAX ? "" : "disabled"}>${r >= TALENT_MAX ? "Max" : "+1"}</button></div>`; }).join("")}</div>
+    ${[["Core talents", myTalents().filter(t => !t.cls)], [`${CLASSES[cls()].name} talents`, myTalents().filter(t => t.cls)]].map(([h, list]) => `<p>${h}</p><div class="list">${list.map(t => { const r = tr(t.id); return `<div class="item"><div>${t.name}<span class="pips">${"\u25CF".repeat(r)}${"\u25CB".repeat(TALENT_MAX - r)}</span><small>${typeof t.desc === "function" ? t.desc() : t.desc}</small></div>
+      <button type="button" data-act="add" data-arg="${t.id}" ${pts > 0 && r < TALENT_MAX ? "" : "disabled"}>${r >= TALENT_MAX ? "Max" : "+1"}</button></div>`; }).join("")}</div>`).join("")}
     <div class="row"><button type="button" data-act="reset">Reset</button><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`,
     {
       add: id => { if (talentPoints() <= 0 || tr(id) >= TALENT_MAX) return; player.talents[id] = tr(id) + 1; sfx("coin"); save(); showTalents(); },
@@ -4247,7 +4336,7 @@ function showChar(pick) {
   const z = map.id === "world" && map.zoneAt ? map.zoneAt(p.x, p.y) : null, rec = z && z.armor;
   const xpPct = p.level >= MAX_LEVEL ? 100 : Math.round(100 * p.xp / xpToNext(p.level));
   const steed = bestSteed(), pet = p.pet && PETS[p.pet];
-  const tal = TALENTS.filter(t => tr(t.id)).map(t => `${t.name} ${tr(t.id)}`).join(", ");
+  const tal = myTalents().filter(t => tr(t.id)).map(t => `${t.name} ${tr(t.id)}`).join(", ");
   const stat = (label, val, cls) => `<div class="cs-stat ${cls || ""}"><b>${val}</b>${label}</div>`;
   const score = ["weapon", ...ARMOR_SLOTS].reduce((a, k) => a + Math.max(0, gearScore(g[k])), 0);
   if (pick === undefined && !(sheet.classList.contains("charsheet") && !panel.hidden)) csPick = null;
@@ -4313,6 +4402,8 @@ function mapQuests() {
 }
 // Lee: no side list. Tap anything on the map and its name pops up
 let mapHits = [], mapSel = null, mapTravel = null;
+// Waystone travel costs a few coins (Lee): more for longer trips, scaled to what enemies at your level drop
+const travelFee = (a, b) => Math.max(5, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 1000 * 0.35 * (player.level < 10 ? 2 : foeCoin(player.level))));
 const hit = (x, y, text, sub, r) => mapHits.push({ x, y, text, sub, r: r || 30 });
 function drawBigMap() {
   const c = document.getElementById("bigmap"); if (!c) return;
@@ -4397,9 +4488,9 @@ function showMap(from) {
       const wx = x / (c.width / MAPS.world.w), wy = y / (c.width / MAPS.world.w), z = MAPS.world.ZONES.find(z => !z.sea && wx >= z.x && wx < z.x + z.w && wy >= z.y && wy < z.y + z.h);
       mapSel = { x, y }; text = z ? z.name : "Open country"; sub = `${z && z.lv ? z.lv.replace(/\..*/, "") + " &middot; " : ""}${gref(wx, wy)}`;
     }
-    const go = mapTravel && best && best.stone;
-    tip.innerHTML = `${text}<small>${sub}</small>${go ? `<button type="button" id="mapGo">Travel</button>` : ""}`; tip.hidden = false; tip.classList.toggle("go", !!go);
-    if (go) document.getElementById("mapGo").onclick = ev => { ev.stopPropagation(); const s = MAPS.world.objs.find(o => o.id === best.stone); closePanel(); goTo("world", s.x, s.y + 50); };
+    const go = mapTravel && best && best.stone, dest = go && MAPS.world.objs.find(o => o.id === best.stone), fee = go ? travelFee(mapTravel, dest) : 0, poor = player.coins < fee;
+    tip.innerHTML = `${text}<small>${sub}</small>${go ? `<button type="button" id="mapGo"${poor ? " disabled" : ""}>Travel &middot; ${fee} coins</button>` : ""}`; tip.hidden = false; tip.classList.toggle("go", !!go);
+    if (go) document.getElementById("mapGo").onclick = ev => { ev.stopPropagation(); if (player.coins < fee) return toast(`You need ${fee} coins to travel there`); player.coins -= fee; closePanel(); goTo("world", dest.x, dest.y + 50); };
     const tx = mapSel.x / sc, ty = mapSel.y / sc, w = tip.offsetWidth, hgt = tip.offsetHeight;
     tip.style.left = `${Math.max(6, Math.min(r.width - w - 6, tx - w / 2))}px`;
     tip.style.top = `${ty - hgt - 26 < 50 ? ty + 26 : ty - hgt - 26}px`;
@@ -4517,6 +4608,7 @@ function showAch() {
 }
 // ---------- Pets: a little friend that trots behind you. Looks only, no stats. Some are earned, some cost gems ----------
 const PETS = {
+  scout: { name: "Scout", shape: "pup", color: "#7a7f88", hidden: true, has: () => false },
   pup: { name: "Ink Pup", shape: "pup", color: "#1b1b20", earn: "Rescue Inky for Little Wick in Inkwell Village", has: () => quests.pet_c?.state === "done" },
   shellback: { name: "Baby Shellback", shape: "crab", color: "#c0503a", earn: "Clear the Drowned Temple", has: () => player.relics.includes("temple") },
   sprout: { name: "Rootling", shape: "sprout", color: "#5a8a3a", earn: "Clear the Hollow", has: () => player.relics.includes("hollow") },
@@ -4545,6 +4637,31 @@ function petUpdate(dt) {
   if (pet.map !== map.id || Math.hypot(tx - pet.x, ty - pet.y) > 600) { pet.x = tx; pet.y = ty; pet.map = map.id; }
   const k = Math.min(1, dt * 5); pet.moving = Math.hypot(tx - pet.x, ty - pet.y) > 6;
   pet.x += (tx - pet.x) * k; pet.y += (ty - pet.y) * k; if (Math.abs(tx - pet.x) > 2) pet.face = Math.sign(tx - pet.x);
+}
+// Scout (Lee): the hunter's wolf, earned from Huntress Kestrel. It runs at whatever is fighting you and bites. Nothing can hurt it
+const wolf = { x: 0, y: 0, map: "", cd: 0, face: 1, moving: false, tgt: null };
+const hasWolf = () => cls() === "hunter" && quests.cls_h2?.state === "done";
+function wolfUpdate(dt) {
+  const p = player; if (!hasWolf() || map.vehicle || p.dead) { wolf.tgt = null; return; }
+  if (wolf.map !== map.id || Math.hypot(p.x - wolf.x, p.y - wolf.y) > 700) { wolf.x = p.x + p.facing * 40; wolf.y = p.y + 20; wolf.map = map.id; wolf.tgt = null; }
+  wolf.cd = Math.max(0, wolf.cd - dt);
+  if (wolf.tgt && (!map.foes.includes(wolf.tgt) || Math.hypot(wolf.tgt.x - p.x, wolf.tgt.y - p.y) > 520)) wolf.tgt = null;
+  if (!wolf.tgt) { let bd = 420; for (const f of map.foes) { const d = Math.hypot(f.x - p.x, f.y - p.y); if ((f.aggro || clock - (p.lastAttack || -9) < 2) && d < bd && seeFoe(f)) { bd = d; wolf.tgt = f; } } }
+  const f = wolf.tgt, tx = f ? f.x - Math.sign(f.x - wolf.x || 1) * (f.d.r + 14) : p.x - p.facing * 56, ty = f ? f.y + 4 : p.y + 22;
+  const dx = tx - wolf.x, dy = ty - wolf.y, d = Math.hypot(dx, dy), sp = (f ? 320 : 260) * dt;
+  wolf.moving = d > 8; if (wolf.moving) { const k = Math.min(1, sp / d); wolf.x += dx * k; wolf.y += dy * k; if (Math.abs(dx) > 2) wolf.face = Math.sign(dx); }
+  if (f && Math.hypot(f.x - wolf.x, f.y - wolf.y) < f.d.r + 34 && wolf.cd <= 0) {
+    wolf.cd = 1.1; wolf.face = Math.sign(f.x - wolf.x) || wolf.face; wolf.bite = 0.2;
+    hitFoe(f, Math.max(1, Math.round(stats().atk * 0.45 * (1 + 0.12 * tr("pack")) * (0.9 + Math.random() * 0.2))), false, "melee");
+  }
+  wolf.bite = Math.max(0, (wolf.bite || 0) - dt);
+}
+function drawWolf() {
+  const keepPet = player.pet, keep = { ...pet };
+  player.pet = "scout"; Object.assign(pet, { x: wolf.x, y: wolf.y, face: wolf.face, moving: wolf.moving });
+  ctx.save(); ctx.translate(wolf.x, wolf.y); ctx.scale(1.5, 1.5); ctx.translate(-wolf.x, -wolf.y - (wolf.bite > 0 ? 4 : 0)); drawPet(); ctx.restore();
+  player.pet = keepPet; Object.assign(pet, keep);
+  ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = "#3f7a3a"; ctx.strokeStyle = "rgba(255,253,246,.9)"; ctx.lineWidth = 3; ctx.strokeText("Scout", wolf.x, wolf.y - 52); ctx.fillText("Scout", wolf.x, wolf.y - 52);
 }
 function drawPet() {
   const P = PETS[player.pet]; if (!P || player.dead) return;
@@ -4624,7 +4741,7 @@ function showPets() {
   if (!petsOpen()) return openPanel(`<h2>Pets</h2><p>No pets yet. Little Wick in Inkwell Village is crying by the well: her pup Inky ran off toward the glade.</p><p class="soft">Help her to unlock pets. Needs level 3.</p>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag() });
   openPanel(`<h2>Pets</h2><p class="soft">A friend that follows you everywhere. Pets are just for looks. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>
-    <div class="list">${Object.entries(PETS).map(([k, P]) => { const own = petOwned(k), out = player.pet === k;
+    <div class="list">${Object.entries(PETS).filter(([, P]) => !P.hidden).map(([k, P]) => { const own = petOwned(k), out = player.pet === k;
       const nm = player.petNames[k];
       return `<div class="item"><div>${nm ? `${esc(nm)} <span class="soft">(${P.name})</span>` : P.name}<small>${own ? (out ? "With you now" : "Yours") : P.earn ? `Earn it: ${P.earn}` : `<span class="gem">&#9670; ${P.gems} gems</span>`}</small></div>
         ${own ? `<button type="button" data-act="rename" data-arg="${k}">Name</button><button type="button" data-act="${out ? "dismiss" : "summon"}" data-arg="${k}">${out ? "Send home" : "Summon"}</button>` : P.gems ? `<button type="button" data-act="buy" data-arg="${k}" ${player.gems < P.gems ? "disabled" : ""}>Buy</button>` : ""}</div>`; }).join("")}</div>
@@ -4637,9 +4754,9 @@ function showPets() {
 }
 // ---------- Classes (Lee): Warrior, Hunter or Mage. The class decides how you attack and which six abilities you learn ----------
 const CLASSES = {
-  warrior: { name: "Warrior", role: "Melee fighter in plate", diff: "Easy", pitch: "Wade in with cleaving combos. The most health, hard to kill.", color: "#a0503a", hp: 1.2 },
-  hunter: { name: "Hunter", role: "Archer in leather", diff: "Medium", pitch: "Shoot from range, move fast, trap anything that gets close.", color: "#3f7a3a", hp: 1, range: 330 },
-  mage: { name: "Mage", role: "Spellcaster in cloth", diff: "Hard", pitch: "Huge bursts and area damage, but fragile. Spells cost mana.", color: "#3b6fb6", hp: 0.85, range: 300 },
+  warrior: { name: "Warrior", role: "Melee fighter in plate", diff: "Easy", pitch: "Wade in with cleaving combos. The most health, hard to kill.", perk: "Takes 10% less damage", color: "#a0503a", hp: 1.2 },
+  hunter: { name: "Hunter", role: "Archer in leather", diff: "Medium", pitch: "Shoot from range, move fast, trap anything that gets close.", perk: "Earns a wolf companion that fights at your side", color: "#3f7a3a", hp: 1, range: 330 },
+  mage: { name: "Mage", role: "Spellcaster in cloth", diff: "Hard", pitch: "Huge bursts and area damage, but fragile.", perk: "Spells cost mana. Carry Mana Ink", color: "#3b6fb6", hp: 0.85, range: 300 },
 };
 // The ability slots keep their old keys (whirl, dash, shield, bomb, rally, storm) so ability bars and phone buttons carry over
 const CLASS_SK = {
@@ -4673,12 +4790,13 @@ const WHIRL = () => CLASS_SK[cls()].whirl;
 const SKILLS = {};
 function applyClass() { for (const k in SKILLS) delete SKILLS[k]; const C = CLASS_SK[cls()]; for (const k of ["dash", "shield", "bomb", "rally", "storm"]) SKILLS[k] = C[k]; }
 applyClass();
-const maxMana = () => 100 + 2 * player.level + ["weapon", ...ARMOR_SLOTS].reduce((a, k) => a + ((player.gear[k] && ITEMS[player.gear[k]].mp) || 0), 0);
+const maxMana = () => Math.round((100 + 2 * player.level + ["weapon", ...ARMOR_SLOTS].reduce((a, k) => a + ((player.gear[k] && ITEMS[player.gear[k]].mp) || 0), 0)) * (1 + 0.08 * tr("deep")));
 // Mage spells cost mana, unless Arcane Surge is running
 function payMana(S) {
   if (cls() !== "mage" || !S.mana || player.surgeT > 0) return true;
-  if ((player.mp ?? maxMana()) < S.mana) { toast("Not enough mana"); return false; }
-  player.mp = (player.mp ?? maxMana()) - S.mana; player.lastCast = clock; return true;
+  const cost = Math.round(S.mana * (1 - 0.05 * tr("weave")));
+  if ((player.mp ?? maxMana()) < cost) { toast(player.bag.mana_potion || player.bag.greater_mana ? "Not enough mana. Drink Mana Ink" : "Not enough mana"); return false; }
+  player.mp = (player.mp ?? maxMana()) - cost; player.lastCast = clock; return true;
 }
 function aimAt(t) {
   const p = player;
@@ -4735,8 +4853,9 @@ function classTick(dt) {
     const mx = maxMana(); if (p.mp == null) p.mp = mx;
     p.surgeT = Math.max(0, (p.surgeT || 0) - dt); if (p.surgeEnd && !p.surgeT) { p.surgeEnd = false; p.drainT = 6; }
     p.drainT = Math.max(0, (p.drainT || 0) - dt);
-    // Ink Well: mana refills twice as fast once you haven't cast for 3 seconds
-    if (!p.drainT) p.mp = Math.min(mx, p.mp + dt * 6 * (clock - (p.lastCast ?? -9) > 3 ? 2 : 1));
+    // Mana refills slowly (Lee: mana should matter), a bit faster once you haven't cast for 3 seconds
+    if (!p.drainT) p.mp = Math.min(mx, p.mp + dt * (clock - (p.lastCast ?? -9) > 3 ? 7 : 3));
+    p.manaCd = Math.max(0, (p.manaCd || 0) - dt);
   }
   if (p.castT > 0 && (p.castT -= dt) <= 0) { const t = nearestFoe(CLASSES.mage.range + 40);
     shootP(aimAt(t), Math.round(s.atk * 3.2), true, "fireball", 520, CLASSES.mage.range + 40, { boom: { r: 80, dmg: Math.round(s.atk * 1.2), cap: 6 } }); sfx("boom"); }
@@ -4790,8 +4909,8 @@ function showClassPick() {
   classPicking = true; paused = true;
   const keys = Object.keys(CLASSES);
   openPanel(`<h2>Choose your path</h2><p class="soft">${player.level > 1 ? "Heroes now walk one of three paths. You keep your level, coins and quests." : "Every legend starts with a choice."} Tap a hero to begin.</p>
-    <div class="cpick">${keys.map(k => { const C = CLASSES[k]; return `<button type="button" class="ccard" data-act="pick" data-arg="${k}" style="--cc:${C.color}"><canvas width="240" height="260" data-k="${k}"></canvas><b>${C.name}</b><small>${C.role}</small><em>${C.diff}</em><span>${C.pitch}</span></button>`; }).join("")}</div>`,
-    { pick: k => { if (!CLASSES[k]) return; player.cls = k; convertGear(); player.mp = maxMana(); applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; classPicking = false; paused = false; clearInterval(cpTimer); closePanel(); save();
+    <div class="cpick">${keys.map(k => { const C = CLASSES[k]; return `<button type="button" class="ccard" data-act="pick" data-arg="${k}" style="--cc:${C.color}"><canvas width="240" height="260" data-k="${k}"></canvas><b>${C.name}</b><small>${C.role}</small><em>${C.diff}</em><span>${C.pitch}</span><strong class="perk">&#9733; ${C.perk}</strong></button>`; }).join("")}</div>`,
+    { pick: k => { if (!CLASSES[k]) return; player.cls = k; convertGear(); player.mp = maxMana(); if (k === "mage" && !player.bag.mana_potion) player.bag.mana_potion = 3; applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; classPicking = false; paused = false; clearInterval(cpTimer); closePanel(); save();
       banner(CLASSES[k].name, player.level >= 3 ? `Your abilities: ${WHIRL().name}${Object.values(SKILLS).filter(S => player.level >= S.lv).map(S => ", " + S.name).join("")}` : "Your path is chosen"); sfx("level"); } });
   const t0 = performance.now();
   const draw = () => {
@@ -4878,7 +4997,7 @@ const NB_ICON = (() => {
     Talk: "M15 20 H85 V62 H45 L28 80 V62 H15 Z M30 36 H70 M30 48 H58",
     Use: "M50 12 V32 M50 68 V88 M12 50 H32 M68 50 H88 M24 24 L36 36 M64 64 L76 76 M76 24 L64 36 M36 64 L24 76",
     Dodge: "M15 55 L75 45 M20 70 L65 62 M25 40 L80 25 M70 18 L88 34 L68 50",
-    Whirl: spiral, Potion: "M40 12 H60 V32 L80 55 L75 86 H25 L20 55 L40 32 Z", Charge: "M14 50 H82 M62 32 L84 50 L62 68 M12 30 H40 M12 70 H40",
+    Whirl: spiral, Potion: "M40 12 H60 V32 L80 55 L75 86 H25 L20 55 L40 32 Z", Mana: "M40 12 H60 V32 L80 55 L75 86 H25 L20 55 L40 32 Z M46 44 L54 44", Charge: "M14 50 H82 M62 32 L84 50 L62 68 M12 30 H40 M12 70 H40",
     Wall: "M50 12 L80 24 L77 58 L50 88 L23 58 L20 24 Z M50 26 V74", Slam: "M34 12 H66 V34 H34 Z M50 34 V56 M14 84 L32 68 L46 80 L58 66 L70 80 L86 70 M30 60 L22 52 M70 60 L78 52",
     Shout: "M28 90 V12 M28 14 L82 24 L62 36 L82 48 L28 44", Blades: "M20 80 L74 26 M64 18 L82 18 L82 36 M80 80 L26 26 M36 18 L18 18 L18 36 M30 88 Q50 98 70 88",
     Multi: "M18 72 L82 20 M18 72 L86 54 M18 72 L72 90 M70 18 L84 19 L80 32 M74 48 L87 54 L76 63 M62 92 L74 90 L66 79",
@@ -4893,7 +5012,7 @@ const NB_ICON = (() => {
     Relic: "M30 20 H70 L86 40 L50 86 L14 40 Z M14 40 H86 M38 20 L50 40 L62 20", lock: "M30 48 H70 V84 H30 Z M38 48 V32 Q50 16 62 32 V48",
   };
   const cache = {};
-  return k => cache[k] ||= `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d[k] || d.Use}"/>${k === "Potion" ? '<ellipse class="fill" cx="50" cy="68" rx="24" ry="13"/>' : ""}</svg>`;
+  return k => cache[k] ||= `<svg viewBox="0 0 100 100" aria-hidden="true"><path d="${d[k] || d.Use}"/>${k === "Potion" ? '<ellipse class="fill" cx="50" cy="68" rx="24" ry="13"/>' : k === "Mana" ? '<ellipse class="fill mana" cx="50" cy="68" rx="24" ry="13"/>' : ""}</svg>`;
 })();
 function setIcon(b, k) { if (b.dataset.ic === k) return; b.dataset.ic = k; b.querySelector(".ic").innerHTML = NB_ICON(k); }
 const tally = n => n <= 0 ? "" : n < 5 ? "|".repeat(n) : n === 5 ? "<s>||||</s>" : String(n);
@@ -4906,19 +5025,20 @@ const ABIL = {
   dodge: { fn: () => dodge(), label: () => "Dodge", icon: () => "Dodge", cd: p => p.dodgeCd / 1.0 },
   whirl: { fn: () => skill(), label: p => p.level < 3 ? "Lv 3" : map.vehicle ? "Volley" : WHIRL().short, icon: p => p.level < 3 ? "lock" : map.vehicle ? "Volley" : WHIRL().short, cd: p => p.skillCd / skillCdMax() },
   potion: { fn: () => drinkPotion(), label: () => "Potion", icon: () => "Potion", cd: p => p.potionCd / 10, count: true },
+  mana: { fn: () => drinkMana(), label: () => "Mana", icon: () => "Mana", cd: p => (p.manaCd || 0) / 10, count: true, own: () => (player.bag.mana_potion || 0) + (player.bag.greater_mana || 0) },
 };
 // class abilities read SKILLS at call time, so a class change shows its own names and icons
 for (const k of ["dash", "shield", "bomb", "rally", "storm"]) ABIL[k] = { fn: () => useSkill(k), label: p => p.level < SKILLS[k].lv ? `Lv ${SKILLS[k].lv}` : SKILLS[k].short, icon: p => p.level < SKILLS[k].lv ? "lock" : SKILLS[k].short, cd: p => (p.acd[k] || 0) / SKILLS[k].cd };
 // any potion or relic you can use can go on the bar too ("item:<id>")
-const barItem = id => ITEMS[id] && (POTIONS.includes(id) || (ITEMS[id].relic && RELICS[ITEMS[id].relic].buff));
+const barItem = id => ITEMS[id] && (POTIONS.includes(id) || (ITEMS[id].mana && cls() === "mage") || (ITEMS[id].relic && RELICS[ITEMS[id].relic].buff));
 const SHORT = { potion: "Ink Potion", greater_potion: "Greater Potion", stew: "Stew" };
 function abil(a) {
   if (!a) return null;
   if (ABIL[a]) return ABIL[a];
   const id = a.slice(5); if (!barItem(id)) return null;
-  const pot = POTIONS.includes(id);
-  return { fn: () => { pot ? drinkPotion(id) : useRelic(id); if (!panel.hidden && sheet.querySelector("h2")?.textContent === "Bag") showBag(); },
-    label: () => SHORT[id] || ITEMS[id].name.replace(/^.*'s /, ""), icon: () => pot ? (id === "stew" ? "Stew" : "Potion") : "Relic", cd: p => pot ? p.potionCd / 10 : 0, count: true, own: () => player.bag[id] || 0 };
+  const pot = POTIONS.includes(id), mana = !!ITEMS[id].mana;
+  return { fn: () => { mana ? drinkMana(id) : pot ? drinkPotion(id) : useRelic(id); if (!panel.hidden && sheet.querySelector("h2")?.textContent === "Bag") showBag(); },
+    label: () => SHORT[id] || ITEMS[id].name.replace(/^.*'s /, ""), icon: () => mana ? "Mana" : pot ? (id === "stew" ? "Stew" : "Potion") : "Relic", cd: p => mana ? (p.manaCd || 0) / 10 : pot ? p.potionCd / 10 : 0, count: true, own: () => player.bag[id] || 0 };
 }
 const abar = { el: document.getElementById("abar"), slots: ["dodge", "whirl", "potion", "dash", "shield", "bomb", "rally", "storm", null] };
 try { const b = JSON.parse(localStorage.getItem(BAR_KEY)); if (Array.isArray(b) && b.length === 9 && b.every(x => x === null || ABIL[x] || (typeof x === "string" && x.startsWith("item:")))) abar.slots = b; } catch {}
@@ -4927,6 +5047,8 @@ try { if (localStorage.getItem("lol-bar-v") !== "2") { for (const k in SKILLS) i
 function useSlot(i) { const a = abil(abar.slots[i]); if (a && !cine) a.fn(); }
 function saveBar() { try { localStorage.setItem(BAR_KEY, JSON.stringify(abar.slots)); } catch {} }
 function buildBar() {
+  // Mages get Mana on key 9 if it's free; other classes don't keep it
+  const mi = abar.slots.indexOf("mana"); if (cls() === "mage" && mi < 0 && abar.slots[8] === null) abar.slots[8] = "mana"; else if (cls() !== "mage" && mi >= 0) abar.slots[mi] = null;
   abar.el.innerHTML = "";
   abar.slots.forEach((a, i) => {
     const A = abil(a);
@@ -5015,7 +5137,7 @@ function showMore() {
   const items = Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id));
   openPanel(`<h2>More</h2><div class="list">${items.map(id => `<div class="item"><div>${ITEMS[id].name}${player.bag[id] > 1 ? ` x${player.bag[id]}` : ""}<small>${ITEMS[id].desc}</small></div><button type="button" data-act="use" data-arg="${id}">${POTIONS.includes(id) ? "Drink" : "Use"}</button></div>`).join("") || '<p class="soft">No potions, stew or relics in your bag right now.</p>'}</div>
     <div class="row">${bestSteed() ? `<button type="button" data-act="ride">${player.mounted ? "Walk" : "Ride"}</button>` : ""}<button type="button" data-act="map">Map</button><button type="button" data-act="pets">Pets</button><button type="button" data-act="sound">Sound ${soundOn ? "on" : "off"}</button><button data-act="close" type="button">Close</button></div>`,
-    { sound: () => { btnSound.click(); showMore(); }, use: id => { POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
+    { sound: () => { btnSound.click(); showMore(); }, use: id => { ITEMS[id].mana ? drinkMana(id) : POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
 }
 { const fit = () => document.body.style.setProperty("--padk", desk ? 1 : Math.max(0.78, Math.min(1, innerHeight / 820, innerWidth / 430)).toFixed(3)); fit(); addEventListener("resize", fit); }
 if (desk) { document.body.classList.add("desk"); abar.el.hidden = false; buildBar(); }
@@ -5039,6 +5161,7 @@ addEventListener("keydown", ev => {
   if (k === "k" || k === "shift") dodge();
   if (k === "l") skill();
   if (k === "h") drinkPotion();
+  if (k === "n") drinkMana();
   if (k === "q") showQuestLog();
   if (k === "m") showMap();
   if (k === "i" || k === "b") showBag();
@@ -5054,7 +5177,7 @@ addEventListener("blur", () => keys.clear());
 const press = (id, fn) => document.getElementById(id).addEventListener("pointerdown", ev => { ev.preventDefault(); fn(); });
 { const ba = document.getElementById("btnAttack"); let hold = 0;
   ba.addEventListener("pointerdown", ev => { ev.preventDefault(); attack(); clearInterval(hold); hold = setInterval(() => { if (player.attackCd <= 0 && !nearObj()) attack(); }, 60); });
-  for (const e of ["pointerup", "pointercancel", "pointerleave"]) ba.addEventListener(e, () => clearInterval(hold)); } press("btnDodge", dodge); press("btnSkill", skill); press("btnPotion", drinkPotion);
+  for (const e of ["pointerup", "pointercancel", "pointerleave"]) ba.addEventListener(e, () => clearInterval(hold)); } press("btnDodge", dodge); press("btnSkill", skill); press("btnPotion", drinkPotion); press("btnMana", () => drinkMana());
 document.getElementById("btnQuests").addEventListener("click", showQuestLog);
 const btnSound = document.getElementById("btnSound");
 function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off"); btnSound.style.textDecoration = soundOn ? "none" : "line-through"; }
@@ -5257,7 +5380,7 @@ function update(dt) {
 
   const p = player, s = stats();
   for (const k of ["attackT", "attackCd", "dodgeCd", "skillCd", "skillT", "potionCd", "hurtT"]) p[k] = Math.max(0, p[k] - dt);
-  skillsUpdate(dt); classTick(dt); achUpdate(dt); petUpdate(dt);
+  skillsUpdate(dt); classTick(dt); achUpdate(dt); petUpdate(dt); wolfUpdate(dt);
 
   if (p.dead) { p.dead -= dt; if (p.dead <= 0) respawn(); }
   else {
@@ -5566,6 +5689,9 @@ const NPC_LOOKS = {
   "Innkeeper Mara": { body: "#b0603e", long: true, apron: "#fffdf6", hat: ["bandana", "#e8d7a8"], sleeves: "#b0603e" },
   "Little Wick": { body: "#e0742a", hat: ["cap", "#3b6fb6"], legs: "#5a4a3a", sleeves: "#e0742a", scale: 0.78 },
   "Old Tobb": { body: "#6a6a72", long: true, belt: true, hat: ["cap", "#5a4a3a"], beard: "#e8e4da", legs: "#3a3440", tool: "staff" },
+  "Sergeant Rook": { body: "#8d939c", chain: true, trim: "#a0503a", belt: true, hat: ["cap", "#a0503a"], beard: "#4a3a2a", sleeves: "#8d939c", legs: "#3a3440", tool: "sword" },
+  "Huntress Kestrel": { body: "#5a6a3a", belt: true, hat: ["hood", "#3f7a3a"], cape: "#3f7a3a", sleeves: "#5a6a3a", legs: "#4a3a2a", hair: "#2a2220", lashes: true, tool: "bow" },
+  "Archmage Orrin": { body: "#3b6fb6", robe: true, trim: "#e8c86a", hat: ["cone", "#2a4a8a"], beard: "#dcdcdc", tool: "staff" },
   "Miner Sange": { body: "#6a5a48", belt: true, hat: ["cap", "#c9a227"], beard: "#8a6a4a", sleeves: "#6a5a48", legs: "#3a3440", tool: "pick" },
   "Carpenter Clegg": { body: "#c9b48a", apron: "#7a5a34", hat: ["cap", "#5a7a3a"], sleeves: "#c9b48a", legs: "#4a3a2a", tool: "saw" },
   "Wren the Bard": { body: "#7a3a6e", long: true, trim: GOLD, hat: ["feather", "#7a3a6e", { plume: "#e8c86a" }], sleeves: "#7a3a6e", cape: "#3b6fb6", tool: "lute" },
@@ -6624,6 +6750,13 @@ function drawObj(o) {
   } else if (o.kind === "pickup") {
     if (quests[o.quest]?.state !== "active" || taken.includes(o.id)) return;
     const bob = Math.sin(clock * 3 + o.x) * 3;
+    if (o.thing === "wolfpup") {
+      // a small grey pup, ears flat, waiting to be picked up
+      const x = o.x, y = o.y; shadow(x, y, 14); ctx.fillStyle = "#9aa0aa"; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x, y - 10, 13, 8, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(x + 12, y - 19 + Math.sin(clock * 4), 8, 7, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 15, y - 20, 1.8, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(201,154,23,${0.5 + 0.5 * Math.sin(clock * 4)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 10, 32, 0, 7); ctx.stroke(); return;
+    }
     if (o.thing === "paw" || o.trail) {
       // a trail of inky paw prints with a wisp of web on them
       ctx.fillStyle = INK; for (const [dx, dy, s] of [[-26, 8, .7], [-8, -2, .85], [12, 6, 1]]) { ctx.beginPath(); ctx.ellipse(o.x + dx, o.y + dy, 6 * s, 5 * s, 0, 0, 7); ctx.fill();
@@ -6748,6 +6881,7 @@ function draw() {
   for (const f of m.foes) if (inView(f.x, f.y, 80)) items.push([f.y, () => { drawFoe(f); drawFoeIce(f); }]);
   items.push([p.y, drawPlayer]);
   if (player.pet && !map.vehicle && !p.ride && pet.map === map.id) items.push([pet.y, drawPet]);
+  if (hasWolf() && !map.vehicle && wolf.map === map.id && !p.dead) items.push([wolf.y, drawWolf]);
   items.sort((a, b) => a[0] - b[0]).forEach(([, fn]) => fn());
 
   drawPshots();
@@ -7441,6 +7575,7 @@ function drawHud() {
     if (mage) { const mx = maxMana(), mp = Math.round(p.mp ?? mx); el("mpbar").style.width = `${100 * mp / mx}%`; el("mptext").textContent = `${mp}/${mx}`; }
     el("xpbar").style.width = p.level >= MAX_LEVEL ? "100%" : `${100 * p.xp / xpToNext(p.level)}%`;
     el("potCount").innerHTML = tally(pots);
+    { const bm = el("btnMana"); if (bm.hidden !== (!mage || desk)) bm.hidden = !mage || desk; if (mage) { setIcon(bm, "Mana"); el("manaCount").innerHTML = tally((p.bag.mana_potion || 0) + (p.bag.greater_mana || 0)); } }
     el("armorVal").textContent = `Armor ${s.def}`;
     // computers show the hotkey in each name
     const hk = c => desk ? ` (${c})` : "";
@@ -7459,6 +7594,7 @@ function drawHud() {
   el("cdSkill").style.setProperty("--p", `${p.skillCd / skillCdMax() * 100}%`);
   el("cdDodge").style.setProperty("--p", `${p.dodgeCd / 1.0 * 100}%`);
   el("cdPotion").style.setProperty("--p", `${p.potionCd / 10 * 100}%`);
+  el("cdMana").style.setProperty("--p", `${(p.manaCd || 0) / 10 * 100}%`);
   if (desk) abarHud(pots); else pad2Hud();
 }
 
