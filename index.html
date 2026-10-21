@@ -642,10 +642,12 @@ for (const it of Object.values(ITEMS)) if (it.slot && !it.premium) {
   const growth = Math.pow(1.31, Math.min(it.lvl, 10) - 1) * Math.pow(1.12, Math.max(0, it.lvl - 10));
   it.price = round(Math.max(30, value * 8 * growth * (it.rare ? 1.5 : 1)));
 }
-// Dyes recolor a worn piece. Common dyes are sold by Smith Brand; premium dyes come with the App Store version.
+// Dyes recolor a worn piece. Common dyes are sold by Smith Brand for gems (Lee): about a week of free gems buys one, more means buying gems.
+// Premium dyes come with the App Store version.
+const DYE_GEMS = 50;
 const DYES = { crimson: ["Crimson", "#a8262a"], forest: ["Forest", "#3d6b3a"], sky: ["Sky", "#4f8ccf"], charcoal: ["Charcoal", "#3a3a42"], sand: ["Sand", "#d8bf8a"], plum: ["Plum", "#6b3a6e"],
   gold: ["Royal Gold", "#d4a92a", true], ice: ["Glacier", "#bfe8f7", true], void: ["Void", "#141018", true], ember: ["Ember", "#e0662a", true] };
-for (const [k, [name, c, prem]] of Object.entries(DYES)) if (!prem) ITEMS["dye_" + k] = { name: `${name} Dye`, dye: k, price: 250, desc: "Unlocks this color for any armor piece" };
+for (const [k, [name, c, prem]] of Object.entries(DYES)) if (!prem) ITEMS["dye_" + k] = { name: `${name} Dye`, dye: k, price: 0, gems: DYE_GEMS, desc: "Unlocks this color for any armor piece" };
 for (const id of Object.keys(ITEMS)) if (ITEMS[id].rare) {
   const it = ITEMS[id];
   ITEMS["bp_" + id] = { name: `Blueprint: ${it.name}`, bp: id, price: 1500, rare: true, desc: `Smith Brand can forge this for ${it.price} coins` };
@@ -4356,6 +4358,7 @@ function showStore() {
     <p>Spend gems</p><div class="list">
       ${card("Ember Armor Pack", `${set("ember")}. Level 5 to 6, equal to iron gear, with a flame look.`, "450")}
       ${card("Frostbound Armor Pack", `${set("frost")}. Level 8 to 9, equal to steel gear, with an ice look.`, "900")}
+      ${card("Dyes", `Smith Brand sells ${Object.values(DYES).filter(d => !d[2]).length} colors for ${DYE_GEMS} gems each, about a week of free gems.`, String(DYE_GEMS))}
       ${card("Premium Dye", Object.values(DYES).filter(d => d[2]).map(d => d[0]).join(", ") + ". Cosmetic only. 450 for all four.", "150")}
       ${card("Pouch of coins", "1,000 coins", "80")}${card("Chest of coins", "6,000 coins", "400")}${card("Vault of coins", "15,000 coins", "900")}
       ${card("Steed coats", "Midnight, Snowmane, Ember, Gilded and Ghostly coats. Buy them from Stablemaster Brindle.", "150+")}
@@ -4397,8 +4400,8 @@ function showShop(n, tab) {
     body = `<p class="soft">Bring me a rare blueprint and I'll forge it. Blueprints drop from any enemy, about 1 in 1,000, and from bosses more often.</p>` +
       BLUEPRINTS.filter(bp => canWear(ITEMS[bp].bp) || player.bag[bp] > 0).map(bp => { const id = ITEMS[bp].bp, it = ITEMS[id], have = player.bag[bp] > 0;
         return `<div class="item"><div>${nm(id)}${have ? "" : ' <span class="soft">(need blueprint)</span>'}<small>${descOf(id)}</small></div><button type="button" data-act="forge" data-arg="${bp}" ${have && player.coins >= it.price ? "" : "disabled"}>${it.price.toLocaleString()} coins</button></div>`; }).join("");
-  } else body = (tab === "dye" ? '<p class="soft">Dyes unlock a color for good. Apply them from your Bag.</p>' : "") + n.shop.filter(id => shopCat(id) === tab).sort((a, b) => (ITEMS[a].lvl || 0) - (ITEMS[b].lvl || 0) || ITEMS[a].price - ITEMS[b].price).map(id => `<div class="item">${thumbTag(id)}<div>${ITEMS[id].dye ? `<span class="swatch" style="background:${DYES[ITEMS[id].dye][1]}"></span>` : ""}${nm(id)}${owned(id) && (ITEMS[id].slot || ITEMS[id].dye) ? " (owned)" : ""}<small>${descOf(id)}</small></div>
-      <button type="button" data-act="buy" data-arg="${id}" ${player.coins < ITEMS[id].price || ((ITEMS[id].dye || ITEMS[id].mount || ITEMS[id].scroll) && owned(id)) ? "disabled" : ""}>${(ITEMS[id].mount || ITEMS[id].scroll) && owned(id) ? "Known" : ITEMS[id].price.toLocaleString() + " coins"}</button></div>`).join("");
+  } else body = (tab === "dye" ? `<p class="soft">Dyes unlock a color for good. Apply them from your Bag. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>` : "") + n.shop.filter(id => shopCat(id) === tab).sort((a, b) => (ITEMS[a].lvl || 0) - (ITEMS[b].lvl || 0) || ITEMS[a].price - ITEMS[b].price).map(id => `<div class="item">${thumbTag(id)}<div>${ITEMS[id].dye ? `<span class="swatch" style="background:${DYES[ITEMS[id].dye][1]}"></span>` : ""}${nm(id)}${owned(id) && (ITEMS[id].slot || ITEMS[id].dye) ? " (owned)" : ""}<small>${descOf(id)}</small></div>
+      <button type="button" data-act="buy" data-arg="${id}" ${(ITEMS[id].gems ? player.gems < ITEMS[id].gems : player.coins < ITEMS[id].price) || ((ITEMS[id].dye || ITEMS[id].mount || ITEMS[id].scroll) && owned(id)) ? "disabled" : ""}>${(ITEMS[id].mount || ITEMS[id].scroll || ITEMS[id].dye) && owned(id) ? (ITEMS[id].dye ? "Owned" : "Known") : ITEMS[id].gems ? `<span class="gem">&#9670; ${ITEMS[id].gems}</span> gems` : ITEMS[id].price.toLocaleString() + " coins"}</button></div>`).join("");
   const prevList = !panel.hidden && sheet.dataset.shop === n.id + ":" + tab && sheet.querySelector(".shoplist"), keepScroll = prevList ? prevList.scrollTop : 0;
   openPanel(`<h2>${n.name}</h2><p class="soft">You have ${player.coins} coins and ${stats().def} armor.</p>
     <div class="tabs" role="tablist">${tabs.map(([t, label]) => `<button type="button" role="tab" aria-selected="${t === tab}" data-act="tab" data-arg="${t}">${label}</button>`).join("")}</div>
@@ -4409,6 +4412,7 @@ function showShop(n, tab) {
       wear: k => { player.coat = k || null; save(); showShop(n, "coat"); },
       buy: id => {
         if (ITEMS[id].coat) { const it = ITEMS[id]; if (player.gems < it.gems) return; player.gems -= it.gems; player.coats.push(it.coat); player.coat = it.coat; sfx("rare"); toast(`${it.name} unlocked and on your steed`); save(); syncRide(); return showShop(n, "coat"); }
+        if (ITEMS[id].dye && ITEMS[id].gems) { const it = ITEMS[id]; if (player.gems < it.gems || owned(id)) return; player.gems -= it.gems; player.dyes.push(it.dye); sfx("rare"); toast(`Unlocked ${it.name}. Apply it from Bag > Dyes`); save(); return showShop(n); }
         if (player.coins < ITEMS[id].price || (ITEMS[id].lvl || 0) > player.level || (ITEMS[id].scroll && owned(id))) return; player.coins -= ITEMS[id].price; sfx("coin");
         if (ITEMS[id].mount) { player.steeds.push(id); syncRide();
           if (leadSteed(n.id, id)) { player.mounted = false; syncRide(); setTimeout(closePanel, 0); sfx("quest"); banner(`${ITEMS[id].name} is yours!`, `${n.name.split(" ").pop()} is bringing it out of the pen`); }
