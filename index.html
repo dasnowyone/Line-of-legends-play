@@ -4066,7 +4066,7 @@ function renderTracker() {
     const q = open[0] && open[0][0];
     T.className = "fold" + (trkShut ? " shut" : "");
     T.innerHTML = q ? `<div><b>${q.title}</b><span class="${quests[q.id].state === "ready" ? "done" : ""}">${progressText(q)}</span>${quests[q.id].state === "active" ? `<i>${q.where}</i>` : ""}${open.length > 1 ? `<span class="more">+${open.length - 1} more in Quests</span>` : ""}</div>`
-      : QUESTS.some(questAvailable) ? '<div><b>New quests</b><span>Look for a gold ! above heads</span></div>' : "";
+      : "";
     if (!T.dataset.fold) { T.dataset.fold = "1"; T.addEventListener("click", () => { trkShut = !trkShut; try { localStorage.setItem("lol-trk", trkShut ? "shut" : "open"); } catch {} renderTracker(); }); }
     return;
   }
@@ -4076,8 +4076,19 @@ function renderTracker() {
   const b = bl.map(([zid, v]) => `<div><b>Bounties: ${(MAPS.world.ZONES.find(z => z.id === zid) || {}).name}</b>${v.list.filter(x => !x.claimed).map(x => `<span class="${x.got >= x.n ? "done" : ""}">${FOES[x.foe].name} ${x.got}/${x.n}</span>`).join("<br>")}</div>`).join("");
   T.innerHTML = b + (act.length
     ? act.map(q => `<div><b>${q.title}</b><span class="${quests[q.id].state === "ready" ? "done" : ""}">${progressText(q)}</span>${quests[q.id].state === "active" ? `<i>${q.where}</i>` : ""}</div>`).join("")
-    : (QUESTS.some(questAvailable) ? '<div><b>New quests</b>Look for a gold ! above heads</div>' : ""));
+    : "");
 }
+// Lee: no standing "New quests" box. When a quest opens up, one notice names who has it
+let questSeen = null;
+setInterval(() => {
+  if (cine || classPicking) return;
+  const av = QUESTS.filter(questAvailable);
+  if (!questSeen) { questSeen = new Set(av.map(q => q.id)); return; }
+  const fresh = av.filter(q => !questSeen.has(q.id)); fresh.forEach(q => questSeen.add(q.id));
+  if (!fresh.length) return;
+  const who = [...new Set(fresh.map(q => npcById(q.giver).name))];
+  toast(fresh.length > 1 ? `New quests from ${who.join(", ")}. Look for a gold !` : `New quest from ${who[0]}: ${fresh[0].title}`);
+}, 1500);
 // ---------- daily bounties ----------
 const plural = n => n.replace(/Wolf$/, "Wolve") + (/(s|sh|ch|x)$/.test(n) ? "es" : "s");
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
@@ -5340,7 +5351,7 @@ function hollowCine(dt) {
     if ((c.rumble -= dt) <= 0) { c.rumble = 0.9; sfx("rumble"); }
   }
   if (t >= 7.4 && !c.announced) { c.announced = true; setHollow(); sfx("rare"); banner("The Hollow has opened!", `A dark forest dungeon for level ${HOLLOW_LEVEL} and up, in western Thornwood`); }
-  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); setTimeout(() => toast("New quest from Warden Sorrel: The Hollow"), 600); }
+  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); }
 }
 function cineUpdate(dt) {
   if (cine.kind === "hollow") return hollowCine(dt);
@@ -5355,7 +5366,7 @@ function cineUpdate(dt) {
     if ((c.rumble -= dt) <= 0) { c.rumble = 0.9; sfx("rumble"); sfx("splash"); }
   }
   if (t >= 7.4 && !c.announced) { c.announced = true; setRisen(); sfx("rare"); banner("The Drowned Temple has risen!", `A dungeon for level ${TEMPLE_LEVEL} and up, across the new bridge`); }
-  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); setTimeout(() => toast("New quest from Elder Quill: The Drowned Temple"), 600); }
+  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); }
 }
 
 // =====================================================================
@@ -7013,7 +7024,7 @@ function dgCine(dt) {
     if ((c.rumble -= dt) <= 0) { c.rumble = 0.9; sfx("rumble"); }
   }
   if (t >= 7.4 && !c.announced) { c.announced = true; setDg(g); sfx("rare"); banner(`${g.name} has appeared!`, g.sub); }
-  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); setTimeout(() => toast(`New quest from ${npcById(g.giver).name}: ${g.name}`), 600); }
+  if (t >= 10.4) { cine = null; document.body.classList.remove("cine"); renderTracker(); }
 }
 // Lose a share of your health from the world itself (rocks, falls, whirlpools). Armor doesn't help
 function chip(frac, text) {
