@@ -4827,7 +4827,7 @@ function payMana(S) {
 }
 // Lee: show how mana works. Spells you can't pay for fade to blue, and the mana bar explains itself
 const manaCost = S => Math.round(S.mana * (1 - 0.05 * tr("weave")));
-const lowMana = S => cls() === "mage" && S && S.mana && !(player.surgeT > 0) && (player.mp ?? maxMana()) < manaCost(S);
+const lowMana = S => !!(S && cls() === "mage" && S.mana && !(player.surgeT > 0) && (player.mp ?? maxMana()) < manaCost(S));
 function showManaHelp() {
   const sp = [WHIRL(), ...Object.values(SKILLS)].filter(S => S.mana && player.level >= S.lv).map(S => `${S.name} ${manaCost(S)}`).join(", ");
   openPanel(`<h2>Mana</h2>
