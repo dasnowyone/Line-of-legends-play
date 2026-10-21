@@ -284,6 +284,7 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .dday.got { opacity: .45; } .dday.got b::after { content: " \2713"; color: #2d7a33; }
 .dday.now { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); background: #fff6d8; }
 #sheet .list > .item > div:first-child { flex: 1; }
+.needlv { color: var(--blood); }
 .item .dropq { color: var(--ink-soft); border-color: var(--ink-soft); flex: none; }
 .item .drop { color: var(--blood); border-color: var(--blood); flex: none; }
 .item small { display: block; color: var(--ink-soft); font-size: 15px; }
@@ -629,7 +630,9 @@ for (const it of Object.values(ITEMS)) if (it.slot) it.tier = it.tier || Math.mi
 for (const it of Object.values(ITEMS)) if (it.slot && !it.desc)
   it.desc = [it.cls && `${it.cls[0].toUpperCase() + it.cls.slice(1)} only`, it.atk && `+${it.atk} attack`, it.def && `+${it.def} armor`, it.hp && `+${it.hp} health`, it.spd && `${it.spd > 0 ? "+" : ""}${it.spd}% speed`,
     it.mp && `+${it.mp} mana`, it.pow && `+${it.pow}% spell power`, it.range && "longer range",
-    it.reach > 0 && "longer reach", it.reach < 0 && "short reach", `level ${it.lvl}+`, TIER_NAMES[it.tier]].filter(Boolean).join(", ");
+    it.reach > 0 && "longer reach", it.reach < 0 && "short reach"].filter(Boolean).join(", ");
+// Lee: item details lead with the level you need, and only while you're under it. Tiers stay behind the scenes
+const descOf = id => { const it = ITEMS[id]; return (it.lvl > player.level ? `<span class="needlv">Needs level ${it.lvl}</span>${it.desc ? ". " : ""}` : "") + (it.desc || ""); };
 // Prices climb steeply with level so top gear is something to save up for
 const round = n => n < 200 ? Math.round(n / 5) * 5 : n < 2000 ? Math.round(n / 25) * 25 : n < 100000 ? Math.round(n / 100) * 100 : Math.round(n / 1000) * 1000;
 for (const it of Object.values(ITEMS)) if (it.slot && !it.premium) {
@@ -2645,16 +2648,19 @@ function grantTool(k) { if (!hasTool(k)) player.tools.push(k); sfx("rare"); setT
 function addMat(id, n, quiet) {
   n = Math.min(n, pouchCap() - matCount());
   if (n <= 0) { toast("Your materials pouch is full. Craft, sell or salvage, or get a bigger pouch in the Store"); return 0; }
-  player.bag[id] = (player.bag[id] || 0) + n;
+  player.bag[id] = (player.bag[id] || 0) + n; matGain(id, n);
   if (quiet) toast(`Found: ${ITEMS[id].name}${n > 1 ? ` x${n}` : ""}`, true); else floater(player.x, player.y - 84, `+${n} ${ITEMS[id].name}`, ITEMS[id].color || GOLD, 18);
   matsCheck(); return n;
 }
 const takeItem = (id, n) => { player.bag[id] -= n; if (player.bag[id] <= 0) delete player.bag[id]; };
 const haveAll = need => Object.entries(need).every(([id, n]) => (player.bag[id] || 0) >= n);
+// Lee: "bring me" quests count only what you gather after taking them (st.got), not what was already in the bag
+const matGot = (st, id) => st.got ? Math.min(st.got[id] || 0, player.bag[id] || 0) : (player.bag[id] || 0);
+function matGain(id, n) { let hit = false; for (const q of QUESTS) { const st = quests[q.id]; if (st && st.got && st.state !== "done" && q.goal.type === "mats" && q.goal.need[id]) { st.got[id] = (st.got[id] || 0) + n; hit = true; } } if (hit) { matsCheck(); renderTracker(); } }
 // "Bring me" quests are ready while you carry everything, and go back to active if you don't
 function matsCheck() {
   for (const q of QUESTS) { const st = quests[q.id]; if (!st || q.goal.type !== "mats" || st.state === "done") continue;
-    const ok = haveAll(q.goal.need);
+    const ok = Object.entries(q.goal.need).every(([id, n]) => matGot(st, id) >= n);
     if (ok && st.state === "active") { st.state = "ready"; toast(`Ready to turn in: ${q.title}`); renderTracker(); }
     else if (!ok && st.state === "ready") { st.state = "active"; renderTracker(); } }
 }
@@ -2870,8 +2876,8 @@ function showCraft(n, tab) {
   else body = (tab === "glow" ? '<p class="soft">Glows change how your weapon shines. Looks only. Recipes come from the Store; choose your glow in Bag &gt; Dyes.</p>' : "") + gear(tab).map((r, i) => {
     const id = r.id, it = id && ITEMS[id], known = r.glow ? (player.gemRec || []).includes(r.glow) : !r.pattern || player.recipes.includes("pattern_" + r.pattern), done = r.glow && (player.glows || []).includes(r.glow);
     const ok = known && !done && haveAll(r.mats) && player.coins >= (r.coins || 0), low = it && it.lvl > player.level;
-    const name = r.glow ? `<span class="swatch" style="background:${r.color}"></span>${r.name}` : `<span${it.crafted ? ' class="crafted"' : ""}>${it.name}</span>${r.qty > 1 ? ` x${r.qty}` : ""}${low ? ` <span class="locked">Lv ${it.lvl}</span>` : ""}`;
-    const desc = r.glow ? "Weapon glow, looks only" : it.crafted ? it.desc.replace(/(Warrior|Hunter|Mage) only, /, "") : it.desc;
+    const name = r.glow ? `<span class="swatch" style="background:${r.color}"></span>${r.name}` : `<span${it.crafted ? ' class="crafted"' : ""}>${it.name}</span>${r.qty > 1 ? ` x${r.qty}` : ""}`;
+    const desc = r.glow ? "Weapon glow, looks only" : it.crafted ? descOf(id).replace(/(Warrior|Hunter|Mage) only, /, "") : descOf(id);
     const btn = done ? "Known" : !known ? (r.glow ? "Store" : "Need pattern") : "Craft";
     return `<div class="item"><div>${name}<small>${desc}${!known && r.pattern ? `. Needs ${PATTERNS[r.pattern][0]}, sold at the far camps` : ""}</small>${chips(r.mats, r.coins)}</div><button type="button" data-act="make" data-arg="${RECIPES.indexOf(r)}" ${ok ? "" : "disabled"}>${btn}</button></div>`; }).join("");
   const prevList = !panel.hidden && sheet.dataset.shop === "craft:" + n.id + ":" + tab && sheet.querySelector(".shoplist"), keepScroll = prevList ? prevList.scrollTop : 0;
@@ -3923,7 +3929,7 @@ function musicTick(dt) {
 for (const ev of ["pointerdown", "touchstart", "keydown"]) addEventListener(ev, () => audioCtx(), { passive: true });
 function addGems(n, why) { player.gems += n; toast(`+${n} gems: ${why}`); save(); }
 function addItem(id, qty, foundIt) {
-  player.bag[id] = (player.bag[id] || 0) + (qty || 1);
+  player.bag[id] = (player.bag[id] || 0) + (qty || 1); if (ITEMS[id].mat) matGain(id, qty || 1);
   toast(`${foundIt ? "Found" : "Received"}: ${ITEMS[id].name}${qty > 1 ? ` x${qty}` : ""}`, true);
   if (isUpgrade(id)) promptEquip(id);
 }
@@ -4063,7 +4069,7 @@ function showQuestList(n, readyL, offerL, activeL) {
 function showOffer(n, q, fromList) {
   openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${q.text}</p><p class="soft">Where: ${q.where}</p><p class="reward">Reward: ${rewardText(q.reward)}</p>
     <div class="row"><button data-act="${fromList ? "back" : "close"}" type="button">${fromList ? "Back" : "Not now"}</button><button data-act="accept" type="button">Accept</button></div>`,
-    { back: () => talk(n), accept: () => { quests[q.id] = { state: "active", n: 0, at: Date.now() }; toast(`Quest accepted: ${q.title}`); if (q.onAccept) q.onAccept(); matsCheck(); renderTracker(); save();
+    { back: () => talk(n), accept: () => { quests[q.id] = { state: "active", n: 0, at: Date.now(), ...(q.goal.type === "mats" ? { got: {} } : {}) }; toast(`Quest accepted: ${q.title}`); if (q.onAccept) q.onAccept(); matsCheck(); renderTracker(); save();
       if (questGroups(q)) setTimeout(() => toast(`Fresh ${plural(FOES[q.goal.foe].name)} have gathered at the quest marker`), 900);
       if (fromList && QUESTS.some(x => x.giver === n.id && questAvailable(x))) talk(n); else closePanel(); } });
 }
@@ -4088,7 +4094,7 @@ function progressText(q) {
   const st = quests[q.id]; if (!st) return "";
   if (st.state === "ready") return `Return to ${npcById(turnInNpc(q)).name}`;
   if (q.goal.type === "talk") return `Find ${npcById(q.goal.npc).name}`;
-  if (q.goal.type === "mats") return Object.entries(q.goal.need).map(([id, n]) => `${ITEMS[id].name} ${Math.min(n, player.bag[id] || 0)}/${n}`).join(", ");
+  if (q.goal.type === "mats") return Object.entries(q.goal.need).map(([id, n]) => `${ITEMS[id].name} ${Math.min(n, matGot(st, id))}/${n}`).join(", ");
   const label = q.goal.type === "kill" ? (q.goal.n > 1 ? plural(FOES[q.goal.foe].name) : FOES[q.goal.foe].name) : q.goal.label || { ink: "Ink Drops", page: "Pages", berry: "Inkberries", silk: "Silk spools", paw: "Paw prints", pup: "Inky cut free", mine: "Ore mined" }[q.goal.thing];
   return `${label}: ${st.n || 0}/${q.goal.n}`;
 }
@@ -4265,7 +4271,7 @@ function showBag(confirmReset, tab) {
     <div class="slots">${slot("weapon", "Weapon")}${slot("head", "Head")}${slot("body", "Body")}${slot("hands", "Hands")}${slot("feet", "Feet")}</div>
     <div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="${!mats}" data-act="btab" data-arg="items">Items</button><button type="button" role="tab" aria-selected="${mats}" data-act="btab" data-arg="mats">Materials ${matCount()}/${pouchCap()}</button></div>
     ${mats ? `<p class="soft">${player.tools.length ? "Tools: " + player.tools.map(k => TOOLS[k][0]).join(", ") + ". " : ""}Materials come from veins, trees, herbs, fishing and enemies. Craft with them at Brand, Carly, Clegg, Fizz and Mara.</p>` : desk ? '<p class="soft">Drag a potion or relic onto the ability bar to put it on a key.</p>' : ""}
-    <div class="list">${items.length ? items.map(([id, n]) => `<div class="item"${desk && barItem(id) ? ` draggable="true" data-drag="item:${id}"` : ""}><div>${ITEMS[id].mat ? `<span class="swatch" style="background:${ITEMS[id].color}"></span>` : ""}<span${ITEMS[id].rare ? ' class="rare"' : ITEMS[id].crafted ? ' class="crafted"' : ""}>${itName(id)}</span>${n > 1 ? ` x${n}` : ""}${isUpgrade(id) ? '<span class="up">&#9650; Upgrade</span>' : ""}<small>${ITEMS[id].desc}</small></div>
+    <div class="list">${items.length ? items.map(([id, n]) => `<div class="item"${desk && barItem(id) ? ` draggable="true" data-drag="item:${id}"` : ""}><div>${ITEMS[id].mat ? `<span class="swatch" style="background:${ITEMS[id].color}"></span>` : ""}<span${ITEMS[id].rare ? ' class="rare"' : ITEMS[id].crafted ? ' class="crafted"' : ""}>${itName(id)}</span>${n > 1 ? ` x${n}` : ""}${isUpgrade(id) ? '<span class="up">&#9650; Upgrade</span>' : ""}<small>${descOf(id)}</small></div>
       ${ITEMS[id].relic && RELICS[ITEMS[id].relic].buff ? `<button type="button" data-act="use" data-arg="${id}">Use</button>` : ""}
       ${ITEMS[id].mana ? `<button type="button" data-act="mana" data-arg="${id}">Drink</button>` : ""}
       ${POTIONS.includes(id) ? `<button type="button" data-act="drink" data-arg="${id}">${id === "grilled_perch" ? "Eat" : "Drink"}</button>` : ""}
@@ -4379,16 +4385,16 @@ function showShop(n, tab) {
   const nm = id => `<span${ITEMS[id].rare ? ' class="rare"' : ""}>${ITEMS[id].name}</span>`;
   let body;
   if (tab === "mount") body = '<p class="soft">Your fastest steed carries you outdoors. Tap Ride on the top bar to get on or off.</p>' + n.shop.filter(id => ITEMS[id].mount).map(id => { const it = ITEMS[id], mine = owned(id), low = it.lvl > player.level;
-    return `<div class="item"><div>${nm(id)}<small>${it.desc}${low ? `. Needs level ${it.lvl}` : ""}</small></div><button type="button" data-act="buy" data-arg="${id}" ${mine || low || player.coins < it.price ? "disabled" : ""}>${mine ? "Yours" : low ? `Level ${it.lvl}` : it.price.toLocaleString() + " coins"}</button></div>`; }).join("");
+    return `<div class="item"><div>${nm(id)}<small>${descOf(id)}</small></div><button type="button" data-act="buy" data-arg="${id}" ${mine || low || player.coins < it.price ? "disabled" : ""}>${mine ? "Yours" : low ? `Level ${it.lvl}` : it.price.toLocaleString() + " coins"}</button></div>`; }).join("");
   else if (tab === "coat") body = `<p class="soft">Coats change how your steed looks. You have ${player.gems} gems.</p>` + `<div class="item"><div>Natural coat<small>Each steed's own color</small></div><button type="button" data-act="wear" data-arg="" ${player.coat ? "" : "disabled"}>${player.coat ? "Wear" : "Wearing"}</button></div>` +
     n.shop.filter(id => ITEMS[id].coat).map(id => { const it = ITEMS[id], k = it.coat, mine = owned(id);
-      return `<div class="item"><div><span class="swatch" style="background:${COATS[k][1]}"></span>${nm(id)}<small>${it.desc}</small></div>${mine ? `<button type="button" data-act="wear" data-arg="${k}" ${player.coat === k ? "disabled" : ""}>${player.coat === k ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${id}" ${player.gems < it.gems ? "disabled" : ""}>${it.gems} gems</button>`}</div>`; }).join("");
-  else if (tab === "sell") body = sellable.map(([id, c]) => `<div class="item"><div>${nm(id)}${c > 1 ? ` x${c}` : ""}<small>${ITEMS[id].desc}</small></div><button type="button" data-act="sell" data-arg="${id}">Sell ${Math.floor(ITEMS[id].price / 4)}</button></div>`).join("");
+      return `<div class="item"><div><span class="swatch" style="background:${COATS[k][1]}"></span>${nm(id)}<small>${descOf(id)}</small></div>${mine ? `<button type="button" data-act="wear" data-arg="${k}" ${player.coat === k ? "disabled" : ""}>${player.coat === k ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${id}" ${player.gems < it.gems ? "disabled" : ""}>${it.gems} gems</button>`}</div>`; }).join("");
+  else if (tab === "sell") body = sellable.map(([id, c]) => `<div class="item"><div>${nm(id)}${c > 1 ? ` x${c}` : ""}<small>${descOf(id)}</small></div><button type="button" data-act="sell" data-arg="${id}">Sell ${Math.floor(ITEMS[id].price / 4)}</button></div>`).join("");
   else if (tab === "forge") {
     body = `<p class="soft">Bring me a rare blueprint and I'll forge it. Blueprints drop from any enemy, about 1 in 1,000, and from bosses more often.</p>` +
       BLUEPRINTS.filter(bp => canWear(ITEMS[bp].bp) || player.bag[bp] > 0).map(bp => { const id = ITEMS[bp].bp, it = ITEMS[id], have = player.bag[bp] > 0;
-        return `<div class="item"><div>${nm(id)}${have ? "" : ' <span class="soft">(need blueprint)</span>'}<small>${it.desc}</small></div><button type="button" data-act="forge" data-arg="${bp}" ${have && player.coins >= it.price ? "" : "disabled"}>${it.price.toLocaleString()} coins</button></div>`; }).join("");
-  } else body = (tab === "dye" ? '<p class="soft">Dyes unlock a color for good. Apply them from your Bag.</p>' : "") + n.shop.filter(id => shopCat(id) === tab).sort((a, b) => (ITEMS[a].lvl || 0) - (ITEMS[b].lvl || 0) || ITEMS[a].price - ITEMS[b].price).map(id => `<div class="item"><div>${ITEMS[id].dye ? `<span class="swatch" style="background:${DYES[ITEMS[id].dye][1]}"></span>` : ""}${nm(id)}${owned(id) && (ITEMS[id].slot || ITEMS[id].dye) ? " (owned)" : ""}${ITEMS[id].lvl > player.level ? ` <span class="locked">Lv ${ITEMS[id].lvl}</span>` : ""}<small>${ITEMS[id].desc}</small></div>
+        return `<div class="item"><div>${nm(id)}${have ? "" : ' <span class="soft">(need blueprint)</span>'}<small>${descOf(id)}</small></div><button type="button" data-act="forge" data-arg="${bp}" ${have && player.coins >= it.price ? "" : "disabled"}>${it.price.toLocaleString()} coins</button></div>`; }).join("");
+  } else body = (tab === "dye" ? '<p class="soft">Dyes unlock a color for good. Apply them from your Bag.</p>' : "") + n.shop.filter(id => shopCat(id) === tab).sort((a, b) => (ITEMS[a].lvl || 0) - (ITEMS[b].lvl || 0) || ITEMS[a].price - ITEMS[b].price).map(id => `<div class="item"><div>${ITEMS[id].dye ? `<span class="swatch" style="background:${DYES[ITEMS[id].dye][1]}"></span>` : ""}${nm(id)}${owned(id) && (ITEMS[id].slot || ITEMS[id].dye) ? " (owned)" : ""}<small>${descOf(id)}</small></div>
       <button type="button" data-act="buy" data-arg="${id}" ${player.coins < ITEMS[id].price || ((ITEMS[id].dye || ITEMS[id].mount || ITEMS[id].scroll) && owned(id)) ? "disabled" : ""}>${(ITEMS[id].mount || ITEMS[id].scroll) && owned(id) ? "Known" : ITEMS[id].price.toLocaleString() + " coins"}</button></div>`).join("");
   const prevList = !panel.hidden && sheet.dataset.shop === n.id + ":" + tab && sheet.querySelector(".shoplist"), keepScroll = prevList ? prevList.scrollTop : 0;
   openPanel(`<h2>${n.name}</h2><p class="soft">You have ${player.coins} coins and ${stats().def} armor.</p>
@@ -5244,7 +5250,7 @@ addEventListener("pointerdown", ev => { if (skPick && !skillcol.contains(ev.targ
 // More (phone): everything that isn't a skill, one tap each
 function showMore() {
   const items = Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id));
-  openPanel(`<h2>More</h2><div class="list">${items.map(id => `<div class="item"><div>${ITEMS[id].name}${player.bag[id] > 1 ? ` x${player.bag[id]}` : ""}<small>${ITEMS[id].desc}</small></div><button type="button" data-act="use" data-arg="${id}">${POTIONS.includes(id) ? "Drink" : "Use"}</button></div>`).join("") || '<p class="soft">No potions, stew or relics in your bag right now.</p>'}</div>
+  openPanel(`<h2>More</h2><div class="list">${items.map(id => `<div class="item"><div>${ITEMS[id].name}${player.bag[id] > 1 ? ` x${player.bag[id]}` : ""}<small>${descOf(id)}</small></div><button type="button" data-act="use" data-arg="${id}">${POTIONS.includes(id) ? "Drink" : "Use"}</button></div>`).join("") || '<p class="soft">No potions, stew or relics in your bag right now.</p>'}</div>
     <div class="row">${bestSteed() ? `<button type="button" data-act="ride">${player.mounted ? "Walk" : "Ride"}</button>` : ""}<button type="button" data-act="map">Map</button><button type="button" data-act="pets">Pets</button><button type="button" data-act="sound">Sound ${soundOn ? "on" : "off"}</button><button data-act="close" type="button">Close</button></div>`,
     { sound: () => { btnSound.click(); showMore(); }, use: id => { ITEMS[id].mana ? drinkMana(id) : POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
 }
