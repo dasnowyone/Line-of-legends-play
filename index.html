@@ -278,7 +278,13 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .item > div { min-width: 0; }
 .nb.nomana { color: #8fa9d6; background-color: #e3ebf7; border-color: #8fa9d6; }
 #manaRow { cursor: pointer; }
-.item .dropq { padding: 2px 9px; color: var(--ink-soft); border-color: var(--ink-soft); border-width: 1.5px; flex: none; }
+.daily { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.dday { border: 1.5px solid var(--ink); border-radius: 9px; padding: 4px 3px; text-align: center; font-size: 13px; line-height: 1.2; background: #fbf8ef; display: grid; gap: 2px; align-content: start; }
+.dday b { font-weight: normal; font-size: 14px; color: var(--ink-soft); } .dday.big { grid-column: span 1; background: #eef5fb; }
+.dday.got { opacity: .45; } .dday.got b::after { content: " \2713"; color: #2d7a33; }
+.dday.now { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); background: #fff6d8; }
+#sheet .list > .item > div:first-child { flex: 1; }
+.item .dropq { color: var(--ink-soft); border-color: var(--ink-soft); flex: none; }
 .item .drop { color: var(--blood); border-color: var(--blood); flex: none; }
 .item small { display: block; color: var(--ink-soft); font-size: 15px; }
 #gearPrompt { left: 50%; transform: translateX(-50%); bottom: 34%; z-index: 6; display: flex; gap: 10px; align-items: center; background: var(--card); border: 2.5px solid var(--gold, #c9a227); border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 17px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
@@ -555,6 +561,18 @@ for (const id of ["inkfang_blade", "warden_helm", "warden_plate", "warden_gauntl
   W("mage", "m_coral_trident", "Coral Staff", 10, 34, "staff", "#f2a3a0", { mp: 25, set: "tide", base: "coral_trident", glow: "#2f7a86" });
   W("mage", "m_ember_blade", "Ember Wand", 5, 18, "wand", "#d9622b", { premium: "ember", base: "ember_blade", glow: "#f2b134" });
   W("mage", "m_frost_blade", "Frostbite Staff", 8, 28, "staff", "#8fd3f0", { mp: 20, premium: "frost", base: "frost_blade", glow: "#e8f7ff" });
+}
+{
+  const CW = (id, cls, name, lvl, atk, kind, color, glow, x) => { ITEMS[id] = { name, slot: "weapon", cls, atk, lvl, legend: true, rare: true, look: { kind, color, glow, len: kind === "blade" ? 48 : undefined, guard: x && x.guard }, ...x }; delete ITEMS[id].guard; };
+  CW("cw1", "warrior", "Rook's Oath", 20, 80, "blade", "#c4cad3", "#c0261e", { guard: "#7a2a1a" });
+  CW("cw2", "warrior", "Oath of Embers", 30, 112, "blade", "#e8b060", "#e0662a", { guard: "#7a2a1a" });
+  CW("cw3", "warrior", "Oathkeeper", 40, 152, "blade", "#f2ead2", GOLD, { guard: "#c0261e", reach: 6 });
+  CW("h_cw1", "hunter", "Kestrel's Gift", 20, 80, "bow", "#6a8a4a", "#e8f4fa", { spd: 6, base: "cw1" });
+  CW("h_cw2", "hunter", "Talonbow", 30, 112, "longbow", "#8a5a2a", "#e0662a", { range: 30, base: "cw2" });
+  CW("h_cw3", "hunter", "Skytalon", 40, 152, "longbow", "#2f5a3a", GOLD, { range: 40, spd: 6, base: "cw3" });
+  CW("m_cw1", "mage", "Orrin's Spark", 20, 80, "wand", "#3b6fb6", "#9cc9de", { mp: 30, base: "cw1" });
+  CW("m_cw2", "mage", "Emberwake Staff", 30, 112, "staff", "#7a3a2a", "#f2b134", { mp: 50, base: "cw2" });
+  CW("m_cw3", "mage", "Inkstar Staff", 40, 152, "staff", "#1b1b3a", GOLD, { mp: 75, base: "cw3" });
 }
 // ---------- Crafting (Lee): materials, and a craft-only set at the top of every tier ----------
 // Materials sit in their own tab of the bag. Ore can't be bought: it's mined from veins (with a pick, from a set level) or won from enemies
@@ -2562,6 +2580,19 @@ QUESTS.push(
   CLS_Q("cls_m2", "orrin", "mage", 6, ["cls_m1"], "Hexers' Lesson", { type: "kill", foe: "goblin_shaman", n: 5 }, "Goblin shamans cast too, and badly. Show five of them how it's done.", { xp: 450, coins: 40, item: "mana_potion", qty: 5 }, "Clean work. A mage who wastes mana is a mage who walks home.", { where: "Margin Woods, the goblin camps" }),
   CLS_Q("cls_m3", "orrin", "mage", 10, ["cls_m2"], "Unmaking Stone", { type: "kill", foe: "golem", n: 5 }, "Stone doesn't burn, but it breaks. Five Scratch Golems, and keep your distance. They throw.", { xp: 900, coins: 60, item: "mana_potion", qty: 5 }, "Stone, unmade. You're ready for the mainland. Mind your mana out there.", { where: "Scratch Hills" }),
 );
+// Lee: each class chain goes on at 20, 30 and 40, out on the mainland. Every chapter hands over the next class weapon.
+// They sit between the shop weapon of that level and the crafted one, so crafting stays the best route
+QUESTS.push(
+  CLS_Q("cls_w4", "rook", "warrior", 20, ["cls_w3"], "Sand in the Joints", { type: "kill", foe: "sand_raider", n: 8 }, "Sand Raiders hit and run all over Sunscratch Canyon. A warrior doesn't chase. Stand your ground, let them come, and break eight.", { xp: 13000, coins: 500, item: "cw1" }, "Still in one piece? Then you've earned this. Rook's Oath. My old blade, and now yours.", { where: "Sunscratch Canyon, from Dry Well Outpost" }),
+  CLS_Q("cls_w5", "rook", "warrior", 30, ["cls_w4"], "Knights of Ash", { type: "kill", foe: "ash_knight", n: 8 }, "Out in the Ember Wastes, Ash Knights wear plate as thick as yours. Find out whose is better. Eight of them.", { xp: 28000, coins: 1200, item: "cw2" }, "The Oath took the heat and came back hotter. Oath of Embers. Swing it like you mean it.", { where: "The Ember Wastes, from Cinder Bastion" }),
+  CLS_Q("cls_w6", "rook", "warrior", 40, ["cls_w5"], "The Last Stand", { type: "kill", foe: "horror", n: 6 }, "The Blotlands spit out Blot Horrors, big as houses and twice as ugly. Six of them. Then you're done learning from me.", { xp: 50000, coins: 3000, item: "cw3" }, "Oathkeeper. There's only one, and it was always going to be yours. Go on. The Keep is waiting.", { where: "The Blotlands, from Last Lantern" }),
+  CLS_Q("cls_h4", "kestrel", "hunter", 20, ["cls_h3"], "Slingers on the Rim", { type: "kill", foe: "slinger", n: 8 }, "Canyon Slingers sit up on the rim of Sunscratch Canyon and throw from range. So do you, only better. Eight of them.", { xp: 13000, coins: 500, item: "h_cw1" }, "Scout told me you never missed. Take Kestrel's Gift. I strung it myself.", { where: "Sunscratch Canyon, from Dry Well Outpost" }),
+  CLS_Q("cls_h5", "kestrel", "hunter", 30, ["cls_h4"], "Drake Hunt", { type: "kill", foe: "drakeling", n: 8 }, "Drakelings dart through the Ember Wastes faster than any bird. Track eight of them, with Scout on their heels.", { xp: 28000, coins: 1200, item: "h_cw2" }, "Eight drakes. Let's see a griffin do that. The Talonbow, made from what you brought down.", { where: "The Ember Wastes, from Cinder Bastion" }),
+  CLS_Q("cls_h6", "kestrel", "hunter", 40, ["cls_h5"], "Hounds of the Blot", { type: "kill", foe: "blot_hound", n: 8 }, "Blot Hounds run in packs across the Blotlands. Scout hates them. Eight of them, and keep your distance.", { xp: 50000, coins: 3000, item: "h_cw3" }, "Skytalon. The best bow I've ever seen, in the hands of the best hunter. Scout agrees.", { where: "The Blotlands, from Last Lantern" }),
+  CLS_Q("cls_m4", "orrin", "mage", 20, ["cls_m3"], "Dust to Dust", { type: "kill", foe: "dust_golem", n: 6 }, "Dust Golems wander Sunscratch Canyon. They're slow, they're tough, and they never run out of breath. You will run out of mana. Manage it. Six of them.", { xp: 13000, coins: 500, item: "m_cw1" }, "Six golems and you still have mana to spare? Take Orrin's Spark. It drinks less of you.", { where: "Sunscratch Canyon, from Dry Well Outpost" }),
+  CLS_Q("cls_m5", "orrin", "mage", 30, ["cls_m4"], "Fire Meets Fire", { type: "kill", foe: "magma_golem", n: 6 }, "Magma Golems in the Ember Wastes laugh at fire. Make them stop laughing. Six of them.", { xp: 28000, coins: 1200, item: "m_cw2" }, "Fire against fire, and you won. The Emberwake Staff. Mind the sparks.", { where: "The Ember Wastes, from Cinder Bastion" }),
+  CLS_Q("cls_m6", "orrin", "mage", 40, ["cls_m5"], "Unwritten Words", { type: "kill", foe: "cultist", n: 8 }, "Ink Cultists in the Blotlands twist spells into something ugly. Unwrite eight of them.", { xp: 50000, coins: 3000, item: "m_cw3" }, "The Inkstar Staff. Every archmage dreams of it, and only one gets to hold it. Today that's you.", { where: "The Blotlands, from Last Lantern" }),
+);
 function classChange(n) {
   const k = n.trainer, C = CLASSES[k];
   if (cls() === k) return;
@@ -4096,6 +4127,39 @@ setInterval(() => {
 // ---------- daily bounties ----------
 const plural = n => n.replace(/Wolf$/, "Wolve") + (/(s|sh|ch|x)$/.test(n) ? "es" : "s");
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+// ---------- Daily login reward (Lee) ----------
+// One claim a day across all your heroes. Seven days in a row ends on gems; missing a day starts the week over
+const DAILY_KEY = "lol-daily";
+const dailyGet = () => { try { return JSON.parse(localStorage.getItem(DAILY_KEY) || "null") || { last: "", day: 0 }; } catch { return { last: "", day: 0 }; } };
+const dayGap = (a, b) => { const p = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); }; return Math.round((p(b) - p(a)) / 864e5); };
+function dailyNext() { const d = dailyGet(), t = today(); if (d.last === t) return 0; return d.last && dayGap(d.last, t) === 1 && d.day < 7 ? d.day + 1 : 1; }
+function dailyRewards() {
+  const c = Math.max(15, Math.round(foeCoin(Math.max(player.level, 10)) * (player.level < 10 ? 0.5 : 1))), tier = Math.min(5, Math.floor(player.level / 10) + 1);
+  const mat = cls() === "hunter" ? HIDE_T[tier] : cls() === "mage" ? CLOTH_T[tier] : ORE_T[tier];
+  const heal = player.level >= 6 ? "greater_potion" : "potion";
+  return [
+    { coins: c * 10 },
+    { item: "potion", qty: 3, also: cls() === "mage" ? ["mana_potion", 3] : null },
+    { coins: c * 15 },
+    { item: mat, qty: 5 },
+    { coins: c * 20 },
+    { item: heal, qty: 3, also: cls() === "mage" ? [player.level >= 15 ? "greater_mana" : "mana_potion", 3] : null },
+    { gems: 10, coins: c * 25 },
+  ];
+}
+const dailyLabel = r => [r.gems && `<span class="gem">&#9670; ${r.gems} gems</span>`, r.coins && `${r.coins} coins`, r.item && `${ITEMS[r.item].name} x${r.qty}`, r.also && `${ITEMS[r.also[0]].name} x${r.also[1]}`].filter(Boolean).join("<br>");
+function showDaily() {
+  const n = dailyNext(), d = dailyGet(), cur = n || d.day, R = dailyRewards();
+  openPanel(`<h2>Daily reward</h2><p class="soft">${n ? (n === 1 && d.last ? "A new week starts today." : `Day ${n} in a row.`) : "Come back tomorrow for the next one."} Play 7 days in a row for gems. Miss a day and the week starts over.</p>
+    <div class="daily">${R.map((r, i) => `<div class="dday${i + 1 < cur || (!n && i + 1 === cur) ? " got" : ""}${n && i + 1 === n ? " now" : ""}${i === 6 ? " big" : ""}"><b>Day ${i + 1}</b><span>${dailyLabel(r)}</span></div>`).join("")}</div>
+    <div class="row">${n ? `<button data-act="claim" type="button">Claim day ${n}</button>` : '<button data-act="close" type="button">OK</button>'}</div>`,
+    { claim: () => { const k = dailyNext(); if (!k) return showDaily(); const r = dailyRewards()[k - 1];
+      try { localStorage.setItem(DAILY_KEY, JSON.stringify({ last: today(), day: k })); } catch {}
+      if (r.coins) player.coins += r.coins; if (r.gems) player.gems += r.gems; if (r.item) addItem(r.item, r.qty); if (r.also) addItem(r.also[0], r.also[1]);
+      sfx(k === 7 ? "level" : "coin"); save(); closePanel(); toast(`Day ${k} reward claimed${k === 7 ? ". See you next week!" : ""}`); } });
+}
+// pops up once a day, the first time you're out in the world with nothing open
+setInterval(() => { if (window.__started && player.cls && panel.hidden && !cine && !classPicking && !player.dead && !transition && dailyNext() && (player.tut.includes("move") || player.tut.includes("all"))) showDaily(); }, 2500);
 const BOUNTY_FOES = ["dash", "squiggle", "triangle", "spider", "wolf", "goblin", "goblin_archer", "goblin_shaman", "goblin_runner", "bandit", "bandit_archer", "bandit_warder", "golem", ...MAINLAND.flatMap(z => z.foes)];
 let bounty = { day: "", boards: {}, gems: false };
 // Each board hunts the creatures of the zone it stands in
@@ -4207,7 +4271,7 @@ function showBag(confirmReset, tab) {
       ${POTIONS.includes(id) ? `<button type="button" data-act="drink" data-arg="${id}">${id === "grilled_perch" ? "Eat" : "Drink"}</button>` : ""}
       ${ITEMS[id].buff ? `<button type="button" data-act="eat" data-arg="${id}">${BUFFS[ITEMS[id].buff] && /Stew|Pie|Skewers|Chowder|Feast/.test(ITEMS[id].name) ? "Eat" : "Drink"}</button>` : ""}
       ${dropAsk === id ? `<button type="button" class="drop" data-act="drop1" data-arg="${id}">Drop 1</button>${n > 1 ? `<button type="button" class="drop" data-act="dropall" data-arg="${id}">Drop all</button>` : ""}<button type="button" data-act="keep">Keep</button>`
-        : `${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}${questKeeps(id) ? "" : `<button type="button" class="dropq" data-act="drop" data-arg="${id}" aria-label="Drop ${itName(id)}">&times;</button>`}`}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
+        : `${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}${questKeeps(id) ? "" : `<button type="button" class="dropq" data-act="drop" data-arg="${id}">Drop</button>`}`}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
     <div class="row">${Object.keys(player.bag).some(isUpgrade) ? '<button type="button" data-act="best">Equip best</button>' : ""}<button type="button" data-act="talents">Talents${talentPoints() > 0 ? ` (${talentPoints()})` : ""}</button><button type="button" data-act="pets">Pets${desk ? " (P)" : ""}</button><button type="button" data-act="ach">Achievements${desk ? " (Y)" : ""}</button><button type="button" data-act="dyes">Dyes</button><button type="button" data-act="store">Store</button><button type="button" data-act="savenow">Save</button><button type="button" data-act="heroes">Heroes</button><button type="button" data-act="reset">${confirmReset ? "Tap again to erase your hero" : "Start over"}</button><button data-act="close" type="button">Close</button></div>`,
     {
       use: id => { useRelic(id); showBag(); }, btab: t => { dropAsk = null; showBag(false, t); }, eat: id => { eatBuff(id); showBag(); },
@@ -4855,7 +4919,7 @@ function rangedAttack(s) {
   p.combo = p.combo % 3 + 1; p.lastAttack = clock; p.attackT = 0.18;
   p.attackCd = (h ? 0.5 * (p.moving ? 1 : 0.8) * (p.furyT > 0 ? 0.7 : 1) : 0.62) * (1 - s.spd / 100);
   const crit = p.combo === 3, a = aimAt(t);
-  shootP(a, Math.round(s.atk * (h ? 1.3 : 1.9) * (crit ? 1.5 * (1 + 0.15 * tr("finisher")) : 1) * (0.9 + Math.random() * 0.2)), crit, h ? "arrow" : "inkbolt", h ? 900 : 620, R);
+  shootP(a, Math.round(s.atk * (h ? 1.3 : 2.2) * (crit ? 1.5 * (1 + 0.15 * tr("finisher")) : 1) * (0.9 + Math.random() * 0.2)), crit, h ? "arrow" : "inkbolt", h ? 900 : 760, R);
   sfx(h ? "shoot" : "slap");
 }
 // Area hits: mage spells stop at 6 targets so a mage can't wipe a whole camp at once
@@ -5283,6 +5347,7 @@ document.getElementById("hud").addEventListener("click", () => {
       <div class="item"><div>Watch a dungeon appear<small>Puts you one kill below its level, in the best gear for that level, next to where it appears</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${[["hollow", "Hollow 12"], ...DGL.map(g => [g.id, `${g.name.replace(/^The /, "").split(" ")[0]} ${g.lv}`])].map(([id, l]) => `<button type="button" data-act="pre" data-arg="${id}">${l}</button>`).join("")}</div></div>
       <div class="item"><div>Open the Inkstone Keep raid<small>Level 50, best gear, all seven stones, 10 greater potions, at the Keep's gate</small></div><button type="button" data-act="keep">Go</button></div>
       <div class="item"><div>Go to the stablemaster<small>Stablemaster Brindle at Highpass Lodge, Frostmargin Peaks</small></div><button type="button" data-act="stable">Go</button></div>
+      <div class="item"><div>Preview the gem items<small>Empties your bag, then gives every gem item for your class: Ember and Frostbound packs, premium dyes, steed coats and the dungeon relics</small></div><button type="button" data-act="gemprev">Go</button></div>
       <div class="item"><div>Get every steed<small>All four steeds, plus 1,000 gems to try the coats</small></div><button type="button" data-act="steed">Go</button></div>
       <div class="item"><div>Best gear for my level<small>The strongest piece you can wear in every slot, plus 5 greater potions</small></div><button type="button" data-act="gear" data-arg="mine">Go</button></div>
       <div class="item"><div>Jump to a level<small>Then use the gear button above to match it</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${[10, 20, 30, 40, 50].map(l => `<button type="button" data-act="setlv" data-arg="${l}">${l}</button>`).join("")}</div></div>
@@ -5338,6 +5403,14 @@ document.getElementById("hud").addEventListener("click", () => {
         if (map.id !== "world") goTo("world", ...MAINLAND[0].camp, true);
         save(); closePanel(); banner("Level 11", "Defeat any enemy to reach level 12"); },
       stable: () => { const n = MAPS.world.objs.find(o => o.id === "brindle"); if (!found.includes("ws_peaks")) found.push("ws_peaks"); closePanel(); goTo("world", n.x - 60, n.y + 40); },
+      gemprev: () => {
+        player.bag = {};
+        for (const id of Object.keys(ITEMS)) if (ITEMS[id].premium && canWear(id)) player.bag[id] = 1;
+        for (const r of Object.values(RELICS)) player.bag[r.id] = (player.bag[r.id] || 0) + 1;
+        for (const [k, d] of Object.entries(DYES)) if (d[2] && !player.dyes.includes(k)) player.dyes.push(k);
+        for (const k of Object.keys(COATS)) if (!player.coats.includes(k)) player.coats.push(k);
+        if (!player.steeds.length) { player.steeds = ["steed_pony"]; syncRide(); }
+        matsCheck(); save(); closePanel(); dropAsk = null; showBag(); toast("Gem items added. Dyes are under Dyes, coats at Stablemaster Brindle"); },
       steed: () => { player.steeds = Object.keys(STEEDS); player.mounted = true; player.gems += 1000; syncRide(); save(); closePanel(); banner("Every steed is yours!", "Stormstrider carries you 30% faster. Tap Ride or Walk on the top bar"); },
       setlv: l => { player.level = +l; player.xp = 0; if (player.level >= TEMPLE_LEVEL && !temple.risen) setRisen(true); if (player.level >= HOLLOW_LEVEL && !hollow.risen) setHollow(true); for (const g of DGL) if (player.level >= g.lv && !g.risen) setDg(g, true); player.hp = stats().maxHp; save(); closePanel(); banner(`Level ${l}`, "Tap the health box 5 times again for matching gear"); },
       ways: () => { for (const o of MAPS.world.objs) if (o.kind === "waystone" && !found.includes(o.id)) found.push(o.id); save(); closePanel(); toast("Every waystone unlocked"); },
