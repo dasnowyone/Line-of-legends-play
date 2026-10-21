@@ -287,11 +287,17 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .needlv { color: var(--blood); }
 #sheet canvas.ithumb { width: 52px; height: 52px; flex: none; border: 1.5px solid rgba(27,27,32,.35); border-radius: 8px; background: #fbf8ef; }
 #sheet .list > .item > canvas.ithumb + div { flex: 1; }
+#sheet canvas.pthumb { width: 48px; height: 48px; flex: none; border: 1.5px solid rgba(27,27,32,.35); border-radius: 8px; background: #fbf8ef; }
+#sheet .list > .item > canvas.pthumb + div { flex: 1; }
 .item .dropq { color: var(--ink-soft); border-color: var(--ink-soft); flex: none; }
 .item .drop { color: var(--blood); border-color: var(--blood); flex: none; }
 .item small { display: block; color: var(--ink-soft); font-size: 15px; }
 #gearPrompt { left: 50%; transform: translateX(-50%); bottom: 34%; z-index: 6; display: flex; gap: 10px; align-items: center; background: var(--card); border: 2.5px solid var(--gold, #c9a227); border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 17px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #gearPrompt[hidden] { display: none; }
+#getUp { left: 50%; transform: translateX(-50%); bottom: 22%; z-index: 6; display: grid; gap: 4px; justify-items: center; text-align: center; }
+#getUp[hidden] { display: none; }
+#getUp button { font-size: 20px; padding: 6px 16px; border-color: var(--gold); box-shadow: 0 3px 10px rgba(0,0,0,.2); }
+#getUp small { font-size: 14px; color: var(--ink-soft); background: rgba(255,253,246,.85); border-radius: 6px; padding: 0 6px; }
 #coach { left: 50%; transform: translateX(-50%); top: calc(140px + env(safe-area-inset-top, 0px)); width: min(88vw, 360px); z-index: 5; background: var(--card); border: 2.5px solid var(--gold); border-radius: 12px; padding: 8px 12px; font-size: 17px; line-height: 1.25; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
 #coach[hidden] { display: none; }
 #coachText { white-space: pre-line; }
@@ -352,6 +358,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
 <div id="toasts" class="ui"></div>
 <div id="coach" class="ui" hidden><span id="coachText"></span><button type="button" id="coachSkip">Skip tips</button></div>
 <div id="gearPrompt" class="ui" hidden><div id="gpText"></div><button type="button" id="gpEquip">Equip</button><button type="button" id="gpNo" aria-label="Dismiss">&times;</button></div>
+<div id="getUp" class="ui" hidden></div>
 <div id="fade" class="ui"></div>
 <div id="panel" class="ui" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 
@@ -3249,7 +3256,7 @@ const player = {
   map: "world", x: P(3460, 9110)[0], y: P(3460, 9110)[1], facing: 1, walk: 0, moving: false,
   level: 1, xp: 0, coins: 10, hp: 64,
   gear: { weapon: null, head: null, body: null, hands: null, feet: null }, bag: { potion: 2 }, dyes: [], dye: {}, gems: 0, elites: [], talents: {}, steeds: [], coats: [], coat: null, mounted: true, tut: [], relics: [], buffs: {}, tools: [], recipes: [], up: {}, glows: [], glow: null, pouch: 0, gemRec: [],
-  acd: {}, st: {}, ach: [], title: null, pets: [], pet: null, petNames: {}, attackT: 0, attackCd: 0, combo: 0, lastAttack: -9, dodgeT: 0, dodgeCd: 0, dodgeDir: [0, 1],
+  acd: {}, st: {}, ach: [], title: null, pets: [], pet: null, petNames: {}, petOutfits: [], petWear: {}, attackT: 0, attackCd: 0, combo: 0, lastAttack: -9, dodgeT: 0, dodgeCd: 0, dodgeDir: [0, 1],
   skillCd: 0, skillT: 0, potionCd: 0, hurtT: 0, lastHurt: -99, dead: 0,
 };
 const quests = {}; // id -> {state: "active"|"ready"|"done", n}
@@ -3307,7 +3314,7 @@ function save() {
   lastSave = Date.now();
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      level: player.level, xp: player.xp, coins: player.coins, gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
+      level: player.level, xp: player.xp, coins: player.coins, name: player.name || "", gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, petOutfits: player.petOutfits || [], petWear: player.petWear || {}, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
       map: player.map, x: player.x, y: player.y, wv: 2, cls: player.cls || null, gearConv: player.gearConv || null,
       skOrder: player.skOrder || null, tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
     }));
@@ -3324,7 +3331,7 @@ function load() {
     if (s.templeRisen) setRisen(true);
     if (s.hollowRisen) setHollow(true);
     for (const id of s.dgRisen || []) if (DG[id]) setDg(DG[id], true);
-    player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
+    player.name = typeof s.name === "string" ? s.name.slice(0, 16) : ""; player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.petOutfits = Array.isArray(s.petOutfits) ? s.petOutfits : []; player.petWear = s.petWear || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
     player.tools = s.tools || []; player.recipes = s.recipes || []; player.up = s.up || {}; player.glows = s.glows || []; player.glow = s.glow || null; player.pouch = s.pouch || 0; player.gemRec = s.gemRec || [];
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
@@ -3667,12 +3674,28 @@ function hurtPlayer(raw, lv) {
   }
   if (player.hp === 0) {
     const lost = Math.floor(player.coins * 0.1);
-    player.coins -= lost; player.dead = 2.5; bump("deaths"); if (!panel.hidden) closePanel();
+    player.coins -= lost; player.dead = player.gems >= GETUP_GEMS ? 5 : 2.5; player.lostCoins = lost; bump("deaths"); if (!panel.hidden) closePanel(); showGetUp();
     const where = map.dungeon ? (map.check ? (map.id === "hollow" ? "at the last lantern you lit" : "at your last safe spot") : map.id === "temple" ? map.deathText : "at the entrance") : "at the nearest waystone";
     banner("You were erased", lost ? `You dropped ${lost} coins. Redrawing you ${where}...` : `Redrawing you ${where}...`);
   }
 }
+// Get back up (Lee): for a few gems you stand up right where you fell, keep your coins, and carry on
+const GETUP_GEMS = 5;
+function showGetUp() {
+  const el = document.getElementById("getUp"); if (!el) return;
+  if (!player.dead || player.gems < GETUP_GEMS) { el.hidden = true; return; }
+  el.hidden = false; el.innerHTML = `<button type="button" id="getUpBtn">Get back up here <span class="gem">&#9670; ${GETUP_GEMS}</span></button><small>You have ${player.gems} gems${player.lostCoins ? `. Keeps your ${player.lostCoins} coins` : ""}</small>`;
+  document.getElementById("getUpBtn").onclick = e => { e.stopPropagation(); getUp(); };
+}
+function getUp() {
+  if (!player.dead || player.gems < GETUP_GEMS) return;
+  player.gems -= GETUP_GEMS; player.coins += player.lostCoins || 0; player.lostCoins = 0;
+  player.dead = 0; player.hp = Math.round(stats().maxHp * 0.6); player.dodgeT = 1.2; player.hurtT = 0;
+  document.getElementById("getUp").hidden = true; bannerTimer = 0; document.getElementById("banner").classList.remove("show");
+  floater(player.x, player.y - 90, "Back on your feet!", GOLD, 22); sfx("rare"); save();
+}
 function respawn() {
+  document.getElementById("getUp").hidden = true;
   if (map.dungeon) {
     player.dead = 0; player.hp = Math.round(stats().maxHp * 0.5); map.shots = [];
     for (const f of map.foes) if (f.state !== "idle") f.state = "return";
@@ -4304,21 +4327,34 @@ function showBag(confirmReset, tab) {
 function heroSlots() {
   const out = [];
   for (let i = 1; i <= MAX_HEROES; i++) { let s = null; try { s = JSON.parse(localStorage.getItem(slotKey(i)) || "null"); } catch {}
-    if (String(i) === SLOT) s = { level: player.level, cls: player.cls, map: player.map, x: player.x, y: player.y, title: player.title };
+    if (String(i) === SLOT) s = { level: player.level, cls: player.cls, map: player.map, x: player.x, y: player.y, title: player.title, name: player.name };
     if (s) out.push({ id: String(i), ...s }); }
   return out;
+}
+// Hero slots (Lee): the first ones are free, more cost gems. Bought slots belong to the player, not one hero. Heroes you already had are kept
+const FREE_HERO_SLOTS = 2, HERO_SLOT_GEMS = 100;
+const heroSlotsOwned = () => { let b = 0; try { b = +localStorage.getItem("lol-heroslots") || 0; } catch {} return Math.min(MAX_HEROES, FREE_HERO_SLOTS + b); };
+function showHeroName() {
+  openPanel(`<h2>Name your hero</h2><p class="soft">Up to 16 letters. Renaming is always free.</p>
+    <input id="heroNameInput" type="text" maxlength="16" autocomplete="off" value="${esc(player.name || "")}" style="font:inherit;font-size:18px;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;width:100%;box-sizing:border-box">
+    <div class="row"><button type="button" data-act="back">Cancel</button><button type="button" data-act="ok">Save</button></div>`,
+    { ok: () => { player.name = document.getElementById("heroNameInput").value.replace(/\s+/g, " ").trim().slice(0, 16); save(); showHeroes(); }, back: () => showHeroes() });
+  const inp = document.getElementById("heroNameInput"); inp.focus(); inp.select();
+  inp.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); sheet.querySelector('[data-act="ok"]').click(); } });
 }
 function showHeroes(confirmDel) {
   save();
   const list = heroSlots(), where = h => { const m = MAPS[h.map || "world"]; try { const z = m && m.zoneAt && h.x != null ? m.zoneAt(h.x, h.y) : null; return z && z.name ? z.name : "Inkwell Village"; } catch { return "Inkwell Village"; } };
   const free = []; for (let i = 1; i <= MAX_HEROES; i++) if (!list.some(h => h.id === String(i))) free.push(String(i));
-  openPanel(`<h2>Heroes</h2><p class="soft">Each hero has their own level, gear, quests and stones. Up to ${MAX_HEROES} heroes.</p><div class="list">${list.map(h => { const me = h.id === SLOT, c = CLASSES[h.cls];
-    return `<div class="item"><div>Hero ${h.id}: ${c ? c.name : "No class yet"}${h.title ? ` <span class="title">${h.title}</span>` : ""}<small>Level ${h.level || 1}, ${where(h)}</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${me ? '<button type="button" disabled>Playing</button>'
+  openPanel(`<h2>Heroes</h2><p class="soft">Each hero has their own level, gear, quests and stones. ${FREE_HERO_SLOTS} hero slots are free, and you can add more for <span class="gem">&#9670; ${HERO_SLOT_GEMS}</span> each, up to ${MAX_HEROES}.</p><div class="list">${list.map(h => { const me = h.id === SLOT, c = CLASSES[h.cls];
+    return `<div class="item"><div>${h.name ? esc(h.name) : "Hero " + h.id}: ${c ? c.name : "No class yet"}${h.title ? ` <span class="title">${h.title}</span>` : ""}<small>Level ${h.level || 1}, ${where(h)}</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${me ? '<button type="button" data-act="name">Rename</button><button type="button" disabled>Playing</button>'
       : `<button type="button" data-act="play" data-arg="${h.id}">Play</button><button type="button" data-act="del" data-arg="${h.id}">${confirmDel === h.id ? "Tap again to delete" : "Delete"}</button>`}</div></div>`; }).join("")}</div>
-    <div class="row">${free.length ? '<button type="button" data-act="newhero">New hero</button>' : ""}<button data-act="close" type="button">Close</button></div>`,
+    <div class="row">${free.length && list.length < heroSlotsOwned() ? '<button type="button" data-act="newhero">New hero</button>' : free.length ? `<button type="button" data-act="buyslot" ${player.gems < HERO_SLOT_GEMS ? "disabled" : ""}>New hero slot <span class="gem">&#9670; ${HERO_SLOT_GEMS}</span></button>` : ""}<button data-act="close" type="button">Close</button></div>`,
     {
       play: id => { save(); try { localStorage.setItem("lol-slot", id); } catch {} location.reload(); },
-      newhero: () => { save(); try { localStorage.setItem("lol-slot", free[0]); localStorage.removeItem(slotKey(free[0])); } catch {} location.reload(); },
+      name: () => showHeroName(),
+      buyslot: () => { if (player.gems < HERO_SLOT_GEMS) return; player.gems -= HERO_SLOT_GEMS; try { localStorage.setItem("lol-heroslots", String((+localStorage.getItem("lol-heroslots") || 0) + 1)); } catch {} sfx("rare"); save(); toast("New hero slot added"); showHeroes(); },
+      newhero: () => { if (heroSlots().length >= heroSlotsOwned()) return; save(); try { localStorage.setItem("lol-slot", free[0]); localStorage.removeItem(slotKey(free[0])); } catch {} location.reload(); },
       del: id => { if (id === SLOT) return; if (confirmDel !== id) return showHeroes(id); try { localStorage.removeItem(slotKey(id)); localStorage.removeItem("lol-bar-" + id); } catch {} toast(`Hero ${id} deleted`); showHeroes(); },
     });
 }
@@ -4444,7 +4480,7 @@ function showChar(pick) {
   const stat = (label, val, cls) => `<div class="cs-stat ${cls || ""}"><b>${val}</b>${label}</div>`;
   const score = ["weapon", ...ARMOR_SLOTS].reduce((a, k) => a + Math.max(0, gearScore(g[k])), 0);
   if (pick === undefined && !(sheet.classList.contains("charsheet") && !panel.hidden)) csPick = null;
-  openPanel(`<div class="cs-top"><h2>Hero${p.title ? ` <span class="title">${p.title}</span>` : ""}</h2><span class="coins">Level ${p.level}${p.level >= MAX_LEVEL ? " (max)" : ` &middot; ${p.xp.toLocaleString()} / ${xpToNext(p.level).toLocaleString()} XP`}</span></div>
+  openPanel(`<div class="cs-top"><h2>${p.name ? esc(p.name) : "Hero"}${p.title ? ` <span class="title">${p.title}</span>` : ""}</h2><span class="coins">Level ${p.level}${p.level >= MAX_LEVEL ? " (max)" : ` &middot; ${p.xp.toLocaleString()} / ${xpToNext(p.level).toLocaleString()} XP`}</span></div>
     <div class="cs-xp"><i style="width:${xpPct}%"></i></div>
     <div class="cs-mid">
       <div class="cs-col">${SLOTS.slice(0, 3).map(slotHtml).join("")}</div>
@@ -4831,6 +4867,49 @@ function drawPet() {
     ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.arc(x - 5, y - 13, 3, 0, 7); ctx.fill();
     ctx.beginPath(); for (const s of [-1, 1]) for (const ly of [-12, -7, -2]) { ctx.moveTo(x + s * 12, y + ly); ctx.lineTo(x + s * 18, y + ly + 3 + (pet.moving ? Math.sin(clock * 20 + ly) * 2 : 0)); } ctx.stroke();
   }
+  const ow = player.petWear && player.petWear[player.pet]; if (ow) { const [hx, hy] = petHead(P, x, y, f); drawPetOutfit(ow, hx, hy); }
+}
+// Pet outfits (Lee): little hats bought once with gems, about a week of free gems each, and worn by any pet
+const PET_OUTFIT_GEMS = 50;
+const PET_OUTFITS = {
+  party: { name: "Party Hat", color: "#e0662a" }, crown: { name: "Tiny Crown", color: "#d4a92a" }, wizard: { name: "Wizard Hat", color: "#3b6fb6" },
+  bow: { name: "Big Bow", color: "#d04a7a" }, tophat: { name: "Top Hat", color: "#1b1b20" }, flower: { name: "Flower", color: "#f2c12e" },
+};
+function petHead(P, x, y, f) {
+  const fy = y - 30 + Math.sin(clock * 3) * 4;
+  switch (P.shape) {
+    case "pup": case "fox": return [x + f * 12, y - 28]; case "cat": return [x + f * 11, y - 25]; case "lizard": return [x + f * 14, y - 13];
+    case "frog": return [x - f, y - 20]; case "crab": return [x, y - 17]; case "bird": return [x + f * 10, fy - 10]; case "owl": return [x, fy - 11];
+    case "wisp": return [x, y - 32 + Math.sin(clock * 2.5) * 6 - 11]; case "sprout": return [x, y - 18]; default: return [x, y - 18];
+  }
+}
+function drawPetOutfit(o, hx, hy) {
+  const O = PET_OUTFITS[o]; if (!O) return; ctx.save(); ctx.translate(hx, hy); ctx.strokeStyle = INK; ctx.lineWidth = 1.6; ctx.fillStyle = O.color;
+  if (o === "party") { ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(0, -14); ctx.lineTo(5, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2c12e"; ctx.beginPath(); ctx.arc(0, -14, 2.4, 0, 7); ctx.fill(); }
+  else if (o === "crown") { ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-6, -7); ctx.lineTo(-3, -3); ctx.lineTo(0, -9); ctx.lineTo(3, -3); ctx.lineTo(6, -7); ctx.lineTo(6, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  else if (o === "wizard") { ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.lineTo(2, -5); ctx.lineTo(-1, -17); ctx.lineTo(-4, -4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2c12e"; ctx.beginPath(); ctx.arc(-1, -8, 1.4, 0, 7); ctx.fill(); }
+  else if (o === "bow") { ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(-7, -8); ctx.lineTo(-7, 2); ctx.closePath(); ctx.moveTo(0, -3); ctx.lineTo(7, -8); ctx.lineTo(7, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, -3, 2.2, 0, 7); ctx.fill(); ctx.stroke(); }
+  else if (o === "tophat") { ctx.fillRect(-7, -2, 14, 2.5); ctx.strokeRect(-7, -2, 14, 2.5); ctx.fillRect(-4.5, -12, 9, 10); ctx.strokeRect(-4.5, -12, 9, 10); ctx.fillStyle = "#c0261e"; ctx.fillRect(-4.5, -5, 9, 2); }
+  else if (o === "flower") { for (let i = 0; i < 5; i++) { const a = i * 1.257; ctx.beginPath(); ctx.arc(Math.cos(a) * 3.5, -4 + Math.sin(a) * 3.5, 2.6, 0, 7); ctx.fill(); ctx.stroke(); } ctx.fillStyle = "#e0662a"; ctx.beginPath(); ctx.arc(0, -4, 2, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function showPetOutfits(k) {
+  const P = PETS[k], wear = player.petWear[k], nm = player.petNames[k] || P.name;
+  openPanel(`<h2>Outfits for ${esc(nm)}</h2><p class="soft">Buy an outfit once and any of your pets can wear it. ${PET_OUTFIT_GEMS} gems each. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>
+    <div class="list"><div class="item"><div>No outfit</div><button type="button" data-act="wear" data-arg="" ${wear ? "" : "disabled"}>${wear ? "Wear" : "Wearing"}</button></div>
+    ${Object.entries(PET_OUTFITS).map(([o, O]) => { const own = player.petOutfits.includes(o), on = wear === o;
+      return `<div class="item"><canvas class="pthumb" width="96" height="96" data-o="${o}"></canvas><div>${O.name}<small>${own ? (on ? "Wearing" : "Yours") : `<span class="gem">&#9670; ${PET_OUTFIT_GEMS} gems</span>`}</small></div>
+        ${own ? `<button type="button" data-act="wear" data-arg="${o}" ${on ? "disabled" : ""}>${on ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${o}" ${player.gems < PET_OUTFIT_GEMS ? "disabled" : ""}>Buy</button>`}</div>`; }).join("")}</div>
+    <div class="row"><button type="button" data-act="back">Back to pets</button><button data-act="close" type="button">Close</button></div>`,
+    { wear: o => { if (o) player.petWear[k] = o; else delete player.petWear[k]; save(); showPetOutfits(k); },
+      buy: o => { if (player.gems < PET_OUTFIT_GEMS || player.petOutfits.includes(o)) return; player.gems -= PET_OUTFIT_GEMS; player.petOutfits.push(o); player.petWear[k] = o; sfx("rare"); save(); showPetOutfits(k); toast(`${PET_OUTFITS[o].name} unlocked`); },
+      back: () => showPets() });
+  // a picture of this pet wearing each outfit
+  for (const cv of sheet.querySelectorAll("canvas.pthumb")) {
+    const g = cv.getContext("2d"), old = ctx, keep = { ...PET_POS }, pk = player.pet, pw = player.petWear[k]; ctx = g;
+    try { g.setTransform(1.2, 0, 0, 1.2, 0, 0); Object.assign(PET_POS, { x: 40, y: P.shape === "bird" || P.shape === "owl" || P.shape === "wisp" ? 77 : 62, face: 1, moving: false }); player.pet = k; player.petWear[k] = cv.dataset.o; const nmk = player.petNames[k]; delete player.petNames[k]; drawPet(); if (nmk) player.petNames[k] = nmk; }
+    catch (e) {} finally { ctx = old; Object.assign(PET_POS, keep); player.pet = pk; if (pw) player.petWear[k] = pw; else delete player.petWear[k]; }
+  }
 }
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 function showPetName(k) {
@@ -4848,9 +4927,9 @@ function showPets() {
     <div class="list">${Object.entries(PETS).filter(([, P]) => !P.hidden).map(([k, P]) => { const own = petOwned(k), out = player.pet === k;
       const nm = player.petNames[k];
       return `<div class="item"><div>${nm ? `${esc(nm)} <span class="soft">(${P.name})</span>` : P.name}<small>${own ? (out ? "With you now" : "Yours") : P.earn ? `Earn it: ${P.earn}` : `<span class="gem">&#9670; ${P.gems} gems</span>`}</small></div>
-        ${own ? `<button type="button" data-act="rename" data-arg="${k}">Name</button><button type="button" data-act="${out ? "dismiss" : "summon"}" data-arg="${k}">${out ? "Send home" : "Summon"}</button>` : P.gems ? `<button type="button" data-act="buy" data-arg="${k}" ${player.gems < P.gems ? "disabled" : ""}>Buy</button>` : ""}</div>`; }).join("")}</div>
+        ${own ? `<button type="button" data-act="outfit" data-arg="${k}">Outfit</button><button type="button" data-act="rename" data-arg="${k}">Name</button><button type="button" data-act="${out ? "dismiss" : "summon"}" data-arg="${k}">${out ? "Send home" : "Summon"}</button>` : P.gems ? `<button type="button" data-act="buy" data-arg="${k}" ${player.gems < P.gems ? "disabled" : ""}>Buy</button>` : ""}</div>`; }).join("")}</div>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`,
-    { rename: k => showPetName(k),
+    { rename: k => showPetName(k), outfit: k => showPetOutfits(k),
       summon: k => { player.pet = k; pet.map = ""; save(); showPets(); toast(`${player.petNames[k] || PETS[k].name} is with you`); },
       dismiss: () => { player.pet = null; save(); showPets(); },
       buy: k => { const P = PETS[k]; if (player.gems < P.gems || petOwned(k)) return; player.gems -= P.gems; player.pets.push(k); player.pet = k; pet.map = ""; sfx("rare"); save(); showPets(); toast(`${P.name} is yours!`, true); },
