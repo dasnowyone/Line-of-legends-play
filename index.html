@@ -276,6 +276,10 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .list.shoplist { height: min(46vh, 420px); overflow-y: auto; align-content: start; overscroll-behavior: contain; border: 1.5px solid rgba(27,27,32,.2); border-radius: 10px; padding: 0 10px 8px; -webkit-overflow-scrolling: touch; }
 .item { display: flex; gap: 10px; align-items: center; justify-content: space-between; border-top: 1.5px dashed rgba(27,27,32,.25); padding-top: 6px; }
 .item > div { min-width: 0; }
+.nb.nomana { color: #8fa9d6; background-color: #e3ebf7; border-color: #8fa9d6; }
+#manaRow { cursor: pointer; }
+.item .dropq { padding: 2px 9px; color: var(--ink-soft); border-color: var(--ink-soft); border-width: 1.5px; flex: none; }
+.item .drop { color: var(--blood); border-color: var(--blood); flex: none; }
 .item small { display: block; color: var(--ink-soft); font-size: 15px; }
 #gearPrompt { left: 50%; transform: translateX(-50%); bottom: 34%; z-index: 6; display: flex; gap: 10px; align-items: center; background: var(--card); border: 2.5px solid var(--gold, #c9a227); border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 17px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 #gearPrompt[hidden] { display: none; }
@@ -4178,6 +4182,14 @@ function showQuestLog() {
     <div class="row"><button data-act="close" type="button">Close</button></div>`);
 }
 let bagTab = "items";
+// Lee: a full bag needs a way out. The x on a row asks first, then drops one or the whole stack. Items an open quest still needs can't be dropped
+let dropAsk = null;
+const questKeeps = id => QUESTS.some(q => { const st = quests[q.id]; return st && st.state !== "done" && ((q.take && q.take[id]) || (q.goal.type === "mats" && q.goal.need[id])); });
+function dropItem(id, n) {
+  dropAsk = null; if (!player.bag[id] || n <= 0 || questKeeps(id)) return showBag();
+  const k = Math.min(n, player.bag[id]); takeItem(id, k); matsCheck(); save();
+  toast(`Dropped ${itName(id)}${k > 1 ? " x" + k : ""}`); showBag();
+}
 function showBag(confirmReset, tab) {
   if (tab) bagTab = tab;
   const s = stats(), g = player.gear, mats = bagTab === "mats";
@@ -4194,10 +4206,11 @@ function showBag(confirmReset, tab) {
       ${ITEMS[id].mana ? `<button type="button" data-act="mana" data-arg="${id}">Drink</button>` : ""}
       ${POTIONS.includes(id) ? `<button type="button" data-act="drink" data-arg="${id}">${id === "grilled_perch" ? "Eat" : "Drink"}</button>` : ""}
       ${ITEMS[id].buff ? `<button type="button" data-act="eat" data-arg="${id}">${BUFFS[ITEMS[id].buff] && /Stew|Pie|Skewers|Chowder|Feast/.test(ITEMS[id].name) ? "Eat" : "Drink"}</button>` : ""}
-      ${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
+      ${dropAsk === id ? `<button type="button" class="drop" data-act="drop1" data-arg="${id}">Drop 1</button>${n > 1 ? `<button type="button" class="drop" data-act="dropall" data-arg="${id}">Drop all</button>` : ""}<button type="button" data-act="keep">Keep</button>`
+        : `${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}${questKeeps(id) ? "" : `<button type="button" class="dropq" data-act="drop" data-arg="${id}" aria-label="Drop ${itName(id)}">&times;</button>`}`}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
     <div class="row">${Object.keys(player.bag).some(isUpgrade) ? '<button type="button" data-act="best">Equip best</button>' : ""}<button type="button" data-act="talents">Talents${talentPoints() > 0 ? ` (${talentPoints()})` : ""}</button><button type="button" data-act="pets">Pets${desk ? " (P)" : ""}</button><button type="button" data-act="ach">Achievements${desk ? " (Y)" : ""}</button><button type="button" data-act="dyes">Dyes</button><button type="button" data-act="store">Store</button><button type="button" data-act="savenow">Save</button><button type="button" data-act="heroes">Heroes</button><button type="button" data-act="reset">${confirmReset ? "Tap again to erase your hero" : "Start over"}</button><button data-act="close" type="button">Close</button></div>`,
     {
-      use: id => { useRelic(id); showBag(); }, btab: t => showBag(false, t), eat: id => { eatBuff(id); showBag(); },
+      use: id => { useRelic(id); showBag(); }, btab: t => { dropAsk = null; showBag(false, t); }, eat: id => { eatBuff(id); showBag(); },
       mana: id => { drinkMana(id); showBag(); },
       drink: id => { if (player.potionCd > 0) return toast(`Potions ready again in ${Math.ceil(player.potionCd)}s`); drinkPotion(id); showBag(); },
       equip: id => { if (equipItem(id)) { showBag(); if (gpId === id || !isUpgrade(gpId)) promptEquip(); } },
@@ -4207,6 +4220,8 @@ function showBag(confirmReset, tab) {
       store: () => showStore(),
       savenow: () => { save(); toast("Game saved. It also saves itself every few seconds"); },
       heroes: () => showHeroes(),
+      drop: id => { dropAsk = id; showBag(); }, keep: () => { dropAsk = null; showBag(); },
+      drop1: id => dropItem(id, 1), dropall: id => dropItem(id, player.bag[id] || 0),
       reset: () => { if (!confirmReset) return showBag(true); try { localStorage.removeItem(SAVE_KEY); } catch {} location.reload(); },
     });
 }
@@ -4810,6 +4825,21 @@ function payMana(S) {
   if ((player.mp ?? maxMana()) < cost) { toast(player.bag.mana_potion || player.bag.greater_mana ? "Not enough mana. Drink Mana Ink" : "Not enough mana"); return false; }
   player.mp = (player.mp ?? maxMana()) - cost; player.lastCast = clock; return true;
 }
+// Lee: show how mana works. Spells you can't pay for fade to blue, and the mana bar explains itself
+const manaCost = S => Math.round(S.mana * (1 - 0.05 * tr("weave")));
+const lowMana = S => cls() === "mage" && S && S.mana && !(player.surgeT > 0) && (player.mp ?? maxMana()) < manaCost(S);
+function showManaHelp() {
+  const sp = [WHIRL(), ...Object.values(SKILLS)].filter(S => S.mana && player.level >= S.lv).map(S => `${S.name} ${manaCost(S)}`).join(", ");
+  openPanel(`<h2>Mana</h2>
+    <p>The blue bar under your health is your mana. Your ink bolts (Attack) are free, but every spell costs mana${sp ? ": " + sp : " once you learn it at level 3"}.</p>
+    <p>Mana refills by itself, slowly while you fight and fast after 3 seconds without casting a spell.</p>
+    <p>A spell you can't afford yet turns pale blue. Drink Mana Ink (the Mana button${desk ? ", key N" : ""}) to refill it. Alchemist Fizz sells it.</p>
+    <p class="soft">Tap the mana bar any time to see this again.</p>
+    <div class="row"><button data-act="close" type="button">Got it</button></div>`);
+}
+// every mage sees it once (even with tips off), the first time they're out in the world with nothing open
+setInterval(() => { if (cls() === "mage" && window.__started && panel.hidden && !cine && !classPicking && !player.dead && !player.tut.includes("manahelp")) { player.tut.push("manahelp"); save(); showManaHelp(); } }, 2000);
+document.getElementById("manaRow").addEventListener("click", e => { e.stopPropagation(); if (panel.hidden && !cine) showManaHelp(); });
 function aimAt(t) {
   const p = player;
   if (t) { p.facing = Math.sign(t.x - p.x) || p.facing; return Math.atan2(t.y - 22 * (t.d.scale || 1) - (p.y - 30), t.x - p.x); }
@@ -5101,6 +5131,7 @@ function abarHud(pots) {
     b.querySelector(".cd").style.setProperty("--p", `${Math.max(0, Math.min(1, A.cd(p))) * 100}%`);
     const n = b.querySelector(".n"); if (n) { const t = tally(A.own ? A.own() : pots); if (n.innerHTML !== t) n.innerHTML = t; }
     b.style.opacity = A.own && !A.own() ? 0.5 : 1;
+    b.classList.toggle("nomana", lowMana(a === "whirl" ? WHIRL() : SKILLS[a]));
   });
 }
 // Phones: one small round button per unlocked ability, stacked above the main buttons
@@ -5141,6 +5172,7 @@ function pad2Hud() {
   const n = skillcol.children.length, need = n * 61, k = n ? Math.max(0.6, Math.min(+getComputedStyle(document.body).getPropertyValue("--padk") || 1, (padTop - top) / need)) : 1;
   if (top !== skTop) { skTop = top; document.body.style.setProperty("--skt", top + "px"); }
   if (Math.abs(k - skK) > 0.01) { skK = k; document.body.style.setProperty("--skk", k.toFixed(3)); }
+  for (const b of skillcol.children) if (b.dataset.k) b.classList.toggle("nomana", lowMana(b.dataset.k === "whirl" ? WHIRL() : SKILLS[b.dataset.k]));
   for (const b of skillcol.children) if (b.dataset.k && SKILLS[b.dataset.k]) b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, (p.acd[b.dataset.k] || 0) / SKILLS[b.dataset.k].cd) * 100}%`);
 }
 // tapping anywhere else while moving a skill stops it
@@ -5197,7 +5229,7 @@ function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.
 document.getElementById("btnMore").addEventListener("click", () => showMore());
 btnSound.addEventListener("click", () => { soundOn = !soundOn; try { localStorage.setItem("lol-sound", soundOn ? "on" : "off"); } catch {} audioCtx(); syncSoundBtn(); });
 syncSoundBtn();
-document.getElementById("btnBag").addEventListener("click", () => showBag());
+document.getElementById("btnBag").addEventListener("click", () => { dropAsk = null; showBag(); });
 document.getElementById("btnTalents").addEventListener("click", () => showTalents());
 document.getElementById("btnChar").addEventListener("click", () => showChar());
 // Get on or off your steed
@@ -7578,7 +7610,7 @@ function drawHud() {
   const s = stats(), p = player;
   const pots = POTIONS.reduce((a, id) => a + (p.bag[id] || 0), 0);
   const tp = talentPoints();
-  const key = [p.level, Math.ceil(p.hp), s.maxHp, p.xp, p.coins, pots, s.def, tp].join();
+  const key = [p.level, Math.ceil(p.hp), s.maxHp, p.xp, p.coins, pots, s.def, tp, cls(), Math.round(p.mp ?? 0), maxMana(), (p.bag.mana_potion || 0) + (p.bag.greater_mana || 0)].join();
   if (key !== hudKey) {
     hudKey = key;
     el("lvl").textContent = `Lv ${p.level}`; el("hptext").textContent = `${Math.ceil(p.hp)}/${s.maxHp}`;
@@ -7604,7 +7636,7 @@ function drawHud() {
     if (L.textContent !== lb) L.textContent = lb; setIcon(ba, !o ? "Attack" : o.kind === "npc" ? "Talk" : "Use");
     const bs = el("btnSkill"), sk = ABIL.whirl.label(p), SL = bs.querySelector(".l"); if (SL.textContent !== sk) SL.textContent = sk;
     setIcon(bs, ABIL.whirl.icon(p)); bs.classList.toggle("nlock", p.level < 3); if (bs.hidden !== (p.level < 3 && !desk)) bs.hidden = p.level < 3 && !desk; setIcon(el("btnDodge"), "Dodge"); setIcon(el("btnPotion"), "Potion"); }
-  el("cdSkill").style.setProperty("--p", `${p.skillCd / skillCdMax() * 100}%`);
+  el("cdSkill").style.setProperty("--p", `${p.skillCd / skillCdMax() * 100}%`); el("btnSkill").classList.toggle("nomana", p.level >= 3 && !map.vehicle && lowMana(WHIRL()));
   el("cdDodge").style.setProperty("--p", `${p.dodgeCd / 1.0 * 100}%`);
   el("cdPotion").style.setProperty("--p", `${p.potionCd / 10 * 100}%`);
   el("cdMana").style.setProperty("--p", `${(p.manaCd || 0) / 10 * 100}%`);
