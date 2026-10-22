@@ -4589,7 +4589,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 92; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 93; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5925,7 +5925,8 @@ function drawRivers(m, x0, y0, x1, y1) {
 }
 const campOn = (z, x0, y0, x1, y1) => z.blob && z.cx + z.rx + 100 > x0 && z.cx - z.rx - 100 < x1 && z.cy + z.ry + 100 > y0 && z.cy - z.ry - 100 < y1;
 const blobPath = z => { ctx.beginPath(); z.blob.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); };
-const inCamp = (m, x, y, pad = 1) => (m.CAMPS || []).some(z => ((x - z.cx) / (z.rx * pad)) ** 2 + ((y - z.cy) / (z.ry * pad)) ** 2 < 1);
+// a function (not a const) so the hunt groups made while the game loads can use it
+function inCamp(m, x, y, pad = 1) { return (m.CAMPS || []).some(z => ((x - z.cx) / (z.rx * pad)) ** 2 + ((y - z.cy) / (z.ry * pad)) ** 2 < 1); }
 function drawPatch(p) {
   const { x, y, r, s } = p, blob = (rx, ry, fill, stroke) => { ctx.fillStyle = fill; ctx.beginPath();
     for (let i = 0; i <= 10; i++) { const a = i / 10 * 6.283, k = 1 + 0.16 * Math.sin(a * 3 + s * 9); i ? ctx.lineTo(x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k) : ctx.moveTo(x + Math.cos(a) * rx * k, y + Math.sin(a) * ry * k); }
