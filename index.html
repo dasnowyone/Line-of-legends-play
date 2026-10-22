@@ -739,6 +739,9 @@ FOES.bloom = { name: "Mother Bloom", art: "jelly", fill: "rgba(225,120,185,.75)"
 for (const [id, hk] of [["angler", 1.3], ["eel", 1.3], ["puffer", 1.3], ["jelly", 1.3], ["crab", 1.3], ["shellback", 1.4], ["voltfin", 1.4], ["bloom", 1.4], ["inkmaw", 1.35]]) {
   FOES[id].hp = Math.round(FOES[id].hp * hk); FOES[id].atk = Math.round(FOES[id].atk * 1.15); }
 FOES.angler.rush = true; FOES.inkmaw.speed = 90;
+// Practice targets in the Proving Grounds (Lee): they never fight back or fall, and show how hard you hit
+const TARGET = (name, art, r) => ({ name, art, target: true, lv: 1, hp: 1e9, atk: 0, xp: 0, coins: [0, 0], speed: 0, r, drops: [] });
+Object.assign(FOES, { tgt_dummy: TARGET("Training Dummy", "tdummy", 18), tgt_butt: TARGET("Archery Target", "tbutt", 20), tgt_crystal: TARGET("Practice Crystal", "tcrystal", 18) });
 FOES.pond_pike = { name: "Pond Pike", art: "angler", fill: "#6a8a5a", lv: 5, hp: 90, atk: 18, xp: 45, coins: [3, 6], speed: 95, r: 18, scale: 0.75, drops: [["potion", .08]] };
 FOES.pond_puffer = { name: "Bubble Puffer", art: "puffer", lv: 6, hp: 70, atk: 14, xp: 50, coins: [3, 7], speed: 70, r: 16, scale: 0.8, ranged: { range: 260, speed: 300, windup: 0.9, cd: 2.4, kind: "bubble" }, drops: [["potion", .08]] };
 FOES.pond_eel = { name: "Reed Eel", art: "eel", lv: 6, hp: 70, atk: 20, xp: 50, coins: [3, 7], speed: 200, r: 14, scale: 0.85, drops: [["potion", .08]] };
@@ -1108,10 +1111,10 @@ const MAINLAND = [
 ];
 
 // Camp and town ground (Lee): one main color for the climate, with patches of grass, snow, sand or ash piles on it
-const CAMP_FILL = { grass: "#cfe0a8", forest: "#c4daa0", marsh: "#c3d6a8", sand: "#f0dcae", snow: "#e7eaea", ash: "#d9c8bb", crystal: "#e2daec", ink: "#d8d2dc", paper: "#efe8da", dry: "#e0cc9e" };
-const CAMP_PATCH = { grass: ["tuft", "tuft", "tuft", "flowers"], forest: ["tuft", "tuft", "moss", "leaves"], marsh: ["tuft", "tuft", "mud", "reeds"], sand: ["sandpile", "sandpile", "sandpile", "drytuft"],
+const CAMP_FILL = { arcane: "#e4e0f0", grass: "#cfe0a8", forest: "#c4daa0", marsh: "#c3d6a8", sand: "#f0dcae", snow: "#e7eaea", ash: "#d9c8bb", crystal: "#e2daec", ink: "#d8d2dc", paper: "#efe8da", dry: "#e0cc9e" };
+const CAMP_PATCH = { arcane: ["glint", "pebbles", "glint"], grass: ["tuft", "tuft", "tuft", "flowers"], forest: ["tuft", "tuft", "moss", "leaves"], marsh: ["tuft", "tuft", "mud", "reeds"], sand: ["sandpile", "sandpile", "sandpile", "drytuft"],
   snow: ["snowpile"], ash: ["ashpile", "ashpile", "cinders"], crystal: ["pebbles", "glint", "glint"], ink: ["pebbles", "inkspot", "inkspot"], paper: ["shavings", "shavings", "pebbles"], dry: ["drytuft", "drytuft", "sandpile"] };
-const CAMP_LOOK = { thorn: "grass", fens: "marsh", canyon: "sand", peaks: "snow", ember: "ash", shard: "crystal", blot: "ink", reach: "paper", village: "grass", pip: "forest", hill: "dry" };
+const CAMP_LOOK = { thorn: "grass", fens: "marsh", canyon: "sand", peaks: "snow", ember: "ash", shard: "crystal", blot: "ink", reach: "paper", village: "grass", pip: "forest", hill: "dry", yard: "dry", lanes: "forest", sanctum: "arcane", square: "paper" };
 function buildWorld() {
   const W = 24000, H = 32000;
   for (const q of QUESTS) if (q.mark) q.mark = P(...q.mark);
@@ -1491,6 +1494,8 @@ function buildWorld() {
     const [nx, ny] = best.map(Math.round);
     if (poolOk(e, nx, ny)) { e.x = nx; e.y = ny; } else ellipses.splice(i, 1);
   }
+  // The glade stream used to run into the sea. The Proving Grounds took that coast, so now it ends in a lake
+  ellipses.push({ x: 5800, y: 28080, rx: 300, ry: 190, kind: "lake" });
   // where a stream meets a lake or pond: the shoreline opens there and the stream runs right into the water
   for (const e of ellipses) { e.mouths = []; rivers.forEach((r, ri) => { const pts = riverPts[ri], ins = ([x, y]) => ((x - e.x) / e.rx) ** 2 + ((y - e.y) / e.ry) ** 2 < 1;
     for (let k = 1; k < pts.length; k++) { const a = ins(pts[k - 1]), b = ins(pts[k]); if (a === b) continue;
@@ -1520,6 +1525,63 @@ function buildWorld() {
       const x0 = q.x, y0 = q.y; let ok = false;
       for (const sgn of [1, -1]) { for (let k = 1; k <= 30 && !ok; k++) { q.x = x0 + ux * sgn * k * 10; q.y = y0 + uy * sgn * k * 10; if (edge(q) >= 40 && !hits(q)) ok = true; } if (ok) break; }
       if (!ok) { q.x = x0; q.y = y0; } else { q.x = Math.round(q.x); q.y = Math.round(q.y); } } }
+  // ---------- The Proving Grounds (Lee): new land in the southwest with a quarter for each class, past Whisper Glade ----------
+  // Built with its own random numbers so nothing else in the world moves
+  const PGR = folkRng(808), PG = { square: [4300, 28700], yard: [4300, 26300], lanes: [2300, 28100], sanctum: [4300, 30200] };
+  ZONES.push(
+    { id: "yard_camp", name: "Ironhold Yard", lv: "Safe. Warriors train here", fill: "#f0e1bf", x: 3400, y: 25580, w: 1800, h: 1440, safe: true, camp: true, cls: "warrior" },
+    { id: "lanes_camp", name: "Fletchwood Lanes", lv: "Safe. Hunters train here", fill: "#f0e1bf", x: 1400, y: 27380, w: 1800, h: 1440, safe: true, camp: true, cls: "hunter" },
+    { id: "sanctum_camp", name: "Starfall Sanctum", lv: "Safe. Mages train here", fill: "#f0e1bf", x: 3400, y: 29480, w: 1800, h: 1440, safe: true, camp: true, cls: "mage" },
+    { id: "square_camp", name: "Champions' Square", lv: "Safe. The heart of the Proving Grounds", fill: "#f0e1bf", x: 3850, y: 28340, w: 900, h: 720, safe: true, camp: true });
+  const PG_ROADS = [
+    [[7590, 29015], [6900, 29010], [6240, 28950], [5500, 28820], [4900, 28720], [4300, 28700]],
+    [[4300, 28700], [4300, 27600], [4300, 26560]],
+    [[4300, 28700], [3700, 28560], [3100, 28330], [2780, 28200]],
+    [[4300, 28700], [4300, 29400], [4620, 29620], [4620, 30040], [4420, 30100]],
+  ];
+  PATHS.push(...PG_ROADS);
+  // the glade road now runs on west: trees and rocks on it make way
+  for (let i = circles.length - 1; i >= 0; i--) { const c = circles[i]; if (c.x < 7700 && c.y > 28400 && c.y < 29400 && c.kind !== "mountain" && distToPaths(c.x, c.y) < (c.kind === "tree" ? c.size * 0.6 : c.r || 0) + 32) circles.splice(i, 1); }
+  const pgTree = (x, y, r0, tint) => { const r = r0 * 1.9, pts = [], n = 18, sd = PGR() * 100;
+    for (let k = 0; k <= n; k++) { const a = k / n * Math.PI * 2, rr = r * 1.6 * (0.85 + 0.15 * Math.sin(a * 5 + sd)); pts.push([Math.cos(a) * rr, -r * 2.2 + Math.sin(a) * rr * 0.85]); }
+    return { x: Math.round(x), y: Math.round(y), r: r0 * 0.55, kind: "tree", canopy: pts, size: r, tint }; };
+  const pgObjs = [];
+  // Ironhold Yard (warrior): barracks, armory and forge, a brawling pit in the middle, a row of dummies and five quartermasters
+  rects.push({ x: 3480, y: 25640, w: 280, h: 170, kind: "house", label: "Barracks", color: "#a0503a" }, { x: 4880, y: 25660, w: 230, h: 150, kind: "house", label: "Armory", color: "#5a5a64" },
+    { x: 4610, y: 25720, w: 190, h: 60, kind: "forge" }, { x: 4000, y: 25980, w: 600, h: 340, kind: "brawlpit", ghost: true, flat: true });
+  // Fletchwood Lanes (hunter): five rows of trees with four shooting lanes, targets at the far end, the lodge and the stalls
+  rects.push({ x: 2700, y: 27380, w: 260, h: 160, kind: "house", label: "Hunters' Lodge", color: "#3f7a3a" });
+  const LANE_ROWS = [27580, 27840, 28100, 28360, 28620];
+  for (const ry of LANE_ROWS) for (let x = 1640; x <= 2560; x += 92) circles.push(pgTree(x + (PGR() - 0.5) * 10, ry + (PGR() - 0.5) * 8, 13 + PGR() * 3, "rgba(105,150,95,.95)"));
+  // Starfall Sanctum (mage): a small temple that glows, rune circles and floating crystals to cast at
+  rects.push({ x: 4110, y: 29760, w: 380, h: 180, kind: "sanctum" }, ...[29994, 30164, 30334].map(y => ({ x: 4730, y: y - 70, w: 140, h: 140, kind: "runecircle", ghost: true, flat: true })), { x: 3560, y: 30060, w: 220, h: 220, kind: "runecircle", ghost: true, flat: true });
+  // Stalls: one quartermaster for each band of levels, in a row on each quarter
+  const BANDS = [[1, 9], [10, 19], [20, 29], [30, 39], [40, 50]];
+  const QM = {
+    warrior: { at: [4420, 26760], color: "#a0503a", hat: "#a0503a", names: ["Recruiter Bram", "Corporal Tess", "Lieutenant Hale", "Captain Morrow", "Marshal Vance"] },
+    hunter: { at: [1950, 28780], color: "#3f7a3a", hat: "#3f7a3a", names: ["Trapper Moss", "Tracker Fern", "Ranger Sloane", "Warden Ivy", "Huntmaster Oren"] },
+    mage: { at: [3720, 30560], color: "#3b5aa6", hat: "#2a4a8a", names: ["Adept Nell", "Scholar Pell", "Magister Ione", "Sage Corvin", "Archon Lys"] },
+  };
+  const CLS_WORD = { warrior: "warriors", hunter: "hunters", mage: "mages" };
+  for (const [k, Q] of Object.entries(QM)) BANDS.forEach(([lo, hi], i) => { const x = Q.at[0] + i * 165, y = Q.at[1];
+    rects.push({ x, y, w: 140, h: 60, kind: "stall", color: Q.color, sign: `Levels ${lo}-${hi}`, cls: k });
+    pgObjs.push({ ...npc("pg_" + k[0] + i, Q.names[i], x + 70, y + 88, Q.hat, `Gear for ${CLS_WORD[k]} of level ${lo} to ${hi}. Same prices as the camps, all in one place.`, []), classShop: false, tierShop: [k, lo, hi] }); });
+  // Trainers move here from the old yard by the village. Crafters work the class trades
+  pgObjs.push(
+    { ...npc("gunnar", "Armorer Gunnar", 4720, 25860, "#5a5a64", "Plate and blade, warriors. Bring ore and I'll make you something the shops don't sell."), crafter: true },
+    { ...npc("linden", "Bowyer Linden", 3060, 27640, "#5a7a3a", "Bows and leather, hunters. Good wood, good hide, and a steady hand."), crafter: true },
+    { ...npc("vey", "Enchanter Vey", 3640, 29860, "#6a4a9a", "Staffs and robes, mages. Cloth remembers the spells woven into it."), crafter: true },
+    waystone("ws_proving", "The Proving Grounds", 4480, 28880));
+  objs.push(...pgObjs);
+  // The rest of the land: open woods, a few rocks and the grass between them
+  { const inQ = (x, y, pad) => ZONES.some(z => z.camp && z.x < 6000 && z.y > 25000 && ((x - (z.x + z.w / 2)) / (z.w * 0.667 * pad)) ** 2 + ((y - (z.y + z.h / 2)) / (z.h * 0.653 * pad)) ** 2 < 1);
+    const okAt = (x, y, r) => distToPaths(x, y) > r + 90 && !inQ(x, y, 1.12) && !ellipses.some(e => ((x - e.x) / (e.rx + r + 40)) ** 2 + ((y - e.y) / (e.ry + r + 40)) ** 2 < 1) && x > 1150 && y < 31200;
+    for (let x = 1100; x < 6200; x += 175) for (let y = 23120; y < 31250; y += 175) { if (PGR() > 0.5) continue;
+      const tx = x + (PGR() - 0.5) * 120, ty = y + (PGR() - 0.5) * 120, rock = PGR() < 0.12, r0 = 15 + PGR() * 10;
+      if (!okAt(tx, ty, rock ? 30 : 40)) continue;
+      circles.push(rock ? { x: Math.round(tx), y: Math.round(ty), r: 14 + PGR() * 16, kind: "rock" } : pgTree(tx, ty, r0, PGR() < 0.3 ? "rgba(130,170,120,.93)" : "rgba(150,180,120,.92)")); }
+    for (let i = 0; i < 4200; i++) { const x = 1050 + PGR() * 5180, y = 23020 + PGR() * 8300, kd = ["grass", "grass", "flower", "grass"][Math.floor(PGR() * 4)], sv = PGR();
+      if (inQ(x, y, 1.02) || distToPaths(x, y) < 30 || ellipses.some(e => ((x - e.x) / (e.rx + 10)) ** 2 + ((y - e.y) / (e.ry + 10)) ** 2 < 1)) continue; decor.push({ x, y, kind: kd, s: sv }); } }
   // Camps get real ground instead of a tan square (Lee): grass, dirt or shoveled snow, gravel where the roads run through,
   // stepping stones to the tents and waystone, and a fence (or snowbanks in the cold) around parts of the edge
   // Pip's Camp and Hillwatch get the same ground and fence, without becoming zones of their own
@@ -1556,7 +1618,7 @@ function buildWorld() {
     const roadPt = (x, y) => { let best = null, bd = 1e9; for (const L of PATHS) for (let j = 0; j < L.length - 1; j++) { const [ax, ay] = L[j], [bx, by] = L[j + 1], dx = bx - ax, dy = by - ay;
       const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1))), qx = ax + t * dx, qy = ay + t * dy, d = Math.hypot(x - qx, y - qy); if (d < bd) { bd = d; best = [qx, qy]; } } return [best, bd]; };
     const inR = (x, y, p) => rects.some(q => q.kind !== "sea" && x > q.x - p && x < q.x + q.w + p && y > q.y - p && y < q.y + q.h + p);
-    const targets = [...rects.filter(q => ["tent", "house", "forge", "cart", "potiontable"].includes(q.kind)).map(q => [q.x + q.w / 2, q.y + q.h + 22]),
+    const targets = [...rects.filter(q => ["tent", "house", "forge", "cart", "potiontable", "stall"].includes(q.kind)).map(q => [q.x + q.w / 2, q.y + q.h + 22]),
       ...objs.filter(o => o.kind === "waystone" || o.kind === "board").map(o => [o.x, o.y + 34])].filter(([x, y]) => inside(x, y));
     z.steps = [];
     for (const [tx, ty] of town ? [] : targets) { const [q, d] = roadPt(tx, ty); if (!q || d < 75 || d > 650) continue;
@@ -1632,6 +1694,16 @@ function buildWorld() {
         reward: { xp: FOES[f].xp * 10, coins: Math.round(foeCoin(z.lo + 1 + j * 2) * 10) }, mark: pt, done: h[3] }); });
   });
 
+  // The Proving Grounds take most of the old west sea: a strip of coast stays along the west edge and the north
+  { const ws = ZONES.find(z => z.sea && z.x === 0 && z.y === NECK), wr = rects.find(q => q.kind === "sea" && q.x === 0 && q.y === NECK);
+    ws.w = wr.w = 1000; const north = { id: "sea", name: "The Inkwell Sea", lv: "", fill: "#b5cfe9", x: 1000, y: NECK, w: OLD_X - 1000, h: 23000 - NECK, sea: true };
+    ZONES.splice(ZONES.indexOf(ws) + 1, 0, north); rects.push({ x: north.x, y: north.y, w: north.w, h: north.h, kind: "sea" });
+    ZONES.push({ id: "proving", name: "The Proving Grounds", lv: "Safe. Train your class", fill: "#dfe8c4", x: 1000, y: 23000, w: OLD_X - 1000, h: 31340 - 23000, safe: true }); }
+  // Practice targets: dummies in the yard, archery targets at the end of each lane, crystals on the spell range
+  const tgt = (foe, x, y) => spawners.push({ foe, x, y, r: 0, n: 1, respawn: 1e9, fixed: true, target: true });
+  for (let i = 0; i < 5; i++) tgt("tgt_dummy", 3520 + i * 110, 26720 + (i % 2) * 40);
+  for (let i = 0; i < 4; i++) tgt("tgt_butt", 1700, 27710 + i * 260);
+  for (let i = 0; i < 3; i++) tgt("tgt_crystal", 5260, 29980 + i * 170);
   return makeMap({
     id: "world", w: W, h: H, ZONES, CAMPS, PATHS, rects, circles, ellipses, spawners, decor, objs, rivers, bridges, riverGap,
     doors: [
@@ -2494,7 +2566,7 @@ function playPiano() { [0, 4, 7, 12, 7, 4, 0].forEach((n, i) => tone(262 * Math.
 const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: buildTemple(), pond: buildPond(), hollow: buildHollow(), wreck: buildWreck(), mine: buildMine(), summit: buildSummit(), sky: buildSky(), library: buildLibrary(), keep: buildKeep() };
 // Keep enemy groups well clear of camps (Lee): a group parked by the fence looked like it lived in the safe zone and never reacted
 { const W = MAPS.world, K = 1.9;
-  for (const sp of W.spawners) { if (sp.patrol) continue;
+  for (const sp of W.spawners) { if (sp.patrol || sp.target) continue;
     for (const z of W.CAMPS) { const ux = (sp.x - z.cx) / z.rx, uy = (sp.y - z.cy) / z.ry, k = Math.hypot(ux, uy), need = K + (sp.r || 0) / Math.min(z.rx, z.ry);
       if (k >= need || k < 0.01) continue;
       let nx = sp.x, ny = sp.y;
@@ -2510,7 +2582,8 @@ for (const s of MAPS.world.spawners) { const q = !Array.isArray(s.foe) && QUESTS
 const FOLK_BODY = ["#8a5a3a", "#3b6fb6", "#a0503a", "#5a7a3a", "#7a5aa6", "#c08a3a", "#6a6a72", "#b0603e", "#2f6a6a", "#9a3a4a", "#d8c8a0"];
 const FOLK_HATS = [["cap", "#5a4a3a"], ["bandana", "#b0302a"], ["wide", "#e0c060"], ["hood", "#4a6a4a"], ["bandana", "#3b6fb6"], ["cap", "#3b6fb6"], null, null];
 const FOLK_SAY = { drink: ["Cheers!", "Another round!", "To heroes!", "*hic*"], cards: ["Ha!", "Your deal.", "Not again!", "I fold."], cook: ["Stew's on!", "Smells good, eh?", "Needs salt."],
-  fish: ["Got one!", "A big one!"], dice: ["Sevens!", "Snake eyes!", "Double or nothing."], juggle: ["Ta-da!", "Whoops!"], party: ["Cheers!", "To Line of Legends!", "Skål!", "Who's buying?", "*hic*", "I'll raise.", "All in!", "Fold.", "Call.", "Full house!", "Read 'em and weep!", "Your deal."], tag: ["Tag!", "You're it!", "Can't catch me!"], roast: ["Mmm.", "Pass the bread."], chop: ["Hup!"], hoe: ["Good soil."], lute: ["♪", "♫"] };
+  fish: ["Got one!", "A big one!"], dice: ["Sevens!", "Snake eyes!", "Double or nothing."], juggle: ["Ta-da!", "Whoops!"], party: ["Cheers!", "To Line of Legends!", "Skål!", "Who's buying?", "*hic*", "I'll raise.", "All in!", "Fold.", "Call.", "Full house!", "Read 'em and weep!", "Your deal."], tag: ["Tag!", "You're it!", "Can't catch me!"], spar: ["Hah!", "Again!", "Guard up!", "Not bad!", "Yield?"], cheer: ["Go on!", "Hit him!", "Ooh!", "Again!", "Finish it!"],
+  shoot: ["Bullseye!", "Close one.", "Wind's up.", "Dead center!"], cast: ["Steady...", "Focus.", "There!", "Ignis!"], roast: ["Mmm.", "Pass the bread."], chop: ["Hup!"], hoe: ["Good soil."], lute: ["♪", "♫"] };
 function folkRng(seed) { let s = (Math.abs(seed | 0) % 2147483646) + 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 // Folk dress for where they live (Lee): furs in the snow, light robes in the desert, rain hoods in the fens...
 const FOLK_WEAR = {
@@ -2522,7 +2595,7 @@ const FOLK_WEAR = {
   crystal: { body: ["#5a8aa6", "#7a6aa6", "#4a6a8a", "#8a9aaa"], hats: [["circlet", "#9aa0aa"], ["hood", "#5a8aa6"], ["cap", "#4a6a8a"], null], long: 0.6 },
   gloom: { body: ["#3a3a42", "#4a4450", "#2e2e36", "#5a5260"], hats: [["hood", "#2e2e36"], ["hood", "#4a4450"], ["wide", "#3a3a42"]], long: 0.9, robe: 0.4 },
 };
-const FOLK_CLIMATE = { peaks: "cold", canyon: "desert", fens: "wet", thorn: "forest", glade: "forest", woods: "forest", ember: "ash", shard: "crystal", blot: "gloom", reach: "gloom" };
+const FOLK_CLIMATE = { lanes: "forest", peaks: "cold", canyon: "desert", fens: "wet", thorn: "forest", glade: "forest", woods: "forest", ember: "ash", shard: "crystal", blot: "gloom", reach: "gloom" };
 function folkLook(r, kid, clim) {
   const pick = a => a[Math.floor(r() * a.length)], W = FOLK_WEAR[clim];
   if (W) { const c = pick(W.body);
@@ -2614,6 +2687,27 @@ function buildFolk() {
     (I.folk ||= []).push({ x, y, act: "party", name, look: folkLook(folkRng(name.charCodeAt(0) * 97 + name.length * 13 + i)), f, sit: true, t: i * 1.3, sayT: 0, seat: [x, y, f], st: "sit", next: 8 + i * 7 }); }); SI("drink", 720, 270, { barrel: false, spots: [[-52, 12, 1], [8, -48, -1]] }); SI("drink", 300, 215, { barrel: false, spots: [[0, 0, -1], [-70, 2, 1]] });
 }
 buildFolk();
+// The Proving Grounds (Lee): warriors spar in the pit while others cheer, hunters shoot down the lanes, mages cast at the crystals
+(function provingFolk() {
+  const W = MAPS.world, r = folkRng(5150), pick = a => a[Math.floor(r() * a.length)];
+  const LOOKS = {
+    warrior: () => ({ body: pick(["#8d939c", "#9aa0aa", "#7a7f88"]), sleeves: "#8d939c", trim: "#a0503a", belt: true, legs: "#3a3440", hat: pick([["helm", "#8d939c"], ["plume", "#9aa0aa"], ["bandana", "#a0503a"], null]), beard: r() < 0.3 ? pick(["#6a4a2a", "#3a2a1a"]) : null, scale: 0.95 + r() * 0.12 }),
+    hunter: () => ({ body: pick(["#5a6a3a", "#6a5a3a", "#4a5a2a"]), sleeves: r() < 0.6 ? "#5a6a3a" : null, belt: true, legs: "#4a3a2a", hat: pick([["hood", "#3f7a3a"], ["feather", "#4a5a2a"], ["hood", "#6a4a2a"]]), scale: 0.95 + r() * 0.1 }),
+    mage: () => { const c = pick(["#3b6fb6", "#6a4a9a", "#2a4a8a"]); return { body: c, sleeves: c, robe: true, long: true, trim: GOLD, legs: "#2a2a34", hat: pick([["cone", c], ["circlet", GOLD], ["hood", c]]), beard: r() < 0.25 ? "#dcdcdc" : null, scale: 0.95 + r() * 0.1 }; },
+  };
+  const add = (k, x, y, act, o) => (W.folk ||= []).push({ x, y, act, look: LOOKS[k](), f: 1, t: r() * 10, sayT: 0, ph: r() * 3, ...o });
+  for (const [x, y] of [[4170, 26090], [4420, 26190], [4260, 26270]]) { const ph = r() * 3; add("warrior", x - 28, y, "spar", { f: 1, ph }); add("warrior", x + 28, y, "spar", { f: -1, ph: ph + 0.8 }); }
+  for (const [x, y, f] of [[3955, 26120, 1], [3975, 26265, 1], [4645, 26115, -1], [4625, 26270, -1], [4140, 25935, 1], [4470, 25935, -1]]) add(r() < 0.75 ? "warrior" : pick(["hunter", "mage"]), x, y, "cheer", { f });
+  for (let i = 0; i < 3; i++) add("hunter", 2480, 27716 + i * 260, "shoot", { f: -1, tx: 1700, ty: 27710 + i * 260, ph: i * 0.9 });
+  for (let i = 0; i < 3; i++) add("mage", 4800, 29994 + i * 170, "cast", { f: 1, tx: 5260, ty: 29980 + i * 170, ph: i * 0.7 });
+  for (const [dx, dy, f] of [[-95, 0, 1], [95, 0, -1], [0, 50, 1]]) add("mage", 3670 + dx, 30170 + dy, "cast", { f, tx: 3670, ty: 30200, ph: r() * 2 });
+  const S = (kind, x, y, o) => addFolkScene(W, { kind, x, y, ...o }, r);
+  S("fire", 3150, 27980); S("walk", 4300, 28700, { r: 300 }); S("lute", 4540, 28560, { f: -1 }); S("drink", 3700, 25900);
+  // Champions' Square: a statue of the three classes and a signpost to each quarter
+  W.props.push({ kind: "statue", x: 4120, y: 28520 }, { kind: "signpost", x: 4400, y: 28600 }, { kind: "banners", x: 4040, y: 28880 }, { kind: "rack", x: 3830, y: 25800 }, { kind: "rack", x: 3920, y: 25800 }, { kind: "rack", x: 3500, y: 26560 });
+  const put = c => { W.circles.push(c); const k = Math.floor(c.x / CELL) + "," + Math.floor(c.y / CELL); if (!W.grid.has(k)) W.grid.set(k, []); W.grid.get(k).push(c); };
+  put({ x: 4070, y: 28510, r: 40, kind: "nodeblock" }); put({ x: 4170, y: 28510, r: 40, kind: "nodeblock" }); put({ x: 4400, y: 28600, r: 8, kind: "nodeblock" });
+})();
 // Camp fences are drawn before the camp folk sit down, so open a gap wherever a fence would run through someone or their stool, fire or table (Lee)
 (function gapFences() {
   const m = MAPS.world, C = m.circles, spots = [...(m.folk || []).map(o => [o.x, o.y, 30]), ...(m.props || []).map(q => [q.x, q.y, q.kind === "fire" ? 50 : 34])];
@@ -2725,23 +2819,15 @@ const TOBIN = (() => {
   const spot = W.objs.filter(o => o.node === "fish" && Math.hypot(o.x - e.x, o.y - e.y) < e.rx + 120)[0];
   return { at, dive: [dx, dy], spot: spot ? [spot.x, spot.y] : at };
 })();
-// ---------- Class trainers (Lee): a training ground just west of Inkwell Village, one trainer per class ----------
+// ---------- Class trainers (Lee): each trainer has a quarter of the Proving Grounds, past Whisper Glade. A sign by the village points the way ----------
 const CLASS_CHANGE_GEMS = 250;
 const TRAIN = (() => {
   const W = MAPS.world, V = W.ZONES.find(z => z.id === "village"), cx = V.x - 330, cy = V.y + 470;
-  // a cleared yard: no trees or rocks on the training ground
-  const gone = new Set(W.circles.filter(c => Math.hypot(c.x - cx, c.y - cy) < 330)); W.circles = W.circles.filter(c => !gone.has(c));
-  for (const [k, a] of W.grid) { const b = a.filter(o => !gone.has(o)); if (b.length !== a.length) W.grid.set(k, b); }
-  const spot = (x, y) => { for (let r = 0; r < 260; r += 20) for (let a = 0; a < 6.28; a += 0.7) { const px = Math.round(x + Math.cos(a) * r), py = Math.round(y + Math.sin(a) * r);
-    if (!blocked(W, px, py, 22) && W.riverGap(px, py) > 40 && !W.objs.some(o => Math.hypot(o.x - px, o.y - py) < 110)) return [px, py]; } return [x, y]; };
-  const T = { rook: spot(cx - 170, cy + 10), kestrel: spot(cx, cy - 50), orrin: spot(cx + 170, cy + 10) };
-  W.objs.push(Object.assign(npc("rook", "Sergeant Rook", ...T.rook, "#a0503a", "Plate on, chin down, swing through. That's the whole lesson. The rest is practice."), { trainer: "warrior" }),
-    Object.assign(npc("kestrel", "Huntress Kestrel", ...T.kestrel, "#3f7a3a", "Watch the wind, watch the grass. The wolf you see is never the one that bites."), { trainer: "hunter" }),
-    Object.assign(npc("orrin", "Archmage Orrin", ...T.orrin, "#2a4a8a", "Ink remembers every word you write with it. Spend it wisely, it does not refill quickly."), { trainer: "mage" }));
-  W.props.push({ kind: "dummy", x: T.rook[0] - 110, y: T.rook[1] - 50 }, { kind: "dummy", x: T.rook[0] - 90, y: T.rook[1] + 80 }, { kind: "archtarget", x: T.kestrel[0] + 10, y: T.kestrel[1] - 90 },
-    { kind: "runestone", x: T.orrin[0] + 60, y: T.orrin[1] - 30 }, { kind: "yardsign", x: cx, y: cy + 110 });
-  // Nothing hunts on the training ground
-  W.SAFE = [{ x: cx, y: cy, r: 360 }];
+  const T = { rook: [4380, 26450], kestrel: [2700, 28050], orrin: [4300, 30010] };
+  W.objs.push(Object.assign(npc("rook", "Sergeant Rook", ...T.rook, "#a0503a", "Plate on, chin down, swing through. That's the whole lesson. The rest is practice. The dummies are yours, and the pit is open."), { trainer: "warrior" }),
+    Object.assign(npc("kestrel", "Huntress Kestrel", ...T.kestrel, "#3f7a3a", "Watch the wind, watch the grass. The wolf you see is never the one that bites. The lanes are open, take a target."), { trainer: "hunter" }),
+    Object.assign(npc("orrin", "Archmage Orrin", ...T.orrin, "#2a4a8a", "Ink remembers every word you write with it. Spend it wisely, it does not refill quickly. Practice on the crystals, they don't mind."), { trainer: "mage" }));
+  W.props.push({ kind: "yardsign", x: cx, y: cy + 110 });
   for (const sp of W.spawners) { const d = Math.hypot(sp.x - cx, sp.y - cy); if (d < 700) { const k = 700 / Math.max(1, d); sp.x = Math.round(cx + (sp.x - cx) * k); sp.y = Math.round(cy + (sp.y - cy) * k); } }
   // Huntress Kestrel's wolf pup, cornered by a pack in Margin Woods
   const Z = W.ZONES.find(z => z.id === "woods"); let pup = [Z.x + Z.w * 0.6, Z.y + Z.h * 0.55];
@@ -2749,6 +2835,15 @@ const TRAIN = (() => {
   W.objs.push({ kind: "pickup", thing: "wolfpup", quest: "cls_h2", id: "wolfpup", x: pup[0], y: pup[1] });
   const pack = { foe: "wolf", x: pup[0] + 90, y: pup[1] + 20, r: 110, n: 3, respawn: 60, questOnly: "cls_h2", timer: 0, live: 0, back: [] }; W.spawners.push(pack);
   return { ...T, center: [cx, cy], pup, pack };
+})();
+// Proving Grounds quartermasters: every piece the camps sell, in their class's line and band of levels, plus potions
+(function provingShops() {
+  const W = MAPS.world, all = [...new Set(W.objs.filter(o => o.shop && !o.tierShop).flatMap(o => o.shop))].filter(id => ITEMS[id] && ITEMS[id].slot);
+  for (const o of W.objs) { if (!o.tierShop) continue; const [k, lo, hi] = o.tierShop;
+    const gear = [...new Set(all.map(id => forCls(id, k)))].filter(id => { const it = ITEMS[id]; return it.cls === k && !it.crafted && !it.premium && !it.rare && (it.lvl || 1) >= lo && (it.lvl || 1) <= hi; });
+    const pots = lo < 10 ? ["potion"] : lo < 20 ? ["potion", "greater_potion"] : ["greater_potion"];
+    if (k === "mage") pots.push(...(lo < 10 ? ["mana_potion"] : lo < 20 ? ["mana_potion", "greater_mana"] : ["greater_mana"]));
+    o.shop = [...pots, ...gear]; }
 })();
 const CLS_Q = (id, giver, c, lv, needs, title, goal, text, reward, done, extra) => ({ id, giver, title, needs, req: () => player.cls === c && player.level >= lv, where: extra?.where || "The wilds around Inkwell Village", goal, text, reward, done, ...extra });
 QUESTS.push(
@@ -2992,6 +3087,10 @@ const CRAFTERS = {
   clegg: { tabs: [["bow", "Bows"], ["staff", "Staffs"], ["upgrade", "Upgrade"], ["salvage", "Salvage"]], need: "craft_e" },
   fizz: { tabs: [["potion", "Potions"], ["elixir", "Elixirs"], ["glow", "Glows"]], need: "craft_e" },
   mara: { tabs: [["meal", "Meals"]], need: "fish_b" },
+  // the class crafters in the Proving Grounds work the same trades as the village crafters, for one class each
+  gunnar: { tabs: [["weapon", "Weapons"], ["plate", "Plate"], ["upgrade", "Upgrade"], ["salvage", "Salvage"]], need: "craft_e", as: ["brand"] },
+  linden: { tabs: [["bow", "Bows"], ["leather", "Leather"], ["upgrade", "Upgrade"], ["salvage", "Salvage"]], need: "craft_e", as: ["clegg", "carly"] },
+  vey: { tabs: [["staff", "Staffs"], ["cloth", "Cloth"], ["upgrade", "Upgrade"], ["salvage", "Salvage"]], need: "craft_e", as: ["clegg", "carly"] },
 };
 const craftOpen = id => CRAFTERS[id] && quests[CRAFTERS[id].need]?.state === "done";
 // Which craftsperson works a piece of gear, and what it's made of
@@ -3040,10 +3139,10 @@ const upCost = id => { const n = upN(id), t = ITEMS[id].tier || 1; return { mats
 const salvageOf = id => { const it = ITEMS[id], t = it.tier || 1; return { [primaryMat(id)]: Math.max(1, Math.round(SIZE[it.slot] * TIER_K[t] * (it.crafted ? 0.5 : 0.3))) }; };
 let craftTab = {};
 function showCraft(n, tab) {
-  const C = CRAFTERS[n.id], mine = id => !ITEMS[id].cls || ITEMS[id].cls === cls();
-  const gear = t => RECIPES.filter(r => r.by === n.id && r.tab === t && (!r.id || !ITEMS[r.id].slot || mine(r.id)));
-  const ownGear = Object.keys(player.bag).filter(id => ITEMS[id].slot && player.bag[id] > 0 && tradeOf(id)[0] === n.id && !ITEMS[id].premium && !ITEMS[id].rare);
-  const worn = Object.values(player.gear).filter(id => id && tradeOf(id)[0] === n.id && !ITEMS[id].premium);
+  const C = CRAFTERS[n.id], by = C.as || [n.id], mine = id => !ITEMS[id].cls || ITEMS[id].cls === cls();
+  const gear = t => RECIPES.filter(r => by.includes(r.by) && r.tab === t && (!r.id || !ITEMS[r.id].slot || mine(r.id)));
+  const ownGear = Object.keys(player.bag).filter(id => ITEMS[id].slot && player.bag[id] > 0 && by.includes(tradeOf(id)[0]) && !ITEMS[id].premium && !ITEMS[id].rare);
+  const worn = Object.values(player.gear).filter(id => id && by.includes(tradeOf(id)[0]) && !ITEMS[id].premium);
   const has = { upgrade: worn.length + ownGear.length > 0, salvage: ownGear.length > 0 };
   const tabs = C.tabs.filter(([t]) => t in has ? has[t] : gear(t).length);
   if (!tabs.length) return openPanel(`<h2>${n.name}</h2><p>Bring me something of mine to work on and I'll see what I can do.</p><div class="row"><button data-act="back" type="button">Back</button><button data-act="close" type="button">Close</button></div>`, { back: () => talk(n) });
@@ -3070,7 +3169,7 @@ function showCraft(n, tab) {
       make: i => { const r = RECIPES[+i]; if (!r || !haveAll(r.mats) || player.coins < (r.coins || 0)) return;
         if (r.glow) { if (!(player.gemRec || []).includes(r.glow) || player.glows.includes(r.glow)) return; }
         else if (r.pattern && !player.recipes.includes("pattern_" + r.pattern)) return;
-        for (const [id, k] of Object.entries(r.mats)) takeItem(id, k); player.coins -= r.coins || 0; sfx(n.id === "brand" ? "shing" : "coin"); bump("crafted");
+        for (const [id, k] of Object.entries(r.mats)) takeItem(id, k); player.coins -= r.coins || 0; sfx(by[0] === "brand" ? "shing" : "coin"); bump("crafted");
         if (r.glow) { player.glows.push(r.glow); player.glow = r.glow; banner(`${r.name}!`, "Your weapon shines with it now. Change it in Bag > Dyes"); }
         else { addItem(r.id, r.qty || 1); if (ITEMS[r.id].crafted) banner("Crafted!", ITEMS[r.id].name); }
         matsCheck(); save(); showCraft(n, tab); },
@@ -3141,8 +3240,32 @@ function drawCraftProp(p) {
     ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 1.5; line(x + 4, y - 46, x + 22, y - 54); return true; }
   if (p.kind === "runestone") { shadow(x, y, 16); ctx.fillStyle = "#8a8f9a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.lineTo(x - 9, y - 44); ctx.lineTo(x, y - 52); ctx.lineTo(x + 9, y - 44); ctx.lineTo(x + 12, y); ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.strokeStyle = `rgba(90,150,230,${0.6 + 0.4 * Math.sin(clock * 3)})`; ctx.lineWidth = 2; line(x - 4, y - 36, x + 4, y - 28); line(x + 4, y - 36, x - 4, y - 28); line(x, y - 22, x, y - 14); return true; }
-  if (p.kind === "yardsign") { ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 46); ctx.fillStyle = "#c8a476"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x - 58, y - 64, 116, 24); ctx.strokeRect(x - 58, y - 64, 116, 24);
-    ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("Training Grounds", x, y - 47); return true; }
+  if (p.kind === "yardsign") { ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 46); ctx.fillStyle = "#c8a476"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x - 92, y - 70, 184, 40); ctx.strokeRect(x - 92, y - 70, 184, 40);
+    ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("Class trainers: Proving Grounds", x, y - 54); ctx.fillText("west, past Whisper Glade \u2190", x, y - 38); return true; }
+  if (p.kind === "statue") {
+    shadow(x, y, 90); ctx.save(); ctx.translate(x, y); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = INK;
+    ctx.fillStyle = "#cfcac0"; ctx.lineWidth = 2.5; ctx.fillRect(-90, -34, 180, 34); ctx.strokeRect(-90, -34, 180, 34); ctx.fillStyle = "#dedad2"; ctx.fillRect(-76, -52, 152, 18); ctx.strokeRect(-76, -52, 152, 18);
+    ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("To every hero yet to come", 0, -12);
+    const stone = "#8f8b83", fig = (bx, k) => { const by = -52, hip = by - 34, neck = hip - 34, hy = neck - 14;
+      ctx.strokeStyle = INK; ctx.lineWidth = 9; line(bx, hip, bx - 9, by); line(bx, hip, bx + 9, by); line(bx, hip, bx, neck); ctx.strokeStyle = stone; ctx.lineWidth = 6; line(bx, hip, bx - 9, by); line(bx, hip, bx + 9, by); line(bx, hip, bx, neck);
+      ctx.fillStyle = "#b8b4ac"; ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.beginPath(); ctx.arc(bx, hy, 12, 0, 7); ctx.fill(); ctx.stroke();
+      const arm = (ax, ay) => { ctx.strokeStyle = INK; ctx.lineWidth = 8; line(bx, neck + 4, ax, ay); ctx.strokeStyle = stone; ctx.lineWidth = 5; line(bx, neck + 4, ax, ay); };
+      if (k === "sword") { arm(bx + 16, neck - 14); arm(bx - 16, neck + 18); ctx.strokeStyle = INK; ctx.lineWidth = 7; line(bx + 16, neck - 12, bx + 20, neck - 62); ctx.strokeStyle = "#c8c4bc"; ctx.lineWidth = 4; line(bx + 16, neck - 12, bx + 20, neck - 62); ctx.strokeStyle = INK; ctx.lineWidth = 3; line(bx + 8, neck - 16, bx + 26, neck - 18); }
+      else if (k === "bow") { arm(bx - 20, neck + 2); arm(bx + 8, neck + 4); ctx.strokeStyle = INK; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(bx - 8, neck + 2, 22, Math.PI * 0.62, Math.PI * 1.38); ctx.stroke(); ctx.strokeStyle = stone; ctx.lineWidth = 3.5; ctx.stroke(); }
+      else { arm(bx + 16, neck - 4); arm(bx - 14, neck + 18); ctx.strokeStyle = INK; ctx.lineWidth = 6; line(bx + 18, by, bx + 18, neck - 40); ctx.strokeStyle = "#a08868"; ctx.lineWidth = 3.5; line(bx + 18, by, bx + 18, neck - 40);
+        ctx.fillStyle = `rgba(150,120,240,${0.55 + 0.3 * Math.sin(clock * 2)})`; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx + 18, neck - 46, 7, 0, 7); ctx.fill(); ctx.stroke(); } };
+    fig(-50, "bow"); fig(50, "staff"); fig(0, "sword"); ctx.restore(); return true; }
+  if (p.kind === "banners") { for (const [dx, c] of [[-40, "#3f7a3a"], [0, "#a0503a"], [40, "#3b5aa6"]]) { const bx = x + dx; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 4; line(bx, y, bx, y - 120);
+      ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bx, y - 116); for (let k = 0; k <= 6; k++) ctx.lineTo(bx + k * 6, y - 116 + Math.sin(clock * 3 + k * 0.8 + dx) * 3); ctx.lineTo(bx + 36, y - 80 + Math.sin(clock * 3 + 5 + dx) * 3); ctx.lineTo(bx + 18, y - 70); ctx.lineTo(bx, y - 80); ctx.closePath(); ctx.fill(); ctx.stroke(); } return true; }
+  if (p.kind === "rack") { shadow(x, y, 30); ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x - 28, y, x - 28, y - 44); line(x + 28, y, x + 28, y - 44); line(x - 32, y - 40, x + 32, y - 40); line(x - 32, y - 12, x + 32, y - 12);
+    ctx.lineWidth = 2.5; for (const [dx, c] of [[-16, "#b8bec8"], [-4, "#8d939c"], [8, "#b8bec8"], [19, "#6a4a2a"]]) { ctx.strokeStyle = c; line(x + dx, y - 6, x + dx + 3, y - 58); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5; for (const dx of [-16, -4, 8]) line(x + dx - 4, y - 18, x + dx + 5, y - 19); return true; }
+  if (p.kind === "signpost") {
+    ctx.lineWidth = 4; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 110); ctx.lineWidth = 1.5; ctx.strokeStyle = INK; ctx.font = `12px ${FONT}`;
+    [["\u2191 Ironhold Yard", 0, 0], ["\u2190 Fletchwood Lanes", -1, 1], ["Whisper Glade \u2192", 1, 2], ["\u2193 Starfall Sanctum", 0, 3]].forEach(([t, d, i]) => { const by = y - 104 + i * 22, w = ctx.measureText(t).width + 26, bx = d > 0 ? x - 6 : d < 0 ? x + 6 - w : x - w / 2;
+      ctx.fillStyle = "#c8a476"; ctx.beginPath(); if (!d) ctx.rect(bx, by, w, 18); else if (d > 0) { ctx.moveTo(bx, by); ctx.lineTo(bx + w - 10, by); ctx.lineTo(bx + w, by + 9); ctx.lineTo(bx + w - 10, by + 18); ctx.lineTo(bx, by + 18); } else { ctx.moveTo(bx + w, by); ctx.lineTo(bx + 10, by); ctx.lineTo(bx, by + 9); ctx.lineTo(bx + 10, by + 18); ctx.lineTo(bx + w, by + 18); }
+      ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.fillText(t, bx + w / 2, by + 13); });
+    return true; }
   if (p.kind === "digsign") { ctx.lineWidth = 3; ctx.strokeStyle = "#6a4a2a"; line(x, y, x, y - 46); ctx.fillStyle = "#c8a476"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(x - 34, y - 52, 68, 22); ctx.strokeRect(x - 34, y - 52, 68, 22);
     ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = INK; ctx.fillText("Old Dig", x, y - 36); return true; }
   return false;
@@ -3358,7 +3481,7 @@ function folkTool(o, k, hx, hy, f, sw) {
       ctx.fillStyle = "#7aa0c8"; ctx.strokeStyle = INK; ctx.beginPath(); ctx.ellipse(fx, fy + 8, 4, 8, Math.sin(o.t * 20) * 0.4, 0, 7); ctx.fill(); ctx.stroke(); }
     else { ctx.fillStyle = BLOOD; ctx.beginPath(); ctx.arc(bx, by, 3.2, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.arc(bx, by, 3.2, 0, Math.PI); ctx.fill();
       ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.ellipse(bx, by + 3, 7 + (o.t * 6 % 6), 2.5, 0, 0, 7); ctx.stroke(); }
-  } else if (k === "lute") npcTool("lute", hx, hy, f);
+  } else if (k === "lute" || k === "sword" || k === "bow" || k === "staff") npcTool(k, hx, hy, f);
 }
 function drawFolk(o) {
   const L = o.look, t = o.t, act = o.act, f = o.f; let sw = 0, tool = null;
@@ -3373,6 +3496,10 @@ function drawFolk(o) {
   else if (act === "lute") { sw = 0; tool = "lute"; }
   else if (act === "dice") { const c = (t % 4) / 4; sw = c < 0.15 ? 0.5 : c < 0.25 ? 0.15 : 0.08; }
   else if (act === "juggle") { sw = 0.45 + Math.sin(t * 8) * 0.15; }
+  else if (act === "spar") { const c = ((t + o.ph) % 1.6) / 1.6; sw = c < 0.3 ? c / 0.3 * 0.95 : c < 0.45 ? 0.95 - (c - 0.3) * 6 : 0.05; tool = "sword"; }
+  else if (act === "cheer") { sw = Math.sin(t * 5 + o.ph) > 0.2 ? 0.95 : 0.55; }
+  else if (act === "shoot") { sw = 0.5; tool = "bow"; }
+  else if (act === "cast") { const c = ((t + o.ph) % 2.2) / 2.2; sw = c < 0.45 ? 0.3 + c : 0.75; tool = "staff"; }
   shadow(o.x, o.y, o.sit ? 14 : 11);
   const H = L.hat && HATS[L.hat[0]];
   stickFigure(o.x, o.y, { w: 2.2, scale: L.scale, facing: f, ink: INK, moving: o.moving, walk: o.walk, swing: sw, sit: o.sit,
@@ -3382,6 +3509,15 @@ function drawFolk(o) {
   if (o.name) { ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.lineWidth = 3; ctx.strokeStyle = PAPER; ctx.fillStyle = INK; const ny = o.y - (o.sit ? 66 : 78) * (L.scale || 1); ctx.strokeText(o.name, o.x, ny); ctx.fillText(o.name, o.x, ny); }
   if (act === "juggle") { const cols = [BLOOD, GOLD, "#3b6fb6"], k = L.scale || 1; for (let i = 0; i < 3; i++) { const u = (t * 1.1 + i / 3) % 1; ctx.fillStyle = cols[i]; ctx.strokeStyle = INK; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(o.x + (u - 0.5) * 28 * k, o.y - (62 + Math.sin(u * Math.PI) * 40) * k, 4, 0, 7); ctx.fill(); ctx.stroke(); } }
+  // arrows and spell orbs fly from the trainees to their targets, and the target shakes when they land
+  if (act === "shoot" || act === "cast") { const per = act === "shoot" ? 2.6 : 2.2, c = ((t + o.ph) % per) / per, k = (c - 0.45) / 0.2, n = Math.floor((t + o.ph) / per);
+    const sx = o.x + f * 18, sy = o.y - (act === "shoot" ? 46 : 84), ex = o.tx, ey = o.ty - (act === "shoot" ? 52 : 62);
+    if (k > 0 && k < 1) { const px = sx + (ex - sx) * k, py = sy + (ey - sy) * k - Math.sin(k * Math.PI) * (act === "shoot" ? 18 : 30), a = Math.atan2(ey - sy, ex - sx);
+      if (act === "shoot") { ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2; line(px - Math.cos(a) * 18, py - Math.sin(a) * 18, px, py); ctx.fillStyle = "#fffdf6"; ctx.fillRect(px - Math.cos(a) * 18 - 3, py - Math.sin(a) * 18 - 2, 6, 4); }
+      else { ctx.fillStyle = "rgba(150,120,240,.3)"; for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.arc(px - Math.cos(a) * i * 10, py - Math.sin(a) * i * 10, 7 - i, 0, 7); ctx.fill(); }
+        ctx.fillStyle = "#b9a6ee"; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(px, py, 7, 0, 7); ctx.fill(); ctx.stroke(); } }
+    if (k >= 1 && o.landed !== n) { o.landed = n; const g = (map.foes || []).find(q => q.d.target && Math.hypot(q.x - o.tx, q.y - o.ty) < 50); if (g) g.wob = 1; }
+    if (act === "cast" && k >= 1 && k < 1.6) { ctx.strokeStyle = `rgba(150,110,240,${1.6 - k})`; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ex, ey, 10 + (k - 1) * 50, 0, 7); ctx.stroke(); } }
   if (act === "lute") { ctx.font = `16px ${FONT}`; ctx.fillStyle = "rgba(27,27,32,.6)"; ctx.textAlign = "center"; for (let i = 0; i < 2; i++) { const u = (t * 0.5 + i / 2) % 1; ctx.globalAlpha = 1 - u; ctx.fillText(i ? "♫" : "♪", o.x + f * 14 + Math.sin(u * 6) * 8, o.y - 70 - u * 40); } ctx.globalAlpha = 1; }
   if (o.sayT > 0 && o.say) {
     const y = o.y - (L.scale || 1) * 92 + (o.sit ? 12 : 0) - (o.name ? 18 : 0); ctx.font = `15px ${FONT}`; const w = ctx.measureText(o.say).width + 14;
@@ -3633,6 +3769,7 @@ function octoUpdate(f, dt) {
 }
 function foeUpdate(f, dt) {
   if (f.d.octo) return octoUpdate(f, dt);
+  if (f.d.target) { f.t += dt; f.flash = Math.max(0, f.flash - dt); f.stunT = f.slowT = 0; f.frozen = f.rooted = f.aggro = false; f.kx = f.ky = 0; f.state = "idle"; f.x = f.hx; f.y = f.hy; return; }
   const d = f.d; f.t += dt; f.flash = Math.max(0, f.flash - dt);
   if (f.kx || f.ky) { move(f, f.kx * dt * 6, f.ky * dt * 6, d.r); f.kx *= 0.8; f.ky *= 0.8; if (Math.abs(f.kx) + Math.abs(f.ky) < 1) f.kx = f.ky = 0; }
   const px = player.x - f.x, py = player.y - f.y, dist = Math.hypot(px, py);
@@ -3751,6 +3888,8 @@ function foeUpdate(f, dt) {
 const WIND_K = 0.6;
 const WARD_K = { arrow: 0.5, spell: 0.3 };
 function hitFoe(f, dmg, crit, kind) {
+  if (f.d.target) { const T = f.dps || (f.dps = { log: [] }); if (clock - (T.last ?? -99) > 6) T.log = [];
+    T.log.push([clock, dmg]); T.last = clock; f.flash = 0.12; f.wob = 1; sfx(crit ? "crit" : "hit"); floater(f.x, f.y - 60, String(dmg), crit ? GOLD : INK, crit ? 26 : 20); return; }
   kind = kind || (cls() === "warrior" ? "melee" : cls() === "hunter" ? "arrow" : "spell");
   if (f.d.ward && WARD_K[kind]) { dmg = Math.max(1, Math.round(dmg * WARD_K[kind])); f.wardT = 0.5;
     if (clock - (f.wardSaid || -9) > 3) { f.wardSaid = clock; floater(f.x, f.y - 100, kind === "spell" ? "Spell warded!" : "Arrows glance off!", "#3b6fb6", 18); } }
@@ -4589,7 +4728,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 94; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 95; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6094,6 +6233,26 @@ const NPC_LOOKS = {
   "Carpenter Clegg": { body: "#c9b48a", apron: "#7a5a34", hat: ["cap", "#5a7a3a"], sleeves: "#c9b48a", legs: "#4a3a2a", tool: "saw" },
   "Wren the Bard": { body: "#7a3a6e", long: true, trim: GOLD, hat: ["feather", "#7a3a6e", { plume: "#e8c86a" }], sleeves: "#7a3a6e", cape: "#3b6fb6", tool: "lute" },
 };
+Object.assign(NPC_LOOKS, {
+  "Recruiter Bram": { body: "#8d939c", chain: true, trim: "#a0503a", belt: true, hat: ["cap", "#a0503a"], sleeves: "#8d939c", legs: "#3a3440", tool: "sword" },
+  "Corporal Tess": { body: "#9aa0aa", chain: true, trim: "#a0503a", belt: true, hat: ["helm", "#8d939c"], sleeves: "#9aa0aa", legs: "#3a3440", hair: "#8a4a24", lashes: true, tool: "sword" },
+  "Lieutenant Hale": { body: "#8d939c", chain: true, trim: "#a0503a", hat: ["plume", "#8d939c", { plume: "#a0503a" }], cape: "#a0503a", legs: "#3a3440", tool: "sword" },
+  "Captain Morrow": { body: "#7a7f88", chain: true, trim: GOLD, hat: ["plume", "#9aa0aa", { plume: GOLD }], cape: "#a0503a", beard: "#4a3a2a", legs: "#2a2a34", tool: "sword" },
+  "Marshal Vance": { body: "#c9c2a8", chain: true, trim: GOLD, hat: ["plume", "#c9c2a8", { plume: "#7a1a14" }], cape: "#7a1a14", beard: "#e8e4da", legs: "#2a2a34", tool: "sword" },
+  "Armorer Gunnar": { body: "#6a5a4a", apron: "#3a3440", hat: ["bandana", "#5a5a64"], beard: "#c9822a", sleeves: "#6a5a4a", legs: "#3a3440", tool: "hammer" },
+  "Trapper Moss": { body: "#6a5a3a", belt: true, hat: ["hood", "#6a4a2a"], legs: "#4a3a2a", sleeves: "#6a5a3a", beard: "#5a4a2a", tool: "bow" },
+  "Tracker Fern": { body: "#5a6a3a", belt: true, hat: ["hood", "#3f7a3a"], cape: "#3f7a3a", legs: "#4a3a2a", hair: "#6a3a1a", lashes: true, tool: "bow" },
+  "Ranger Sloane": { body: "#4a5a2a", belt: true, hat: ["feather", "#4a5a2a", { plume: "#c0504a" }], cape: "#3f7a3a", legs: "#3a3a30", tool: "bow" },
+  "Warden Ivy": { body: "#3f6a3a", belt: true, hat: ["hood", "#2a4a2a"], cape: "#2a4a2a", legs: "#3a3a30", hair: "#2a2220", lashes: true, tool: "bow" },
+  "Huntmaster Oren": { body: "#6e4a2a", belt: true, hat: ["feather", "#3f6a3a", { plume: GOLD }], cape: "#6e4a2a", beard: "#9a9a90", legs: "#3a3a30", tool: "bow" },
+  "Bowyer Linden": { body: "#c9b48a", apron: "#5a7a3a", hat: ["cap", "#5a7a3a"], sleeves: "#c9b48a", legs: "#4a3a2a", tool: "bow" },
+  "Adept Nell": { body: "#3b6fb6", robe: true, trim: "#e8c86a", hat: ["cone", "#3b6fb6"], hair: "#d8a040", lashes: true, tool: "staff" },
+  "Scholar Pell": { body: "#5a5a8a", robe: true, trim: GOLD, hat: ["circlet", GOLD, { gem: "#7ac0e0" }], beard: "#8a6a4a", tool: "staff" },
+  "Magister Ione": { body: "#6a4a9a", robe: true, trim: GOLD, hat: ["circlet", GOLD, { gem: "#c07ad8" }], hair: "#2a2220", lashes: true, tool: "staff" },
+  "Sage Corvin": { body: "#2a4a8a", robe: true, trim: GOLD, hat: ["cone", "#1e3a6a"], beard: "#f4f2ec", tool: "staff" },
+  "Archon Lys": { body: "#f2ece0", robe: true, trim: "#7a6ad0", hat: ["cone", "#7a6ad0"], hair: "#e8e0c8", lashes: true, tool: "staff" },
+  "Enchanter Vey": { body: "#6a4a9a", robe: true, trim: "#7ac04a", hat: ["hood", "#4a3a7a"], tool: "flask" },
+});
 // Shopkeepers potter about their stall a little: a few steps, a pause, then back (Lee). They stop and face you when you're close
 function keeperTick(dt) {
   if (!map.objs) return;
@@ -6155,6 +6314,8 @@ const ENV = {
   blot: { fx: "ink", tint: [30, 20, 50, 0.2], wind: 0.06 },
   reach: { fx: "shavings", tint: [250, 110, 150, 0.09], wind: 0.08 },
   keep: { fx: null, tint: [60, 50, 80, 0.08], wind: 0.05 },
+  proving: { fx: "pollen", tint: [255, 230, 120, 0.04], wind: 0.02, birds: 1 }, square: { fx: "pollen", tint: [255, 210, 120, 0.04], wind: 0, birds: 0.8 },
+  yard: { fx: "dust", tint: [220, 170, 90, 0.05], wind: 0.06, birds: 0.3 }, lanes: { fx: "leaves", tint: [60, 120, 40, 0.06], wind: 0.03, birds: 1 }, sanctum: { fx: "sparkle", tint: [160, 110, 250, 0.07], wind: 0.02 },
   sea: { fx: null, tint: [80, 130, 200, 0.06], wind: 0.12 },
 };
 const FX_N = { snow: 150, rain: 170, dust: 60, embers: 70, sparkle: 45, ink: 45, shavings: 40, leaves: 28, pollen: 34, fireflies: 30, wind: 12 };
@@ -6443,6 +6604,82 @@ function drawInteriorGround(m) {
   ctx.fillStyle = "rgba(40,30,20,.2)"; ctx.fillRect(m.doors[0].x, m.h - 24, m.doors[0].w, 24);
 }
 
+// The Proving Grounds (Lee): class stalls, the brawling pit, rune circles and the Starfall Sanctum
+function drawProving(q) {
+  const X = q.x, Y = q.y, W = q.w, H = q.h; ctx.strokeStyle = INK; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (q.kind === "stall") {
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; line(X + 8, Y + H, X + 8, Y - 66); line(X + W - 8, Y + H, X + W - 8, Y - 66);
+    ctx.fillStyle = "#b58552"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(X, Y + H - 36, W, 36); ctx.strokeRect(X, Y + H - 36, W, 36);
+    ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(27,27,32,.35)"; for (let x = X + 20; x < X + W; x += 20) line(x, Y + H - 34, x, Y + H - 2);
+    ctx.fillStyle = "#c99a62"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(X - 6, Y + H - 44, W + 12, 9); ctx.strokeRect(X - 6, Y + H - 44, W + 12, 9);
+    // goods on the counter
+    const top = Y + H - 44;
+    if (q.cls === "warrior") { ctx.fillStyle = "#9aa0aa"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X + 34, top - 1, 13, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillRect(X + 31, top - 13, 6, 10);
+      ctx.strokeStyle = "#b8bec8"; ctx.lineWidth = 3; line(X + 70, top - 2, X + 104, top - 26); ctx.strokeStyle = INK; ctx.lineWidth = 2; line(X + 74, top - 12, X + 82, top - 2);
+      ctx.fillStyle = q.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X + 110, top - 22); ctx.lineTo(X + 128, top - 22); ctx.lineTo(X + 126, top - 6); ctx.lineTo(X + 119, top - 1); ctx.lineTo(X + 112, top - 6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if (q.cls === "hunter") { ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(X + 40, top - 4, 22, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke(); ctx.strokeStyle = "rgba(27,27,32,.6)"; ctx.lineWidth = 1; line(X + 21, top - 14, X + 59, top - 14);
+      ctx.fillStyle = "#8a6a44"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(X + 72, top - 24, 14, 24); ctx.strokeRect(X + 72, top - 24, 14, 24); ctx.strokeStyle = "#6a4a2a"; for (const dx of [-3, 2, 7]) line(X + 79 + dx, top - 24, X + 79 + dx, top - 36);
+      ctx.fillStyle = "#b0784a"; ctx.strokeStyle = INK; ctx.beginPath(); ctx.ellipse(X + 114, top - 6, 18, 7, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+    else { for (const [dx, c] of [[24, "#3b8ee0"], [42, "#a45ad8"], [60, "#3b8ee0"]]) { ctx.fillStyle = c; ctx.globalAlpha = 0.8 + 0.2 * Math.sin(clock * 3 + dx); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X + dx, top - 6, 6, 0, 7); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1; ctx.strokeRect(X + dx - 2, top - 17, 4, 6); }
+      ctx.fillStyle = "#6a4a9a"; ctx.lineWidth = 1.5; ctx.fillRect(X + 84, top - 10, 30, 10); ctx.strokeRect(X + 84, top - 10, 30, 10); ctx.fillStyle = "#2a4a8a"; ctx.fillRect(X + 88, top - 19, 26, 9); ctx.strokeRect(X + 88, top - 19, 26, 9);
+      ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(X + 126, top, X + 126, top - 40); ctx.fillStyle = "#7ac0e0"; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X + 126, top - 43, 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
+    // striped awning with a scalloped edge
+    const aw = Y - 66, n = 6, sw = (W + 24) / n;
+    for (let i = 0; i < n; i++) { ctx.fillStyle = i % 2 ? "#fffdf6" : q.color; ctx.beginPath(); ctx.moveTo(X - 12 + i * sw, aw + 26); ctx.lineTo(X + i * sw * (W / (W + 24)), aw); ctx.lineTo(X + (i + 1) * sw * (W / (W + 24)), aw); ctx.lineTo(X - 12 + (i + 1) * sw, aw + 26); ctx.arc(X - 12 + (i + 0.5) * sw, aw + 26, sw / 2, 0, Math.PI); ctx.closePath(); ctx.fill(); }
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, aw); ctx.lineTo(X + W, aw); ctx.lineTo(X + W + 12, aw + 26); for (let i = n - 1; i >= 0; i--) ctx.arc(X - 12 + (i + 0.5) * sw, aw + 26, sw / 2, 0, Math.PI); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = "#e9d7a8"; ctx.fillRect(X + W / 2 - 46, aw - 30, 92, 24); ctx.strokeRect(X + W / 2 - 46, aw - 30, 92, 24); ctx.strokeStyle = "#6a4a2a"; line(X + W / 2 - 30, aw - 6, X + W / 2 - 30, aw); line(X + W / 2 + 30, aw - 6, X + W / 2 + 30, aw);
+    ctx.fillStyle = INK; ctx.font = `14px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(q.sign, X + W / 2, aw - 13);
+  } else if (q.kind === "brawlpit") {
+    const cx = X + W / 2, cy = Y + H / 2, rx = W / 2, ry = H / 2;
+    ctx.fillStyle = "rgba(120,90,50,.22)"; ctx.beginPath(); ctx.ellipse(cx, cy + 8, rx + 18, ry + 12, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e6cf98"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(150,110,60,.18)"; ctx.beginPath(); ctx.ellipse(cx, cy - ry * 0.35, rx * 0.9, ry * 0.45, 0, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = "rgba(150,110,60,.55)"; ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.55, ry * 0.55, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 1.5; for (let i = 0; i < 26; i++) { const a = i * 2.39, d = 0.15 + ((i * 37) % 70) / 100, px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d; line(px - 4, py, px + 4, py + 1); }
+    // rope ring on posts, open at the front
+    const posts = []; for (let i = 0; i < 12; i++) { const a = Math.PI / 2 + 0.42 + i / 11 * (Math.PI * 2 - 0.84); posts.push([cx + Math.cos(a) * (rx + 10), cy + Math.sin(a) * (ry + 8)]); }
+    ctx.strokeStyle = "#a0503a"; ctx.lineWidth = 2.5; for (const h of [16, 28]) { ctx.beginPath(); posts.forEach(([px, py], i) => i ? ctx.lineTo(px, py - h) : ctx.moveTo(px, py - h)); ctx.stroke(); }
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; for (const [px, py] of posts) line(px, py + 2, px, py - 34);
+    ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Brawling Pit", cx, Y - 46);
+  } else if (q.kind === "runecircle") {
+    const cx = X + W / 2, cy = Y + H / 2, r = W / 2, k = 0.45, pulse = 0.5 + 0.5 * Math.sin(clock * 2 + X);
+    ctx.fillStyle = `rgba(140,110,230,${0.1 + 0.06 * pulse})`; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * k, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = `rgba(110,80,210,${0.5 + 0.3 * pulse})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, r, r * k, 0, 0, 7); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.78, r * 0.78 * k, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); for (let i = 0; i <= 5; i++) { const a = clock * 0.3 + i * Math.PI * 4 / 5; const px = cx + Math.cos(a) * r * 0.74, py = cy + Math.sin(a) * r * 0.74 * k; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+    for (let i = 0; i < 8; i++) { const a = -clock * 0.4 + i * Math.PI / 4, px = cx + Math.cos(a) * r * 0.89, py = cy + Math.sin(a) * r * 0.89 * k; line(px - 4, py - 3, px + 4, py + 3); line(px, py - 4, px, py + 4); }
+  } else if (q.kind === "sanctum") {
+    const mid = X + W / 2, base = Y + H, stone = "#e9e5f3", dark = "#b9b2d6", glow = 0.5 + 0.5 * Math.sin(clock * 1.6);
+    const g = ctx.createRadialGradient(mid, base - 170, 20, mid, base - 170, 300); g.addColorStop(0, `rgba(160,130,255,${0.22 + 0.1 * glow})`); g.addColorStop(1, "rgba(160,130,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mid, base - 170, 300, 0, 7); ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+    // steps
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? dark : stone; const sx = X - 40 + i * 14, sy = base - 16 - i * 16; ctx.fillRect(sx, sy, W + 80 - i * 28, 16); ctx.strokeRect(sx, sy, W + 80 - i * 28, 16); }
+    // hall and columns
+    const hy = base - 48, ht = 130; ctx.fillStyle = "#cfc6ea"; ctx.fillRect(X + 10, hy - ht, W - 20, ht); ctx.strokeRect(X + 10, hy - ht, W - 20, ht);
+    ctx.strokeStyle = "rgba(27,27,32,.18)"; ctx.lineWidth = 1; for (let y = hy - ht + 16; y < hy; y += 16) line(X + 12, y, X + W - 12, y); ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+    for (let i = 0; i < 6; i++) { const cx = X + 24 + i * (W - 48) / 5; ctx.fillStyle = stone; ctx.fillRect(cx - 10, hy - ht + 6, 20, ht - 6); ctx.strokeRect(cx - 10, hy - ht + 6, 20, ht - 6);
+      ctx.strokeStyle = "rgba(27,27,32,.25)"; ctx.lineWidth = 1; line(cx - 3, hy - ht + 10, cx - 3, hy - 4); line(cx + 4, hy - ht + 10, cx + 4, hy - 4); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.fillStyle = GOLD; ctx.fillRect(cx - 14, hy - ht, 28, 9); ctx.strokeRect(cx - 14, hy - ht, 28, 9); ctx.lineWidth = 2.5; }
+    // doorway full of starlight
+    ctx.fillStyle = "#1c1840"; ctx.beginPath(); ctx.moveTo(mid - 30, hy); ctx.lineTo(mid - 30, hy - 70); ctx.arc(mid, hy - 70, 30, Math.PI, 0); ctx.lineTo(mid + 30, hy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#fffdf6"; for (let i = 0; i < 9; i++) { const sx = mid - 22 + ((i * 17) % 44), sy = hy - 8 - ((i * 29) % 86); ctx.globalAlpha = 0.35 + 0.6 * Math.abs(Math.sin(clock * 2 + i)); ctx.beginPath(); ctx.arc(sx, sy, 1.8, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
+    // roof band and dome
+    ctx.fillStyle = stone; ctx.fillRect(X - 6, hy - ht - 24, W + 12, 24); ctx.strokeRect(X - 6, hy - ht - 24, W + 12, 24);
+    ctx.fillStyle = "#7a6ad0"; ctx.beginPath(); ctx.ellipse(mid, hy - ht - 24, W * 0.36, 86, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2; for (const k of [-0.6, -0.2, 0.2, 0.6]) { ctx.beginPath(); ctx.ellipse(mid, hy - ht - 24, Math.abs(k) * W * 0.36, 86, 0, k < 0 ? Math.PI : Math.PI * 1.5, k < 0 ? Math.PI * 1.5 : 0); ctx.stroke(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillStyle = GOLD; ctx.fillRect(mid - 4, hy - ht - 140, 8, 32); ctx.strokeRect(mid - 4, hy - ht - 140, 8, 32);
+    // the floating crystal over the dome
+    const cy = hy - ht - 190 + Math.sin(clock * 1.8) * 8; const cg = ctx.createRadialGradient(mid, cy, 2, mid, cy, 60); cg.addColorStop(0, `rgba(200,180,255,${0.5 + 0.3 * glow})`); cg.addColorStop(1, "rgba(200,180,255,0)");
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(mid, cy, 60, 0, 7); ctx.fill();
+    ctx.save(); ctx.translate(mid, cy); ctx.rotate(Math.sin(clock * 0.8) * 0.15); ctx.fillStyle = "#c6b6ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(16, 0); ctx.lineTo(0, 30); ctx.lineTo(-16, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.moveTo(-3, -22); ctx.lineTo(5, -4); ctx.lineTo(-3, -2); ctx.closePath(); ctx.fill(); ctx.restore();
+    // runes drifting around the temple
+    ctx.lineWidth = 2; for (let i = 0; i < 7; i++) { const a = clock * 0.35 + i * 0.9, rx = mid + Math.cos(a) * (W * 0.75), ry = hy - 90 + Math.sin(a) * 40 - ((clock * 14 + i * 30) % 60);
+      ctx.strokeStyle = `rgba(130,100,240,${0.35 + 0.35 * Math.sin(clock * 3 + i)})`; line(rx - 5, ry - 4, rx + 5, ry + 4); line(rx + 5, ry - 4, rx - 5, ry + 4); line(rx, ry - 7, rx, ry + 7); }
+    ctx.fillStyle = INK; ctx.font = `22px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Starfall Sanctum", mid, hy - ht - 240);
+  }
+}
 function drawRect(q) {
   ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = INK;
   switch (q.kind) {
@@ -6595,6 +6832,7 @@ function drawRect(q) {
       ctx.fillStyle = "#6b4a2a"; ctx.fillRect(tx + 6, ty + 26, 8, 10); ctx.fillRect(tx + 76, ty + 26, 8, 10);
       break;
     }
+    case "stall": case "brawlpit": case "runecircle": case "sanctum": drawProving(q); break;
     case "temple": {
       const r = temple.risen ? 1 : temple.rise; if (r <= 0) break;
       const X = q.x, W = q.w, Y = q.y + q.h, mid = X + W / 2, stone = "#9cb8b4", dark = "#5e7f80";
@@ -6919,8 +7157,47 @@ function heroLook(gearOverride) {
 function drawFoeIce(f) { if (!(f.frozen && f.stunT > 0)) return; const d = f.d, s = d.scale || 1, h = (d.r * 2.6 + 30) * s, w = (d.r * 2 + 16) * s;
   ctx.fillStyle = "rgba(170,215,245,.45)"; ctx.strokeStyle = "rgba(90,150,220,.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.rect(f.x - w / 2, f.y - h, w, h); ctx.fill(); ctx.stroke();
   ctx.strokeStyle = "rgba(255,255,255,.8)"; line(f.x - w / 2 + 6, f.y - h + 8, f.x - w / 2 + 14, f.y - h + 26); }
+// Practice targets: a straw dummy, an archery butt and a floating crystal. After a few hits they show your damage per second
+function drawTarget(f) {
+  const x = f.x, y = f.y, art = f.d.art, wob = f.wob = Math.max(0, (f.wob || 0) - 0.04), hit = f.flash > 0;
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = INK;
+  if (art === "tdummy") {
+    shadow(x, y, 18); ctx.translate(x, y); ctx.rotate(Math.sin(clock * 28) * 0.08 * wob);
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; line(0, 0, 0, -74); ctx.lineWidth = 4; line(-26, -54, 26, -54);
+    ctx.fillStyle = hit ? "#fffdf6" : "#d8c27a"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -50, 16, 23, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -84, 12, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#b8963a"; ctx.lineWidth = 1.5; for (const a of [-0.6, -0.2, 0.3, 0.7]) line(Math.sin(a) * 10, -94 + Math.abs(a) * 4, Math.sin(a) * 15, -102 + Math.abs(a) * 6);
+    for (const sx of [-1, 1]) line(sx * 24, -54, sx * 30, -46);
+    ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 2; line(-15, -40, 15, -40); line(-14, -60, 14, -60);
+    ctx.fillStyle = BLOOD; ctx.beginPath(); ctx.arc(0, -52, 5, 0, 7); ctx.fill(); ctx.strokeStyle = BLOOD; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -52, 9, 0, 7); ctx.stroke();
+  } else if (art === "tbutt") {
+    shadow(x, y, 20); ctx.translate(x, y); const k = 1 + wob * 0.04;
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 4; line(-16, 0, -6, -40); line(16, 0, 6, -40); line(0, -20, 0, 6);
+    ctx.scale(k, k);
+    for (const [r, c] of [[30, "#e8d9a8"], [24, "#fffdf6"], [18, "#3b6fb6"], [12, BLOOD], [5.5, GOLD]]) { ctx.fillStyle = hit && r === 30 ? "#fffdf6" : c; ctx.strokeStyle = INK; ctx.lineWidth = r === 30 ? 2 : 1.2; ctx.beginPath(); ctx.arc(0, -52, r, 0, 7); ctx.fill(); ctx.stroke(); }
+    const n = Math.min(6, (f.dps && f.dps.log.length) || 0); ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2;
+    for (let i = 0; i < n; i++) { const a = i * 2.4, r = 6 + (i * 7) % 18, ax = Math.cos(a) * r, ay = -52 + Math.sin(a) * r; line(ax, ay, ax + 14, ay - 5); ctx.fillStyle = "#fffdf6"; ctx.fillRect(ax + 11, ay - 8, 5, 4); }
+  } else {
+    const hov = Math.sin(clock * 2 + x * 0.01) * 6, cy = -62 + hov; ctx.translate(x, y);
+    ctx.fillStyle = "rgba(27,27,32,.12)"; ctx.beginPath(); ctx.ellipse(0, 0, 18 - hov * 0.5, 6, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = `rgba(150,110,230,${0.45 + 0.25 * Math.sin(clock * 3)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 30, 10, 0, 0, 7); ctx.stroke();
+    const g = ctx.createRadialGradient(0, cy, 2, 0, cy, 44); g.addColorStop(0, `rgba(180,150,255,${0.35 + wob * 0.4})`); g.addColorStop(1, "rgba(180,150,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, cy, 44, 0, 7); ctx.fill();
+    ctx.rotate(Math.sin(clock * 30) * 0.06 * wob);
+    ctx.fillStyle = hit ? "#ffffff" : "#b9a6ee"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, cy - 30); ctx.lineTo(15, cy - 4); ctx.lineTo(0, cy + 22); ctx.lineTo(-15, cy - 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.beginPath(); ctx.moveTo(-3, cy - 22); ctx.lineTo(4, cy - 6); ctx.lineTo(-3, cy - 4); ctx.closePath(); ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = "rgba(27,27,32,.5)"; line(-15, cy - 4, 15, cy - 4); line(0, cy - 30, 0, cy + 22);
+  }
+  ctx.restore();
+  const T = f.dps, close = Math.hypot(player.x - x, player.y - y) < 320;
+  if (T && clock - T.last < 6) {
+    const sum = T.log.reduce((a, [, d]) => a + d, 0), secs = Math.max(1, T.last - T.log[0][0] + 1), dps = Math.round(sum / secs);
+    ctx.font = `bold 17px ${FONT}`; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = PAPER; ctx.fillStyle = INK;
+    const t1 = `${dps.toLocaleString()} per second`, t2 = `${T.log.length} hits, ${sum.toLocaleString()} damage`;
+    ctx.strokeText(t1, x, y - 128); ctx.fillText(t1, x, y - 128); ctx.font = `13px ${FONT}`; ctx.fillStyle = SOFT; ctx.strokeText(t2, x, y - 111); ctx.fillText(t2, x, y - 111);
+  } else if (close) { ctx.font = `14px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = SOFT; ctx.fillText(f.d.name, x, y - 112); }
+}
 function drawFoe(f) {
   const d = f.d, art = d.art || f.type; let ink = INK, w = 2.2;
+  if (d.target) return drawTarget(f);
   if (f.flash > 0) ink = "#ffffff";
   else if (f.state === "windup" || f.state === "aim") { const k = 1 - f.timer / (f.wmax || 0.5); ink = `rgb(${27 + 190 * k | 0},${27 - 5 * k | 0},${32 - 10 * k | 0})`; w += 2.5 * k; }
   else if (f.enraged) ink = "#7a1a14";
