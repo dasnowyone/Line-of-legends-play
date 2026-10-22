@@ -615,6 +615,14 @@ const PATTERNS = { 3: ["Deeptide Patterns", 15000], 4: ["Wyrmforged Patterns", 6
 for (const [t, [name, price]] of Object.entries(PATTERNS)) ITEMS["pattern_" + t] = { name, scroll: +t, price, desc: `Teaches Brand, Carly and Clegg every tier ${t} crafted piece` };
 // Weapon glows: recipes bought with gems, brewed by Fizz. Looks only
 const GLOWS = { star: ["Starlight Glow", "#dff4ff", 120], ember: ["Emberheart Glow", "#ff8a3a", 120], void: ["Voidflame Glow", "#a56af2", 120] };
+// What the Proving Grounds quartermasters wear: their tier's crafted set in gem dye colors, glowing weapons on the top two (Lee)
+const QM_ARMOR = [
+  { dye: { body: "forest", head: "forest", hands: "forest", feet: "forest" }, say: "Like the green? Forest Dye. Tailor Carly sells it for gems." },
+  { dye: { body: "plum", head: "plum", hands: "charcoal", feet: "charcoal" }, say: "Plum and Charcoal Dye from Tailor Carly. Gems well spent, if you ask me." },
+  { dye: { body: "ice", head: "ice", hands: "sky", feet: "sky" }, say: "Glacier Dye. Only the gem Store has that one." },
+  { dye: { body: "ember", head: "ember", hands: "charcoal", feet: "charcoal" }, glow: "ember", say: "Ember Dye and an Emberheart Glow. You'll find both in the Store." },
+  { dye: { body: "gold", head: "gold", hands: "void", feet: "void" }, glow: "void", say: "Royal Gold, Void and a Voidflame Glow. The finest the Store has." },
+];
 // The crafted sets: stronger than the best piece the shops sell in that tier (about 15%, 25% from tier 3), with a cape, and only made by hand
 const CRAFT_SETS = [null, ["Ironheart", "#6d737c", "#c27a3a"], ["Moonsilver", "#dfe8f0", "#7aa6d6"], ["Deeptide", "#2f6f86", "#9fe0e8"], ["Wyrmforged", "#7a2a22", "#f2b134"], ["Legendforged", "#efe2b8", "#d4a92a"]];
 {
@@ -1555,17 +1563,21 @@ function buildWorld() {
   for (const ry of LANE_ROWS) for (let x = 1640; x <= 2560; x += 92) circles.push(pgTree(x + (PGR() - 0.5) * 10, ry + (PGR() - 0.5) * 8, 13 + PGR() * 3, "rgba(105,150,95,.95)"));
   // Starfall Sanctum (mage): a small temple that glows, rune circles and floating crystals to cast at
   rects.push({ x: 4110, y: 29760, w: 380, h: 180, kind: "sanctum" }, ...[29994, 30164, 30334].map(y => ({ x: 4730, y: y - 70, w: 140, h: 140, kind: "runecircle", ghost: true, flat: true })), { x: 3560, y: 30060, w: 220, h: 220, kind: "runecircle", ghost: true, flat: true });
-  // Stalls: one quartermaster for each band of levels, in a row on each quarter
+  // Stalls: one quartermaster for each band of levels, spread around each quarter, each stall in its class's own style (Lee).
+  // The quartermasters wear their class's crafted armor for their levels, in gem dye colors
   const BANDS = [[1, 9], [10, 19], [20, 29], [30, 39], [40, 50]];
   const QM = {
-    warrior: { at: [4420, 26760], color: "#a0503a", hat: "#a0503a", names: ["Recruiter Bram", "Corporal Tess", "Lieutenant Hale", "Captain Morrow", "Marshal Vance"] },
-    hunter: { at: [1950, 28780], color: "#3f7a3a", hat: "#3f7a3a", names: ["Trapper Moss", "Tracker Fern", "Ranger Sloane", "Warden Ivy", "Huntmaster Oren"] },
-    mage: { at: [3720, 30560], color: "#3b5aa6", hat: "#2a4a8a", names: ["Adept Nell", "Scholar Pell", "Magister Ione", "Sage Corvin", "Archon Lys"] },
+    warrior: { spots: [[3380, 26180], [4700, 26450], [5000, 26150], [4560, 26800], [3760, 26980]], color: "#a0503a", hat: "#a0503a", names: ["Recruiter Bram", "Corporal Tess", "Lieutenant Hale", "Captain Morrow", "Marshal Vance"] },
+    hunter: { spots: [[2700, 27760], [2950, 28420], [2700, 28560], [3250, 28100], [2350, 28800]], color: "#3f7a3a", hat: "#3f7a3a", names: ["Trapper Moss", "Tracker Fern", "Ranger Sloane", "Warden Ivy", "Huntmaster Oren"] },
+    mage: { spots: [[3420, 29760], [3900, 30420], [4350, 30560], [4900, 30620], [3550, 30650]], color: "#3b5aa6", hat: "#2a4a8a", names: ["Adept Nell", "Scholar Pell", "Magister Ione", "Sage Corvin", "Archon Lys"] },
   };
   const CLS_WORD = { warrior: "warriors", hunter: "hunters", mage: "mages" };
-  for (const [k, Q] of Object.entries(QM)) BANDS.forEach(([lo, hi], i) => { const x = Q.at[0] + i * 165, y = Q.at[1];
-    rects.push({ x, y, w: 140, h: 60, kind: "stall", color: Q.color, sign: `Levels ${lo}-${hi}`, cls: k });
-    pgObjs.push({ ...npc("pg_" + k[0] + i, Q.names[i], x + 70, y + 88, Q.hat, `Gear for ${CLS_WORD[k]} of level ${lo} to ${hi}. Same prices as the camps, all in one place.`, []), classShop: false, tierShop: [k, lo, hi] }); });
+  for (const [k, Q] of Object.entries(QM)) BANDS.forEach(([lo, hi], i) => { const [x, y] = Q.spots[i], A = QM_ARMOR[i];
+    rects.push({ x, y, w: 140, h: 60, kind: "stall", color: Q.color, sign: `Levels ${lo}-${hi}`, cls: k, tier: i });
+    pgObjs.push({ ...npc("pg_" + k[0] + i, Q.names[i], x - 34, y + 66, Q.hat, `Gear for ${CLS_WORD[k]} of level ${lo} to ${hi}. Same prices as the camps, all in one place. ${A.say}`, []), classShop: false, tierShop: [k, lo, hi], armor: { cls: k, t: i + 1, dye: A.dye, glow: A.glow } }); });
+  // The Beast Pen (Lee): pets roam a little fenced yard by the lanes; Beastmaster Tamsin tells you where each comes from and sells the rest
+  rects.push({ x: 1700, y: 28700, w: 430, h: 200, kind: "beastpen", ghost: true, flat: true });
+  pgObjs.push({ ...npc("tamsin", "Beastmaster Tamsin", 2196, 28700, "#6a5a3a", "Every hunter needs a friend at heel. These little ones are looking for homes. Some you rescue out in the world, some I can sell you."), pets: true });
   // Trainers move here from the old yard by the village. Crafters work the class trades
   pgObjs.push(
     { ...npc("gunnar", "Armorer Gunnar", 4720, 25860, "#5a5a64", "Plate and blade, warriors. Bring ore and I'll make you something the shops don't sell."), crafter: true },
@@ -3363,6 +3375,27 @@ function drawCage(o) {
   ctx.strokeStyle = `rgba(201,154,23,${0.5 + 0.5 * Math.sin(clock * 4)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(x, y - 4, 44, 18, 0, 0, 7); ctx.stroke();
 }
 // Steeds in the pen wander, graze and drink. When you buy one, the stablemaster opens the gate, fetches it and leads it out to you (Lee)
+// Beast Pen pets wander about the pen; the gem ones wear a little outfit so you can see what's on offer
+const BEASTS = [["kit"], ["hawk"], ["frog"], ["owlet"], ["roc"], ["fox", "crown"], ["owl", "wizard"], ["crane", "flower"], ["scarab", "bow"]];
+let BEAST_Q;
+function beastTick(dt) {
+  const q = BEAST_Q || (BEAST_Q = MAPS.world.rects.find(r => r.kind === "beastpen")); if (!q || map.id !== "world" || Math.abs(player.x - q.x) > 1600 || Math.abs(player.y - q.y) > 1300) return;
+  const inside = () => { const a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * 0.75; return [q.x + q.w / 2 + Math.cos(a) * q.w / 2 * d, q.y + q.h / 2 + Math.sin(a) * q.h / 2 * d]; };
+  if (!q.pets) { const r = folkRng(4404); q.pets = BEASTS.map(([k, wear]) => { const a = r() * 6.28, d = Math.sqrt(r()) * 0.75; return { k, wear, x: q.x + q.w / 2 + Math.cos(a) * q.w / 2 * d, y: q.y + q.h / 2 + Math.sin(a) * q.h / 2 * d, face: 1, pause: r() * 3 }; }); }
+  for (const b of q.pets) {
+    if (b.pause > 0) { b.pause -= dt; b.moving = false; continue; }
+    if (!b.tgt) b.tgt = inside();
+    const dx = b.tgt[0] - b.x, dy = b.tgt[1] - b.y, d = Math.hypot(dx, dy);
+    if (d < 4) { b.tgt = null; b.pause = 1 + Math.random() * 4; b.moving = false; continue; }
+    const sp = Math.min(d, 55 * dt); b.x += dx / d * sp; b.y += dy / d * sp; b.face = Math.sign(dx) || b.face; b.moving = true;
+  }
+}
+function drawPetAs(b) {
+  const p = player, keep = { pet: p.pet, petNames: p.petNames, petWear: p.petWear, dead: p.dead }, kp = { ...pet };
+  Object.assign(p, { pet: b.k, petNames: {}, petWear: b.wear ? { [b.k]: b.wear } : {}, dead: false }); Object.assign(pet, { x: b.x, y: b.y, face: b.face, moving: b.moving });
+  try { drawPet(); } finally { Object.assign(p, keep); Object.assign(pet, kp); }
+  if (Math.hypot(player.x - b.x, player.y - b.y) < 110) { const P = PETS[b.k]; ctx.font = `12px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = P.gems ? "#3b6fb6" : SOFT; ctx.fillText(P.gems ? `${P.name} \u25C6${P.gems}` : P.name, b.x, b.y + 16); }
+}
 function penTick(dt) {
   for (const q of MAPS.world.pens || []) {
     if (map.id !== "world" || Math.abs(player.x - q.ox) > 1600 || Math.abs(player.y - q.oy) > 1300) continue;
@@ -4219,16 +4252,31 @@ const TRACKS = {
   sky: { step: 0.27, root: 392, scale: [0, 2, 4, 6, 7, 9, 11, 12, 14], lead: "triangle", vol: 0.026, pat: [0, 2, 4, 7, 6, 4, 2, 4, 1, 3, 5, 8, 7, 5, 4, -1], patB: [8, 7, 6, 5, 4, 5, 6, 7, 4, -1, 2, -1, 0, -1, -1, -1], bass: [0, 1, 4, 3], bassWave: "triangle", perc: [1, 0, 2, 0, 1, 2, 2, 0], sparkle: true },
   library: { step: 0.42, root: 523, scale: [0, 2, 3, 6, 7, 8, 11, 12], lead: "sine", vol: 0.028, pat: [0, 2, 3, 2, 0, -1, 6, -1, 7, 5, 4, 3, 1, -1, -1, -1], patB: [7, -1, 6, 5, 3, -1, 2, -1, 1, 3, 1, 0, -1, -1, -1, -1], bass: [0, 5, 3, 6], bassWave: "sine" },
   battle: { step: 0.2, root: 196, scale: [0, 2, 3, 5, 7, 8, 10, 12], lead: "sawtooth", vol: 0.016, pat: [0, 0, 3, 0, 4, 0, 3, 2, 0, 0, 3, 0, 5, 4, 3, 2], patB: [7, 7, 6, 5, 4, 4, 3, 2, 3, 3, 2, 1, 0, 1, 2, 4], bass: [0, 5, 3, 4], bassWave: "square", perc: [1, 2, 1, 2, 1, 2, 1, 1] },
+  // A tune for every zone (Lee)
+  glade: { step: 0.42, root: 330, scale: [0, 2, 4, 6, 7, 9, 11, 12, 14], lead: "sine", vol: 0.03, pat: [0, -1, 4, 6, 7, -1, 6, 4, 2, -1, 4, 5, 4, -1, 2, -1], patB: [8, -1, 7, 6, 4, -1, 5, -1, 3, 4, 2, -1, 0, -1, -1, -1], bass: [0, 3, 1, 4], bassWave: "sine", sparkle: true },
+  thorn: { step: 0.36, root: 185, scale: [0, 2, 3, 5, 7, 9, 10, 12], lead: "triangle", vol: 0.034, pat: [0, 2, 3, -1, 4, 3, 2, -1, 0, 2, 3, 5, 4, -1, 2, -1], patB: [7, -1, 6, 4, 5, 4, 2, -1, 3, 2, 0, -1, 1, -1, 0, -1], bass: [0, 6, 5, 4], bassWave: "triangle", perc: [1, 0, 0, 2, 0, 0, 1, 0] },
+  canyon: { step: 0.3, root: 220, scale: [0, 1, 4, 5, 7, 8, 10, 12], lead: "triangle", vol: 0.032, pat: [0, -1, 2, 3, 4, -1, 3, 2, 1, -1, 2, -1, 0, -1, -1, -1], patB: [4, 5, 6, 5, 4, -1, 3, 2, 3, 2, 1, -1, 0, -1, 0, -1], bass: [0, 0, 5, 1], bassWave: "triangle", perc: [1, 0, 2, 0, 0, 1, 2, 0] },
+  sea: { step: 0.55, root: 208, scale: [0, 2, 4, 7, 9, 12, 14, 16], lead: "sine", vol: 0.034, pat: [0, 2, 4, 5, 6, 5, 4, 2, 1, 3, 4, -1, 3, -1, -1, -1], patB: [7, 6, 5, 4, 5, 4, 2, -1, 3, 2, 1, -1, 0, -1, -1, -1], bass: [0, 4, 3, 1], bassWave: "sine" },
+  reach: { step: 0.46, root: 156, scale: [0, 2, 4, 6, 8, 10, 12, 14], lead: "triangle", vol: 0.032, pat: [0, -1, 3, -1, 5, 4, -1, -1, 6, -1, 4, -1, 2, -1, -1, -1], patB: [7, 6, -1, 5, 3, -1, 4, -1, 2, -1, 1, -1, 0, -1, -1, -1], bass: [0, 3, 1, 4], bassWave: "sawtooth" },
+  keep: { step: 0.36, root: 131, scale: [0, 2, 3, 5, 7, 8, 11, 12], lead: "sawtooth", vol: 0.013, pat: [0, -1, 0, 3, 4, -1, 3, 2, 0, -1, 0, 3, 5, 4, 6, -1], patB: [7, -1, 6, 5, 4, -1, 3, -1, 2, 3, 2, 1, 0, -1, -1, -1], bass: [0, 5, 3, 6], bassWave: "square", perc: [1, 0, 0, 0, 1, 0, 1, 0] },
+  proving: { step: 0.26, root: 262, scale: [0, 2, 4, 5, 7, 9, 11, 12, 14], lead: "square", vol: 0.015, pat: [0, -1, 0, 4, 7, -1, 7, -1, 5, 4, 5, 7, 4, -1, -1, -1], patB: [8, -1, 7, 5, 4, -1, 5, 7, 4, 2, 1, -1, 0, -1, 0, -1], bass: [0, 3, 4, 0], bassWave: "triangle", perc: [1, 0, 2, 0, 1, 2, 2, 0] },
+  yard: { step: 0.28, root: 196, scale: [0, 2, 4, 5, 7, 9, 10, 12], lead: "square", vol: 0.015, pat: [0, 0, 4, -1, 4, 4, 7, -1, 6, 5, 4, -1, 2, -1, 0, -1], patB: [4, 4, 5, -1, 7, 6, 5, 4, 3, -1, 1, -1, 0, 0, 0, -1], bass: [0, 3, 6, 4], bassWave: "triangle", perc: [1, 0, 2, 0, 1, 1, 2, 0] },
+  lanes: { step: 0.24, root: 294, scale: [0, 2, 4, 5, 7, 9, 10, 12], lead: "triangle", vol: 0.03, pat: [0, 2, 4, 2, 4, 5, 4, 2, 0, 2, 4, 7, 6, 4, 2, -1], patB: [7, 6, 5, 4, 5, 4, 2, 0, 1, 2, 4, 2, 0, -1, 0, -1], bass: [0, 4, 3, 4], bassWave: "triangle", perc: [1, 2, 2, 1, 2, 2, 1, 0] },
+  sanctum: { step: 0.46, root: 277, scale: [0, 2, 3, 5, 7, 8, 11, 12], lead: "sine", vol: 0.03, pat: [0, -1, 2, 3, 6, -1, 7, -1, 5, -1, 4, 3, 2, -1, -1, -1], patB: [7, -1, 6, -1, 4, 5, 3, -1, 2, -1, 1, -1, 0, -1, -1, -1], bass: [0, 5, 6, 4], bassWave: "sine", sparkle: true },
 };
-const ZONE_TRACK = { village: "village", meadow: "meadow", glade: "meadow", woods: "forest", thorn: "forest", hills: "hills", canyon: "hills", fens: "water", sea: "water", peaks: "frost", ember: "ember", shard: "crystal", blot: "dread", reach: "dread", keep: "dread" };
-const MAP_TRACK = { home: "hearth", inn: "hearth", temple: "deep", pond: "deep", hollow: "forest", wreck: "shanty", mine: "mine", summit: "frost", sky: "sky", library: "library", keep: "dread" };
+const ZONE_TRACK = { village: "village", meadow: "meadow", glade: "glade", woods: "forest", thorn: "thorn", hills: "hills", canyon: "canyon", fens: "water", sea: "sea", peaks: "frost", ember: "ember", shard: "crystal", blot: "dread", reach: "reach", keep: "keep" };
+// Every camp plays a calmer take on its zone's tune: slower, softer, no drums
+for (const z of ["thorn", "fens", "canyon", "peaks", "ember", "shard", "blot", "reach"]) { const B = TRACKS[ZONE_TRACK[z]];
+  TRACKS["camp_" + z] = { ...B, step: B.step * 1.25, perc: null, lead: B.lead === "square" || B.lead === "sawtooth" ? "triangle" : B.lead, vol: (B.lead === "square" || B.lead === "sawtooth" ? 0.028 : B.vol) * 0.85, bassWave: B.bassWave === "sawtooth" || B.bassWave === "square" ? "triangle" : B.bassWave }; }
+const SAFE_TRACK = { village: "village", yard_camp: "yard", lanes_camp: "lanes", sanctum_camp: "sanctum", square_camp: "proving", proving: "proving" };
+const MAP_TRACK = { home: "hearth", inn: "hearth", temple: "deep", pond: "deep", hollow: "forest", wreck: "shanty", mine: "mine", summit: "frost", sky: "sky", library: "library", keep: "keep" };
 let curTrack = "";
 function pickTrack() {
   const p = player;
   if (map.foes && map.foes.some(f => f.d.boss && f.hp > 0 && Math.hypot(f.x - p.x, f.y - p.y) < 650)) return "battle";
   if (MAP_TRACK[map.id]) return MAP_TRACK[map.id];
   const z = map.zoneAt ? map.zoneAt(p.x, p.y) : {};
-  if (z.safe) return "village";
+  if (z.safe) return SAFE_TRACK[z.id] || (TRACKS["camp_" + z.id.replace("_camp", "")] ? "camp_" + z.id.replace("_camp", "") : "village");
   return ZONE_TRACK[z.id] || (map.dungeon ? "deep" : "meadow");
 }
 // Each tune plays through its own volume knob, so moving between areas crossfades (Lee): the old tune fades out
@@ -4394,7 +4442,7 @@ function talk(n) {
   if (offerL[0]) return showOffer(n, offerL[0]);
   const active = activeL[0];
   const body = active ? `<p>${active.text}</p><p class="soft">${progressText(active)}</p>` : `<p>${n.line}</p>`;
-  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n) });
+  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${n.pets ? '<button data-act="pets" type="button">Pets</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), pets: () => showPets() });
 }
 function rewardText(r) {
   return [r.tool && TOOLS[r.tool][0], r.pet && `${PETS[r.pet].name} (${r.pet === "pup" ? "your first pet" : "a new pet"})`, r.item && ITEMS[r.item].name + (r.qty > 1 ? ` x${r.qty}` : ""), r.coins && `${r.coins} coins`, r.xp && `${r.xp} XP`].filter(Boolean).join(", ");
@@ -4728,7 +4776,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 95; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 96; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5899,7 +5947,7 @@ function update(dt) {
   clock += dt; shake = Math.max(0, shake - dt * 14);
   if (bannerTimer > 0 && (bannerTimer -= dt) <= 0) document.getElementById("banner").classList.remove("show");
   if (gpTimer > 0 && (gpTimer -= dt) <= 0) document.getElementById("gearPrompt").hidden = true;
-  musicTick(dt); ambienceTick(dt); folkTick(dt); keeperTick(dt); penTick(dt); gatherTick(dt); lessonTick(dt);
+  musicTick(dt); ambienceTick(dt); folkTick(dt); keeperTick(dt); penTick(dt); beastTick(dt); gatherTick(dt); lessonTick(dt);
   // Save your spot every few seconds, so a page reload puts you back where you were
   if ((autoSaveT -= dt) <= 0) { autoSaveT = 5; if (window.__started && !player.dead && !transition && !cine && !player.ride && (!map.fall || onFloor(map, player.x, player.y))) save(); }
   for (const e of fx) { e.life -= dt; if (e.kind === "shard") { e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 400 * dt; e.a += dt * 8; } if (e.kind === "text") e.y -= 40 * dt; }
@@ -6608,12 +6656,41 @@ function drawInteriorGround(m) {
 function drawProving(q) {
   const X = q.x, Y = q.y, W = q.w, H = q.h; ctx.strokeStyle = INK; ctx.lineCap = "round"; ctx.lineJoin = "round";
   if (q.kind === "stall") {
-    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; line(X + 8, Y + H, X + 8, Y - 66); line(X + W - 8, Y + H, X + W - 8, Y - 66);
-    ctx.fillStyle = "#b58552"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(X, Y + H - 36, W, 36); ctx.strokeRect(X, Y + H - 36, W, 36);
-    ctx.lineWidth = 1.2; ctx.strokeStyle = "rgba(27,27,32,.35)"; for (let x = X + 20; x < X + W; x += 20) line(x, Y + H - 34, x, Y + H - 2);
-    ctx.fillStyle = "#c99a62"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(X - 6, Y + H - 44, W + 12, 9); ctx.strokeRect(X - 6, Y + H - 44, W + 12, 9);
+    // Each class builds its own (Lee): a warrior's armory booth, a hunter's log lean-to, a mage's crystal canopy.
+    // The trim gets grander with the levels: bronze, silver, teal, crimson, gold
+    const T = q.tier || 0, trim = ["#b07a3a", "#c8ced8", "#3aa6a0", "#b8323a", "#e0b030"][T], top = Y + H - 44, mid = X + W / 2;
+    const pennant = (px, py, c) => { ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(px, py, px, py - 34); ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; const fl = Math.sin(clock * 4 + px) * 3;
+      ctx.beginPath(); ctx.moveTo(px, py - 34); ctx.quadraticCurveTo(px + 12, py - 32 + fl, px + 24, py - 28 + fl); ctx.quadraticCurveTo(px + 12, py - 24 + fl, px, py - 22); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+    const scallops = (x0, x1, y, n, c) => { const sw = (x1 - x0) / n; ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y); for (let i = 0; i < n; i++) ctx.arc(x0 + (i + 0.5) * sw, y, sw / 2, Math.PI, 0, true); ctx.lineTo(x0, y); ctx.closePath(); ctx.fill(); ctx.stroke(); };
+    if (q.cls === "warrior") {
+      // heavy timber posts banded in metal, a stout counter with a painted front
+      for (const px of [X + 8, X + W - 8]) { ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 8; line(px, Y + H, px, Y - 58); ctx.strokeStyle = trim; ctx.lineWidth = 9; for (const by of [Y - 40, Y + 4]) line(px, by, px, by + 4); }
+      ctx.fillStyle = "#8a5a34"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.fillRect(X, Y + H - 36, W, 36); ctx.strokeRect(X, Y + H - 36, W, 36);
+      ctx.fillStyle = q.color; ctx.fillRect(X + 6, Y + H - 32, W - 12, 28); ctx.strokeStyle = trim; ctx.lineWidth = 2; ctx.strokeRect(X + 6, Y + H - 32, W - 12, 28);
+      ctx.fillStyle = trim; for (const rx of [X + 4, X + W - 4]) for (const ry of [Y + H - 31, Y + H - 6]) { ctx.beginPath(); ctx.arc(rx, ry, 2.2, 0, 7); ctx.fill(); }
+      ctx.fillStyle = "#6a4a2a"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(X - 6, top, W + 12, 9); ctx.strokeRect(X - 6, top, W + 12, 9);
+    } else if (q.cls === "hunter") {
+      // rough log posts lashed with rope, a counter of stacked logs
+      for (const px of [X + 8, X + W - 8]) { ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 9; line(px, Y + H, px - 2, Y - 50); ctx.strokeStyle = "rgba(40,25,10,.45)"; ctx.lineWidth = 1.5; for (let k = 0; k < 5; k++) line(px - 4, Y + H - 14 - k * 22, px + 3, Y + H - 18 - k * 22);
+        ctx.strokeStyle = trim; ctx.lineWidth = 2.5; line(px - 5, Y - 34, px + 5, Y - 30); line(px - 5, Y - 28, px + 5, Y - 24); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { const ly = Y + H - 12 - k * 12; ctx.fillStyle = k % 2 ? "#9a7448" : "#8a6438"; ctx.beginPath(); ctx.roundRect(X - 2, ly - 6, W + 4, 12, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#c9a874"; ctx.beginPath(); ctx.ellipse(X - 2, ly, 4, 6, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(X + W + 2, ly, 4, 6, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = "#b0905e"; ctx.fillRect(X - 6, top, W + 12, 9); ctx.strokeRect(X - 6, top, W + 12, 9);
+    } else {
+      // two tall crystals hold up the canopy, the counter draped in cloth
+      for (const px of [X + 6, X + W - 6]) { const gl = 0.6 + 0.3 * Math.sin(clock * 2 + px);
+        ctx.fillStyle = `rgba(190,170,255,${0.25 * gl})`; ctx.beginPath(); ctx.ellipse(px, Y + 10, 16, 70, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#cbbcf5"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px - 7, Y + H); ctx.lineTo(px - 8, Y - 46); ctx.lineTo(px, Y - 60); ctx.lineTo(px + 8, Y - 46); ctx.lineTo(px + 7, Y + H); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1.5; line(px - 3, Y - 44, px - 3, Y + H - 6); ctx.fillStyle = trim; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(px - 10, Y + H - 8, 20, 8); ctx.strokeRect(px - 10, Y + H - 8, 20, 8); }
+      ctx.fillStyle = "#4a3a7a"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - 4, top + 8); ctx.lineTo(X + W + 4, top + 8); ctx.lineTo(X + W, Y + H);
+      for (let i = 6; i >= 0; i--) ctx.lineTo(X + i * W / 6, Y + H - (i % 2 ? 4 : 0)); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = trim; ctx.lineWidth = 3; line(X + 2, Y + H - 8, X + W - 2, Y + H - 8);
+      ctx.fillStyle = "#5a4a90"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(X - 6, top, W + 12, 9); ctx.strokeRect(X - 6, top, W + 12, 9);
+    }
+    // the plaque on the counter's front says which levels this stall serves
+    ctx.fillStyle = "#f1e4bf"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(mid - 44, Y + H - 29, 88, 20); ctx.strokeRect(mid - 44, Y + H - 29, 88, 20);
+    ctx.fillStyle = INK; ctx.font = `14px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(q.sign, mid, Y + H - 14);
     // goods on the counter
-    const top = Y + H - 44;
     if (q.cls === "warrior") { ctx.fillStyle = "#9aa0aa"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X + 34, top - 1, 13, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillRect(X + 31, top - 13, 6, 10);
       ctx.strokeStyle = "#b8bec8"; ctx.lineWidth = 3; line(X + 70, top - 2, X + 104, top - 26); ctx.strokeStyle = INK; ctx.lineWidth = 2; line(X + 74, top - 12, X + 82, top - 2);
       ctx.fillStyle = q.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(X + 110, top - 22); ctx.lineTo(X + 128, top - 22); ctx.lineTo(X + 126, top - 6); ctx.lineTo(X + 119, top - 1); ctx.lineTo(X + 112, top - 6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
@@ -6623,12 +6700,64 @@ function drawProving(q) {
     else { for (const [dx, c] of [[24, "#3b8ee0"], [42, "#a45ad8"], [60, "#3b8ee0"]]) { ctx.fillStyle = c; ctx.globalAlpha = 0.8 + 0.2 * Math.sin(clock * 3 + dx); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X + dx, top - 6, 6, 0, 7); ctx.fill(); ctx.stroke(); ctx.globalAlpha = 1; ctx.strokeRect(X + dx - 2, top - 17, 4, 6); }
       ctx.fillStyle = "#6a4a9a"; ctx.lineWidth = 1.5; ctx.fillRect(X + 84, top - 10, 30, 10); ctx.strokeRect(X + 84, top - 10, 30, 10); ctx.fillStyle = "#2a4a8a"; ctx.fillRect(X + 88, top - 19, 26, 9); ctx.strokeRect(X + 88, top - 19, 26, 9);
       ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(X + 126, top, X + 126, top - 40); ctx.fillStyle = "#7ac0e0"; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(X + 126, top - 43, 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
-    // striped awning with a scalloped edge
-    const aw = Y - 66, n = 6, sw = (W + 24) / n;
-    for (let i = 0; i < n; i++) { ctx.fillStyle = i % 2 ? "#fffdf6" : q.color; ctx.beginPath(); ctx.moveTo(X - 12 + i * sw, aw + 26); ctx.lineTo(X + i * sw * (W / (W + 24)), aw); ctx.lineTo(X + (i + 1) * sw * (W / (W + 24)), aw); ctx.lineTo(X - 12 + (i + 1) * sw, aw + 26); ctx.arc(X - 12 + (i + 0.5) * sw, aw + 26, sw / 2, 0, Math.PI); ctx.closePath(); ctx.fill(); }
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X, aw); ctx.lineTo(X + W, aw); ctx.lineTo(X + W + 12, aw + 26); for (let i = n - 1; i >= 0; i--) ctx.arc(X - 12 + (i + 0.5) * sw, aw + 26, sw / 2, 0, Math.PI); ctx.closePath(); ctx.stroke();
-    ctx.fillStyle = "#e9d7a8"; ctx.fillRect(X + W / 2 - 46, aw - 30, 92, 24); ctx.strokeRect(X + W / 2 - 46, aw - 30, 92, 24); ctx.strokeStyle = "#6a4a2a"; line(X + W / 2 - 30, aw - 6, X + W / 2 - 30, aw); line(X + W / 2 + 30, aw - 6, X + W / 2 + 30, aw);
-    ctx.fillStyle = INK; ctx.font = `14px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(q.sign, X + W / 2, aw - 13);
+    if (q.cls === "warrior") {
+      // a peaked tent roof in the class color, striped, with a metal valance and a shield over the front
+      const ry = Y - 52, pk = Y - 118; ctx.fillStyle = q.color; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - 18, ry); ctx.lineTo(mid, pk); ctx.lineTo(X + W + 18, ry); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(0,0,0,.14)"; for (let i = 0; i < 4; i++) { const a0 = X - 18 + i * 2 * (W + 36) / 8; ctx.beginPath(); ctx.moveTo(mid, pk); ctx.lineTo(a0, ry); ctx.lineTo(a0 + (W + 36) / 8, ry); ctx.closePath(); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(X - 18, ry); ctx.lineTo(mid, pk); ctx.lineTo(X + W + 18, ry); ctx.closePath(); ctx.stroke();
+      scallops(X - 18, X + W + 18, ry, 8, trim);
+      ctx.fillStyle = trim; ctx.strokeStyle = INK; ctx.lineWidth = 2; const sy = Y - 92; ctx.beginPath(); ctx.moveTo(mid - 14, sy); ctx.lineTo(mid + 14, sy); ctx.lineTo(mid + 13, sy + 18); ctx.lineTo(mid, sy + 28); ctx.lineTo(mid - 13, sy + 18); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = q.color; ctx.lineWidth = 3; line(mid, sy + 3, mid, sy + 23); line(mid - 9, sy + 10, mid + 9, sy + 10);
+      if (T >= 2) { pennant(mid, pk, trim); } if (T >= 4) { ctx.fillStyle = GOLD; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(mid - 10, pk - 36); ctx.lineTo(mid - 10, pk - 48); ctx.lineTo(mid - 5, pk - 42); ctx.lineTo(mid, pk - 50); ctx.lineTo(mid + 5, pk - 42); ctx.lineTo(mid + 10, pk - 48); ctx.lineTo(mid + 10, pk - 36); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      // an armor stand beside the booth
+      const ax = X + W + 30, ay = Y + H; ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 4; line(ax, ay, ax, ay - 74); line(ax - 14, ay, ax + 14, ay); line(ax - 16, ay - 58, ax + 16, ay - 58);
+      ctx.fillStyle = trim === "#c8ced8" ? "#9aa0aa" : trim; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax - 15, ay - 58); ctx.lineTo(ax + 15, ay - 58); ctx.lineTo(ax + 11, ay - 26); ctx.lineTo(ax - 11, ay - 26); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(27,27,32,.4)"; ctx.lineWidth = 1.2; line(ax, ay - 56, ax, ay - 28); ctx.fillStyle = "#9aa0aa"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(ax, ay - 76, 10, Math.PI, 0); ctx.lineTo(ax + 10, ay - 70); ctx.lineTo(ax - 10, ay - 70); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (q.cls === "hunter") {
+      // a lean-to roof of thatch and leaves, antlers on the beam, pelts hanging and a barrel of arrows
+      const fy = Y - 44, by = Y - 92; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 6; line(X - 12, fy, X + W + 12, fy);
+      ctx.fillStyle = "#b8975a"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - 20, fy + 4); ctx.lineTo(X - 6, by); ctx.lineTo(X + W + 6, by); ctx.lineTo(X + W + 20, fy + 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(110,80,30,.55)"; ctx.lineWidth = 1.5; for (let x = X - 10; x < X + W + 14; x += 9) line(x + 6, by + 4, x, fy + 2);
+      for (let i = 0; i < 9; i++) { const lx = X - 4 + i * (W + 8) / 8, ly = by - 2 + (i % 2) * 5; ctx.fillStyle = i % 3 ? "#5f8a3a" : "#7aa04a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(lx, ly, 11 + (i % 3) * 2, 0, 7); ctx.fill(); ctx.stroke(); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; for (let x = X - 14; x < X + W + 18; x += 12) { ctx.fillStyle = "#c9a864"; ctx.beginPath(); ctx.moveTo(x - 4, fy + 4); ctx.lineTo(x, fy + 14 + (x % 3) * 2); ctx.lineTo(x + 4, fy + 4); ctx.closePath(); ctx.fill(); }
+      // antlers over the middle
+      ctx.strokeStyle = "#efe4c8"; ctx.lineWidth = 4; for (const sd of [-1, 1]) { line(mid + sd * 5, fy - 12, mid + sd * 24, fy - 34); line(mid + sd * 15, fy - 22, mid + sd * 12, fy - 38); line(mid + sd * 20, fy - 28, mid + sd * 30, fy - 40); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 1; for (const sd of [-1, 1]) line(mid + sd * 5, fy - 12, mid + sd * 24, fy - 34);
+      ctx.fillStyle = "#efe4c8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(mid - 8, fy - 14); ctx.lineTo(mid + 8, fy - 14); ctx.lineTo(mid + 4, fy + 2); ctx.lineTo(mid - 4, fy + 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = trim; ctx.beginPath(); ctx.arc(mid, fy - 6, 2.5, 0, 7); ctx.fill();
+      // pelts on the ends of the beam
+      for (const [px, c] of [[X + 22, "#9a6a3a"], [X + W - 22, "#c8b89a"]]) { ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px - 10, fy + 4); ctx.lineTo(px + 10, fy + 4); ctx.lineTo(px + 13, fy + 22); ctx.lineTo(px + 6, fy + 30); ctx.lineTo(px, fy + 24); ctx.lineTo(px - 6, fy + 30); ctx.lineTo(px - 13, fy + 22); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      if (T >= 2) for (const px of [X - 6, X + W + 6]) { ctx.strokeStyle = trim; ctx.lineWidth = 2; line(px, fy + 6, px, fy + 20); ctx.fillStyle = trim; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(px, fy + 26, 3, 8, 0.2, 0, 7); ctx.fill(); ctx.stroke(); }
+      if (T >= 4) pennant(X + W + 4, by - 8, trim);
+      // a barrel of arrows beside the stall
+      const bx = X + W + 30, bb = Y + H; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2; for (const dx of [-8, -3, 2, 7]) { line(bx + dx, bb - 30, bx + dx * 1.4, bb - 52); ctx.fillStyle = trim; ctx.fillRect(bx + dx * 1.4 - 2, bb - 56, 4, 6); }
+      ctx.fillStyle = "#8a6438"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(bx - 13, bb - 32); ctx.quadraticCurveTo(bx - 17, bb - 16, bx - 13, bb); ctx.lineTo(bx + 13, bb); ctx.quadraticCurveTo(bx + 17, bb - 16, bx + 13, bb - 32); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#4a4a50"; ctx.lineWidth = 2; line(bx - 15, bb - 24, bx + 15, bb - 24); line(bx - 15, bb - 8, bx + 15, bb - 8);
+    } else {
+      // a pointed canopy of night sky with stars in it and a hem of trim, an orb floating over the tip
+      const ry = Y - 50, pk = Y - 136; ctx.fillStyle = "#262c66"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - 20, ry); ctx.quadraticCurveTo(X + W * 0.3, ry - 30, mid, pk); ctx.quadraticCurveTo(X + W * 0.7, ry - 30, X + W + 20, ry); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fffdf6"; for (let i = 0; i < 12; i++) { const sx = X - 2 + ((i * 37) % (W + 4)), sy = ry - 6 - ((i * 23) % 44) * (1 - Math.abs(sx - mid) / (W * 0.75)); ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(clock * 1.7 + i * 1.3)); ctx.beginPath(); ctx.arc(sx, sy, i % 4 ? 1.5 : 2.5, 0, 7); ctx.fill(); }
+      ctx.globalAlpha = 1; scallops(X - 20, X + W + 20, ry, 8, trim);
+      const oy = pk - 22 + Math.sin(clock * 2 + X) * 5, gl = ctx.createRadialGradient(mid, oy, 2, mid, oy, 30); gl.addColorStop(0, "rgba(190,170,255,.7)"); gl.addColorStop(1, "rgba(190,170,255,0)"); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(mid, oy, 30, 0, 7); ctx.fill();
+      ctx.fillStyle = T >= 3 ? trim : "#9fd0f0"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(mid, oy, 8, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,.7)"; ctx.beginPath(); ctx.arc(mid - 3, oy - 3, 2.5, 0, 7); ctx.fill();
+      if (T >= 2) for (let i = 0; i < 3; i++) { const a = clock * 1.2 + i * 2.09, rx = mid + Math.cos(a) * 20, ry2 = oy + Math.sin(a) * 7; ctx.fillStyle = trim; ctx.beginPath(); ctx.arc(rx, ry2, 2.5, 0, 7); ctx.fill(); }
+      // runes drifting up beside the stall
+      ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { const rx = X + W + 22 + (i % 2) * 10, rr = Y + H - ((clock * 18 + i * 30) % 90); ctx.strokeStyle = `rgba(130,100,240,${0.6 - ((clock * 18 + i * 30) % 90) / 160})`; line(rx - 4, rr - 3, rx + 4, rr + 3); line(rx + 4, rr - 3, rx - 4, rr + 3); line(rx, rr - 6, rx, rr + 6); }
+    }
+  } else if (q.kind === "beastpen") {
+    // a low fence round a patch of soft grass, a water bowl, a pile of straw and a little hutch
+    const cx = X + W / 2, cy = Y + H / 2, rx = W / 2, ry = H / 2;
+    ctx.fillStyle = "rgba(140,190,110,.35)"; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e0c060"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(X + 70, Y + 70, 34, 16, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(160,120,40,.7)"; for (let i = 0; i < 8; i++) line(X + 46 + i * 6, Y + 66 + (i % 3) * 3, X + 52 + i * 6, Y + 60 + (i % 2) * 4);
+    ctx.fillStyle = "#8a6238"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(X + W - 90, Y + 140, 22, 9, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#5b8fc4"; ctx.beginPath(); ctx.ellipse(X + W - 90, Y + 139, 16, 5, 0, 0, 7); ctx.fill();
+    const hx = X + W - 110, hy = Y + 64; ctx.fillStyle = "#a0784a"; ctx.lineWidth = 2; ctx.fillRect(hx, hy - 34, 60, 34); ctx.strokeRect(hx, hy - 34, 60, 34); ctx.fillStyle = "#3f7a3a"; ctx.beginPath(); ctx.moveTo(hx - 8, hy - 32); ctx.lineTo(hx + 30, hy - 58); ctx.lineTo(hx + 68, hy - 32); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#3a2a1a"; ctx.beginPath(); ctx.moveTo(hx + 20, hy); ctx.lineTo(hx + 20, hy - 14); ctx.arc(hx + 30, hy - 14, 10, Math.PI, 0); ctx.lineTo(hx + 40, hy); ctx.closePath(); ctx.fill();
+    const posts = []; for (let i = 0; i < 22; i++) { const a = Math.PI / 2 + 0.3 + i / 21 * (Math.PI * 2 - 0.6); posts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); }
+    ctx.strokeStyle = "#8a6238"; ctx.lineWidth = 2.5; for (const h of [8, 16]) { ctx.beginPath(); posts.forEach(([px, py], i) => i ? ctx.lineTo(px, py - h) : ctx.moveTo(px, py - h)); ctx.stroke(); }
+    ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 4; for (const [px, py] of posts) line(px, py + 2, px, py - 20);
+    ctx.fillStyle = "#e9d7a8"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(cx - 50, Y - 40, 100, 24); ctx.strokeRect(cx - 50, Y - 40, 100, 24); ctx.strokeStyle = "#6a4a2a"; line(cx - 34, Y - 16, cx - 34, Y + 2); line(cx + 34, Y - 16, cx + 34, Y + 2);
+    ctx.fillStyle = INK; ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Beast Pen", cx, Y - 23);
   } else if (q.kind === "brawlpit") {
     const cx = X + W / 2, cy = Y + H / 2, rx = W / 2, ry = H / 2;
     ctx.fillStyle = "rgba(120,90,50,.22)"; ctx.beginPath(); ctx.ellipse(cx, cy + 8, rx + 18, ry + 12, 0, 0, 7); ctx.fill();
@@ -6832,7 +6961,7 @@ function drawRect(q) {
       ctx.fillStyle = "#6b4a2a"; ctx.fillRect(tx + 6, ty + 26, 8, 10); ctx.fillRect(tx + 76, ty + 26, 8, 10);
       break;
     }
-    case "stall": case "brawlpit": case "runecircle": case "sanctum": drawProving(q); break;
+    case "stall": case "brawlpit": case "runecircle": case "sanctum": case "beastpen": drawProving(q); break;
     case "temple": {
       const r = temple.risen ? 1 : temple.rise; if (r <= 0) break;
       const X = q.x, W = q.w, Y = q.y + q.h, mid = X + W / 2, stone = "#9cb8b4", dark = "#5e7f80";
@@ -7118,6 +7247,15 @@ function paintThumbs(root) {
       finally { player.cls = cls0; }
     } catch (e) {} finally { ctx = old; }
   }
+}
+// The Proving Grounds quartermasters (Lee): drawn like a hero in their class's crafted set for their tier, dyed and glowing
+function drawArmoredNpc(o, fc) {
+  const A = o.armor, p = player, pre = A.cls === "warrior" ? "" : A.cls[0] + "_", gear = {};
+  for (const s of ["weapon", "head", "body", "hands", "feet"]) { const id = `${pre}cr${A.t}_${s}`; gear[s] = ITEMS[id] ? id : null; }
+  const keys = ["gear", "dye", "cls", "glow", "gather", "level", "facing", "walk", "moving", "attackT", "hurtT"], keep = {}; for (const k of keys) keep[k] = p[k];
+  Object.assign(p, { gear, dye: A.dye, cls: A.cls, glow: A.glow || null, gather: null, level: 20, facing: fc, walk: o.walk || 0, moving: !!o.moving, attackT: 0, hurtT: 0 });
+  try { const look = heroLook(); look.w = 2.6; look.ink = INK; look.swing = 0; stickFigure(o.x, o.y, look); }
+  finally { Object.assign(p, keep); }
 }
 function heroLook(gearOverride) {
   const p = player, g = gearOverride || p.gear, dye = gearOverride ? {} : (p.dye || {});
@@ -7423,7 +7561,7 @@ function drawObj(o) {
   if (o.kind === "npc") {
     shadow(o.x, o.y, 12);
     const L = npcLook(o), fs = o.fishing, fc = o.moving ? o.f : fs && Math.hypot(player.x - o.x, player.y - o.y) > 150 ? (fs.bx < o.x ? -1 : 1) : player.x < o.x ? -1 : 1, H = HATS[L.hat[0]];
-    stickFigure(o.x, o.y, { w: 2.4, scale: L.scale, facing: fc, moving: o.moving, walk: o.walk || 0, hair: L.hair, lashes: L.lashes, ink: INK, filledHead: false, body: { color: L.body, long: L.long, robe: L.robe, trim: L.trim, belt: L.belt, chain: L.chain, apron: L.apron, straps: L.straps },
+    if (o.armor) drawArmoredNpc(o, fc); else stickFigure(o.x, o.y, { w: 2.4, scale: L.scale, facing: fc, moving: o.moving, walk: o.walk || 0, hair: L.hair, lashes: L.lashes, ink: INK, filledHead: false, body: { color: L.body, long: L.long, robe: L.robe, trim: L.trim, belt: L.belt, chain: L.chain, apron: L.apron, straps: L.straps },
       cape: L.cape, sleeves: L.sleeves, legs: L.legs, feet: "#4a3424", beard: L.beard, hat: hy => H(L.hat[1], fc, hy, L.hat[2] || {}), weapon: o.swing > 0 ? (hx, hy, f) => drawTool("pick", hx, hy, f, o.swing) : fs ? (hx, hy, f) => { fs.t = clock; folkTool(fs, "rod", hx, hy, f, 0.45); } : L.tool ? (hx, hy, f) => npcTool(L.tool, hx, hy, f) : null });
     ctx.font = `16px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = SOFT; ctx.fillText(o.name, o.x, o.y + 18);
     if (o.sayT > 0 && o.say) { const y = o.y - 104; ctx.font = `15px ${FONT}`; const w = ctx.measureText(o.say).width + 14;
@@ -7568,6 +7706,7 @@ function draw() {
     else if (o.kind !== "sea") items.push([o.kind === "keepwall" ? o.y + o.h : (o.kind === "wall" && o.y === 0) || o.kind === "paddock" || o.flat ? -1 : o.y + o.h, () => drawRect(o)]);
   }
   for (const o of m.objs) if (inView(o.x, o.y, 60)) items.push([o.y, () => drawObj(o)]);
+  if (m.id === "world" && BEAST_Q && BEAST_Q.pets && inView(BEAST_Q.x + 215, BEAST_Q.y + 100, 430)) for (const b of BEAST_Q.pets) items.push([b.y, () => drawPetAs(b)]);
   for (const q of m.pens || []) if (inView(q.x + q.w / 2, q.y + q.h / 2, q.w)) { for (const h of q.herd) items.push([h.y, () => { ctx.save(); ctx.translate(h.x, h.y); ctx.scale(0.85, 0.85); drawHorse(0, 0, h.f, h.moving, h.c); ctx.restore(); }]); }
   for (const o of m.props || []) if (inView(o.x, o.y, 100)) items.push([o.y, () => drawProp(o)]);
   for (const o of m.folk || []) if (inView(o.x, o.y, 60)) items.push([o.y, () => drawFolk(o)]);
