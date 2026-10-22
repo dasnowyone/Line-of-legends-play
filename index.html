@@ -735,6 +735,10 @@ FOES.bloom = { name: "Mother Bloom", art: "jelly", fill: "rgba(225,120,185,.75)"
   throws: { range: 380, speed: 230, cd: 2.4, kind: "bubble", fan: 3 }, drops: [["greater_potion", 1], ["tide_helm", .3], ["tide_gauntlets", .2]] };
 
 // Gulp's Grotto under Angler Tobin's pond (Lee): small water folk, and the fish that stole his rod
+// The Drowned Temple tuned up (Lee: as a hunter it felt easy): tougher and harder hitting, anglers rush ranged heroes, Inkmaw moves faster
+for (const [id, hk] of [["angler", 1.3], ["eel", 1.3], ["puffer", 1.3], ["jelly", 1.3], ["crab", 1.3], ["shellback", 1.4], ["voltfin", 1.4], ["bloom", 1.4], ["inkmaw", 1.35]]) {
+  FOES[id].hp = Math.round(FOES[id].hp * hk); FOES[id].atk = Math.round(FOES[id].atk * 1.15); }
+FOES.angler.rush = true; FOES.inkmaw.speed = 90;
 FOES.pond_pike = { name: "Pond Pike", art: "angler", fill: "#6a8a5a", lv: 5, hp: 90, atk: 18, xp: 45, coins: [3, 6], speed: 95, r: 18, scale: 0.75, drops: [["potion", .08]] };
 FOES.pond_puffer = { name: "Bubble Puffer", art: "puffer", lv: 6, hp: 70, atk: 14, xp: 50, coins: [3, 7], speed: 70, r: 16, scale: 0.8, ranged: { range: 260, speed: 300, windup: 0.9, cd: 2.4, kind: "bubble" }, drops: [["potion", .08]] };
 FOES.pond_eel = { name: "Reed Eel", art: "eel", lv: 6, hp: 70, atk: 20, xp: 50, coins: [3, 7], speed: 200, r: 14, scale: 0.85, drops: [["potion", .08]] };
@@ -4585,7 +4589,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 91; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 92; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
