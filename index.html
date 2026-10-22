@@ -3544,9 +3544,10 @@ for (const q of QUESTS) if (quests[q.id]?.state === "active") questGroups(q);
 function questGroups(q) {
   const g = q.goal, W = MAPS.world; if (g.type !== "kill" || g.n < 2 || !q.mark || !FOES[g.foe] || W.spawners.some(s => s.questOnly === q.id)) return 0;
   const groups = Math.ceil(g.n / 4); let made = 0;
-  for (let t = 0; t < 80 && made < groups; t++) {
-    const a = Math.random() * 6.28, d = 220 + Math.random() * 520, x = q.mark[0] + Math.cos(a) * d, y = q.mark[1] + Math.sin(a) * d;
-    if (blocked(W, x, y, 40) || W.spawners.some(s => s.questOnly === q.id && Math.hypot(s.x - x, s.y - y) < 360)) continue;
+  for (let t = 0; t < 240 && made < groups; t++) {
+    const a = Math.random() * 6.28, d = 220 + Math.random() * (t < 120 ? 520 : 900), x = q.mark[0] + Math.cos(a) * d, y = q.mark[1] + Math.sin(a) * d;
+    // never in or right next to a camp, where enemies won't fight (Lee saw a hunt group standing in Sorrel's Watch)
+    if (blocked(W, x, y, 40) || inCamp(W, x, y, 2.1) || W.spawners.some(s => s.questOnly === q.id && Math.hypot(s.x - x, s.y - y) < 360)) continue;
     const s = { foe: g.foe, x: Math.round(x), y: Math.round(y), r: 160, n: 4, questOnly: q.id, timer: 0, live: 0, back: [] };
     W.spawners.push(s); for (let i = 0; i < s.n; i++) spawnFoe(W, s); made++;
   }
@@ -4860,7 +4861,7 @@ canvas.addEventListener("pointermove", ev => { if (joy.active && ev.pointerId ==
 const endJoy = ev => { if (ev.pointerId === joy.id) joy.active = false; };
 canvas.addEventListener("pointerup", endJoy); canvas.addEventListener("pointercancel", endJoy);
 // where the hero is heading: the stick, or the way they were walking a moment ago (tapping a skill on the phone can let go of the stick)
-function moveDir() { const [jx, jy] = joyDir(); if (jx || jy) return [jx, jy]; const p = player; return p.lastDir && clock - (p.lastMoveT ?? -9) < 0.6 ? p.lastDir : [0, 0]; }
+function moveDir() { const [jx, jy] = joyDir(); if (jx || jy) return [jx, jy]; const p = player; return p.lastDir && clock - (p.lastMoveT ?? -9) < 1.5 ? p.lastDir : [0, 0]; }
 function joyDir() {
   let x = 0, y = 0;
   if (joy.active) {
@@ -8067,7 +8068,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { RESCUES, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
