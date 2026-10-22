@@ -4929,7 +4929,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 100; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 101; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5466,12 +5466,12 @@ function showPets() {
   if (!petsOpen()) return openPanel(`<h2>Pets</h2><p>No pets yet. Little Wick in Inkwell Village is crying by the well: her pup Inky ran off toward the glade.</p><p class="soft">Help her to unlock pets. Needs level 3.</p>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag() });
   openPanel(`<h2>Pets</h2><p class="soft">A friend that follows you everywhere. Pets are just for looks. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>
-    <div class="list">${Object.entries(PETS).filter(([, P]) => !P.hidden).map(([k, P]) => { const own = petOwned(k), out = player.pet === k;
+    <div class="list">${hasWolf() ? `<div class="item"><div>${esc(wolfName())} <span class="soft">(Wolf)</span><small>Fights beside you</small></div><button type="button" data-act="wolfname">Name</button></div>` : ""}${Object.entries(PETS).filter(([, P]) => !P.hidden).map(([k, P]) => { const own = petOwned(k), out = player.pet === k;
       const nm = player.petNames[k];
       return `<div class="item"><div>${nm ? `${esc(nm)} <span class="soft">(${P.name})</span>` : P.name}<small>${own ? (out ? "With you now" : "Yours") : P.earn ? `Earn it: ${P.earn}` : `<span class="gem">&#9670; ${P.gems} gems</span>`}</small></div>
         ${own ? `<button type="button" data-act="outfit" data-arg="${k}">Outfit</button><button type="button" data-act="rename" data-arg="${k}">Name</button><button type="button" data-act="${out ? "dismiss" : "summon"}" data-arg="${k}">${out ? "Send home" : "Summon"}</button>` : P.gems ? `<button type="button" data-act="buy" data-arg="${k}" ${player.gems < P.gems ? "disabled" : ""}>Buy</button>` : ""}</div>`; }).join("")}</div>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`,
-    { rename: k => showPetName(k), outfit: k => showPetOutfits(k),
+    { rename: k => showPetName(k), wolfname: () => showWolfName(), outfit: k => showPetOutfits(k),
       summon: k => { player.pet = k; pet.map = ""; save(); showPets(); toast(`${player.petNames[k] || PETS[k].name} is with you`); },
       dismiss: () => { player.pet = null; save(); showPets(); },
       buy: k => { const P = PETS[k]; if (player.gems < P.gems || petOwned(k)) return; player.gems -= P.gems; player.pets.push(k); player.pet = k; pet.map = ""; sfx("rare"); save(); showPets(); toast(`${P.name} is yours!`, true); },
@@ -5535,6 +5535,8 @@ function showManaHelp() {
     <p class="soft">Tap the mana bar any time to see this again.</p>
     <div class="row"><button data-act="close" type="button">Got it</button></div>`);
 }
+// hunters who tamed Scout before wolves could be named get asked once
+setInterval(() => { if (window.__started && hasWolf() && !player.petNames.scout && panel.hidden && !cine && !classPicking && !player.dead && !player.tut.includes("wolfname")) { player.tut.push("wolfname"); save(); showWolfName(true); } }, 3000);
 // every mage sees it once (even with tips off), the first time they're out in the world with nothing open
 setInterval(() => { if (cls() === "mage" && window.__started && panel.hidden && !cine && !classPicking && !player.dead && !player.tut.includes("manahelp")) { player.tut.push("manahelp"); save(); showManaHelp(); } }, 2000);
 document.getElementById("manaRow").addEventListener("click", e => { e.stopPropagation(); if (panel.hidden && !cine) showManaHelp(); });
