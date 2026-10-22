@@ -1177,6 +1177,7 @@ function buildWorld() {
     { x: 5790, y: 7580, w: 220, h: 150, kind: "temple", ghost: true },
   ].map(q => { const [x, y] = P(q.x, q.y); return { ...q, x, y }; });
   for (const z of ZONES) if (z.sea) rects.push({ x: z.x, y: z.y, w: z.w, h: z.h, kind: "sea" });
+  rects.push(...homeYard(rects.find(q => q.label === "Home")));
   // Walls are cut into short pieces so they sort and draw in depth order
   const wallRow = (x0, x1, y, h, kind, gap) => { for (let x = x0; x < x1; x += 400) { const b = Math.min(x + 400, x1);
     if (gap && b > gap[0] && x < gap[1]) { if (x < gap[0]) rects.push({ x, y, w: gap[0] - x, h, kind }); if (b > gap[1]) rects.push({ x: gap[1], y, w: b - gap[1], h, kind }); }
@@ -1630,7 +1631,7 @@ function buildWorld() {
   return makeMap({
     id: "world", w: W, h: H, ZONES, CAMPS, PATHS, rects, circles, ellipses, spawners, decor, objs, rivers, bridges, riverGap,
     doors: [
-      { ...Pd(3440, 9050), w: 40, h: 18, to: "home", tx: 320, ty: 410, label: "Your house" },
+      { ...Pd(3440, 9050), w: 40, h: 18, to: "home", tx: 450, ty: 550, label: "Your house" },
       { ...Pd(4070, 9600), w: 40, h: 18, to: "inn", tx: 450, ty: 560, label: "The Leaky Inkwell" },
       { ...Pd(5880, 7728), w: 40, h: 16, to: "temple", tx: TEMPLE_IN[0], ty: TEMPLE_IN[1], label: "The Drowned Temple", needsRisen: true },
       { x: HOLLOW[0] - 20, y: HOLLOW[1] - 4, w: 40, h: 16, to: "hollow", tx: HOLLOW_IN[0], ty: HOLLOW_IN[1], label: "The Hollow", needs: "hollow" },
@@ -1659,16 +1660,20 @@ function wallsFor(w, h, doorX, doorW) {
 }
 function buildHome() {
   return makeMap({
-    id: "home", name: "Your House", interior: true, w: 640, h: 480, floor: "#ead9bb",
-    rects: [...wallsFor(640, 480, 290, 60),
-      { x: 50, y: 80, w: 120, h: 90, kind: "bed" }, { x: 380, y: 210, w: 130, h: 70, kind: "table" },
-      { x: 500, y: 82, w: 80, h: 46, kind: "chest" }, { x: 230, y: 70, w: 120, h: 26, kind: "shelf" }],
+    id: "home", name: "Your House", interior: true, w: 900, h: 620, floor: "#ead9bb",
+    rects: [...wallsFor(900, 620, 420, 60),
+      { x: 50, y: 80, w: 120, h: 90, kind: "bed" }, { x: 380, y: 250, w: 130, h: 70, kind: "table" },
+      { x: 760, y: 82, w: 80, h: 46, kind: "chest" }, { x: 230, y: 70, w: 120, h: 26, kind: "shelf" },
+      { kind: "homedecor", hd: "plans", always: true, on: true, x: 318, y: 530, w: 40, h: 18 },
+      ...HOME_IN.map(([hd, x, y, w, h, o]) => ({ kind: "homedecor", hd, x, y, w, h, ghost: true, ...o }))],
     objs: [
       { kind: "object", id: "bed", x: 110, y: 200, label: "Rest", name: "Bed" },
-      { kind: "object", id: "chest", x: 540, y: 160, label: "Open", name: "Chest" },
-      { kind: "object", id: "letter", x: 445, y: 300, label: "Read", name: "Letter" },
+      { kind: "object", id: "chest", x: 800, y: 160, label: "Open", name: "Chest" },
+      { kind: "object", id: "letter", x: 445, y: 340, label: "Read", name: "Letter" },
+      { kind: "object", id: "plans", x: 338, y: 568, label: "Decorate", name: "Home plans" },
+      { kind: "object", id: "piano", hd: "piano", hidden: true, x: 640, y: 345, label: "Play", name: "Grand Piano" },
     ],
-    doors: [{ x: 290, y: 468, w: 60, h: 12, to: "world", tx: P(3460, 9110)[0], ty: P(3460, 9110)[1] }],
+    doors: [{ x: 420, y: 608, w: 60, h: 12, to: "world", tx: P(3460, 9110)[0], ty: P(3460, 9110)[1] }],
     zoneAt() { return { id: "home", name: "Your House", lv: "Rest here to heal and save", safe: true }; },
   });
 }
@@ -2334,7 +2339,158 @@ QUESTS.push({ id: "rq_keep", where: "Inkstone Keep, through the gate on its sout
   text: "The Keep's gate has opened. He knows you're coming. Fight through his guard, past the Twins, and up to the Blank Throne. Erase the Eraser King, and the map is ours again.",
   done: "You did it. Listen: no more scrubbing sounds. Just pens scratching, everywhere, drawing the world back in. Legend.",
   goal: { type: "kill", foe: "eraserking", n: 1 }, reward: { xp: FOES.eraserking.xp, coins: Math.round(foeCoin(50) * 60), item: "greater_potion", qty: 5 } });
+// ---------- Home upgrades (Lee): furniture for coins, fancy pieces, house looks and additions for gems. All just for looks or small conveniences ----------
+const HOME = {
+  rug: { name: "Woven Rug", tab: "in", coins: 300 }, fern: { name: "Potted Fern", tab: "in", coins: 250 }, lamp: { name: "Standing Lamp", tab: "in", coins: 400 },
+  chair: { name: "Reading Chair", tab: "in", coins: 500 }, books: { name: "Tall Bookcase", tab: "in", coins: 800 }, hearth: { name: "Stone Fireplace", tab: "in", coins: 1500 },
+  trophy: { name: "Stone Trophy Wall", tab: "in", coins: 2000, desc: "Shows each of the Seven Stones you have won" },
+  piano: { name: "Grand Piano", tab: "in", gems: 100, desc: "Tap it to play a tune" }, tank: { name: "Aquarium", tab: "in", gems: 100 }, canopy: { name: "Canopy Bed", tab: "in", gems: 150 },
+  beds: { name: "Flower Beds", tab: "yard", coins: 300 }, bath: { name: "Birdbath", tab: "yard", coins: 600 }, lanterns: { name: "Path Lanterns", tab: "yard", coins: 800 },
+  gnome: { name: "Garden Gnome", tab: "yard", gems: 50 }, flamingo: { name: "Pink Flamingo", tab: "yard", gems: 50 }, topiary: { name: "Dragon Hedge", tab: "yard", gems: 100 },
+  fountain: { name: "Stone Fountain", tab: "yard", gems: 150 }, pond: { name: "Koi Pond", tab: "yard", gems: 150 },
+  roof_red: { name: "Red Roof", tab: "house", coins: 500, roof: "#b5473a" }, roof_green: { name: "Green Roof", tab: "house", coins: 500, roof: "#4f7a4a" },
+  roof_slate: { name: "Slate Roof", tab: "house", coins: 500, roof: "#5a6070" }, roof_plum: { name: "Plum Roof", tab: "house", coins: 500, roof: "#7a4a7a" },
+  stone: { name: "Stone Cottage", tab: "house", gems: 150, look: true, desc: "Grey stone walls with ivy" }, timber: { name: "Timber Manor", tab: "house", gems: 250, look: true, desc: "Dark beams, a balcony and a weathervane" },
+  tower: { name: "Astronomy Tower", tab: "add", gems: 300, desc: "Climb up and look at the stars. Stones you have won light up the sky" },
+  green: { name: "Glass Greenhouse", tab: "add", gems: 300, desc: "Grows 2 herbs a day for you to pick" },
+  pool: { name: "Indoor Pool", tab: "add", gems: 400, desc: "A pool inside your house. Walk in for a swim" },
+};
+const HOME_TABS = { in: "Inside", yard: "Yard", house: "House", add: "Additions" };
+const homeOn = id => player.home.own.includes(id) && !player.home.off.includes(id);
+// where each piece sits: yard pieces next to the Home house in the village, inside pieces in the house
+function homeYard(h) {
+  const r = (hd, dx, dy, w, ht, o) => ({ kind: "homedecor", hd, x: h.x + dx, y: h.y + dy, w, h: ht, ghost: true, ...o });
+  return [r("tower", -92, 10, 70, 120), r("green", 215, 40, 140, 90), r("beds", 8, 132, 70, 14, { flat: true }), r("beds", 122, 132, 70, 14, { flat: true }),
+    r("lanterns", 66, 160, 10, 8), r("lanterns", 124, 160, 10, 8), r("gnome", 10, 170, 16, 10), r("flamingo", 185, 160, 12, 8), r("bath", -62, 190, 30, 18),
+    r("topiary", -80, 255, 54, 26), r("fountain", 70, 248, 60, 30), r("pond", 232, 292, 100, 40, { flat: true })];
+}
+const HOME_IN = [["rug", 250, 370, 270, 130, { flat: true }], ["fern", 190, 84, 30, 30], ["lamp", 192, 296, 20, 20], ["chair", 230, 280, 50, 46], ["books", 28, 250, 44, 130],
+  ["hearth", 400, 42, 130, 40], ["trophy", 560, 72, 160, 6, { flat: true }], ["piano", 600, 230, 150, 90], ["tank", 28, 430, 44, 110], ["canopy", 50, 80, 120, 90, { flat: true }],
+  ["pool", 590, 410, 270, 160, { flat: true }]];
+function syncHome() {
+  for (const m of [MAPS.world, MAPS.home]) if (m) {
+    for (const q of m.rects) if (q.kind === "homedecor" && !q.always) { q.on = homeOn(q.hd); q.ghost = !q.on || q.flat; }
+    for (const o of m.objs) if (o.hd) o.hidden = !homeOn(o.hd);
+  }
+}
+const HD = (q, f) => { ctx.strokeStyle = INK; ctx.lineWidth = 2; f(q.x, q.y, q.w, q.h); };
+function drawPlans(q) { // a little writing desk with the home plans open on it
+  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillStyle = "#8a6238"; ctx.fillRect(q.x, q.y - 14, q.w, q.h + 14); ctx.strokeRect(q.x, q.y - 14, q.w, q.h + 14);
+  ctx.fillStyle = "#fffdf6"; ctx.fillRect(q.x + 4, q.y - 20, q.w - 8, 14); ctx.strokeRect(q.x + 4, q.y - 20, q.w - 8, 14); ctx.lineWidth = 1; line(q.x + q.w / 2, q.y - 20, q.x + q.w / 2, q.y - 6);
+  ctx.strokeStyle = "#3b6fb6"; line(q.x + 8, q.y - 15, q.x + 16, q.y - 15); line(q.x + 24, q.y - 12, q.x + 32, q.y - 15);
+}
+function drawHomeDecor(q) {
+  if (!q.on) return;
+  const ell = (x, y, rx, ry, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fill(); ctx.stroke(); };
+  const box = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); };
+  HD(q, (x, y, w, h) => { switch (q.hd) {
+    case "tower": { // round stone tower with a dome and a telescope poking out
+      const cx = x + w / 2; box(x, y - 150, w, h + 150, "#b9b2a6"); ctx.lineWidth = 1; for (let yy = y - 140; yy < y + h; yy += 16) line(x, yy, x + w, yy); ctx.lineWidth = 2;
+      ctx.fillStyle = "#3b4a7a"; ctx.beginPath(); ctx.arc(cx, y - 150, w / 2 + 6, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#f2c12e"; for (const [sx, sy] of [[-14, -162], [8, -170], [16, -158]]) { ctx.beginPath(); ctx.arc(cx + sx, y + sy, 2, 0, 7); ctx.fill(); }
+      ctx.lineWidth = 5; ctx.strokeStyle = "#8a6238"; line(cx + 6, y - 172, cx + 34, y - 196); ctx.lineWidth = 2; ctx.strokeStyle = INK;
+      box(cx - 12, y - 120, 24, 30, "#cfe0ee"); box(cx - 14, y + h - 44, 28, 44, "#7a5a34"); break; }
+    case "green": { // glass greenhouse with plants inside
+      ctx.fillStyle = "rgba(200,232,240,.55)"; ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y - 20); ctx.lineTo(x + w / 2, y - 60); ctx.lineTo(x + w, y - 20); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
+      for (let i = 0; i < 6; i++) { const px = x + 14 + i * 22; ctx.fillStyle = ["#5a8a3a", "#3f7a3a", "#e8607a", "#f2c640"][i % 4]; ctx.beginPath(); ctx.arc(px, y + h - 22, 9, 0, 7); ctx.fill(); ctx.fillStyle = "#3f7a3a"; ctx.fillRect(px - 1, y + h - 14, 2, 10); }
+      ctx.lineWidth = 1.2; for (let xx = x + 28; xx < x + w; xx += 28) line(xx, y + h, xx, y - 20 - Math.min(xx - x, x + w - xx) * 0.57); line(x, y + 30, x + w, y + 30); ctx.lineWidth = 2;
+      box(x + w / 2 - 13, y + h - 40, 26, 40, "rgba(200,232,240,.8)"); break; }
+    case "beds": { box(x, y, w, h, "#7a5a34"); for (let i = 0; i < 6; i++) ell(x + 7 + i * 11.5, y + 5, 4, 4, ["#e8607a", "#f2c640", "#c07ad8", "#fffdf6"][i % 4]); break; }
+    case "lanterns": { shadow(x + 5, y + 8, 8); ctx.lineWidth = 3; line(x + 5, y + 8, x + 5, y - 34); ctx.lineWidth = 2; box(x - 2, y - 46, 14, 14, `rgba(255,200,90,${0.85 + 0.15 * Math.sin(clock * 5 + x)})`);
+      ctx.fillStyle = "rgba(255,200,90,.22)"; ctx.beginPath(); ctx.arc(x + 5, y - 39, 22, 0, 7); ctx.fill(); break; }
+    case "gnome": { shadow(x + 8, y + 8, 9); box(x + 2, y - 10, 12, 16, "#3b6fb6"); ell(x + 8, y - 14, 6, 6, "#f0c8a0"); ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(x + 2, y - 12); ctx.lineTo(x + 8, y - 2); ctx.lineTo(x + 14, y - 12); ctx.fill();
+      ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.moveTo(x + 1, y - 16); ctx.lineTo(x + 8, y - 34); ctx.lineTo(x + 15, y - 16); ctx.closePath(); ctx.fill(); ctx.stroke(); break; }
+    case "flamingo": { shadow(x + 6, y + 6, 8); ctx.lineWidth = 1.5; line(x + 6, y + 6, x + 6, y - 18); ctx.lineWidth = 2; ell(x + 6, y - 24, 11, 7, "#f08aa8");
+      ctx.strokeStyle = "#f08aa8"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + 14, y - 26); ctx.quadraticCurveTo(x + 22, y - 44, x + 14, y - 46); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ell(x + 13, y - 47, 4, 3.5, "#f08aa8"); break; }
+    case "bath": { shadow(x + w / 2, y + h, 14); box(x + w / 2 - 4, y - 14, 8, h + 14, "#b9b2a6"); ell(x + w / 2, y - 16, 20, 7, "#b9b2a6"); ell(x + w / 2, y - 17, 14, 4, "#9fd0ea"); ell(x + w / 2 + 6, y - 22, 4, 3, "#c98a63"); break; }
+    case "topiary": { shadow(x + w / 2, y + h, 26); ctx.fillStyle = "#4f8a3a"; // a hedge cut like a little dragon
+      ell(x + 24, y + 6, 22, 14, "#4f8a3a"); ell(x + 46, y - 14, 10, 14, "#4f8a3a"); ell(x + 52, y - 30, 10, 8, "#4f8a3a"); ell(x + 4, y, 10, 6, "#4f8a3a");
+      for (const sx of [12, 22, 32]) { ctx.fillStyle = "#3f7a3a"; ctx.beginPath(); ctx.moveTo(x + sx - 5, y - 6); ctx.lineTo(x + sx, y - 16); ctx.lineTo(x + sx + 5, y - 6); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 55, y - 32, 1.8, 0, 7); ctx.fill(); break; }
+    case "fountain": { const cx = x + w / 2; ell(cx, y + h / 2, w / 2, h / 2 + 2, "#b9b2a6"); ell(cx, y + h / 2 - 2, w / 2 - 7, h / 2 - 5, "#9fd0ea"); box(cx - 5, y - 18, 10, 24, "#b9b2a6"); ell(cx, y - 20, 14, 5, "#b9b2a6");
+      ctx.strokeStyle = "rgba(120,180,220,.9)"; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx, y - 24); ctx.quadraticCurveTo(cx + s * 14, y - 40 - 3 * Math.sin(clock * 6), cx + s * 20, y + 4); ctx.stroke(); } break; }
+    case "pond": { const cx = x + w / 2, cy = y + h / 2; ell(cx, cy, w / 2, h / 2, "#7fb8d8"); ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) { const a = clock * 0.7 + i * 2.1; ctx.fillStyle = ["#f08a3a", "#fffdf6", "#e0662a"][i]; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 30, cy + Math.sin(a) * 12, 6, 3, a + Math.PI / 2, 0, 7); ctx.fill(); }
+      ctx.lineWidth = 2; ell(cx - 34, cy + 10, 9, 5, "#5a9a4a"); ell(x + 10, y + 6, 8, 6, "#a8a29a"); ell(x + w - 8, y + h - 6, 9, 6, "#a8a29a"); break; }
+    // inside
+    case "rug": { ctx.fillStyle = "#c0503a"; ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke(); ctx.strokeStyle = "#f2c640"; ctx.lineWidth = 3; ctx.strokeRect(x + 14, y + 14, w - 28, h - 28);
+      ctx.fillStyle = "#3b6fb6"; ctx.beginPath(); ctx.moveTo(x + w / 2, y + 30); ctx.lineTo(x + w / 2 + 40, y + h / 2); ctx.lineTo(x + w / 2, y + h - 30); ctx.lineTo(x + w / 2 - 40, y + h / 2); ctx.fill(); break; }
+    case "fern": { box(x + 7, y + 8, 16, 18, "#c98a63"); ctx.strokeStyle = "#3f7a3a"; ctx.lineWidth = 3; for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x + 15, y + 8); ctx.quadraticCurveTo(x + 15 + i * 8, y - 14, x + 15 + i * 13, y - 4); ctx.stroke(); } break; }
+    case "lamp": { ctx.lineWidth = 3; line(x + 10, y + 16, x + 10, y - 34); ctx.lineWidth = 2; ell(x + 10, y + 16, 9, 4, "#5a5560");
+      ctx.fillStyle = "#f2e0a0"; ctx.beginPath(); ctx.moveTo(x, y - 34); ctx.lineTo(x + 4, y - 52); ctx.lineTo(x + 16, y - 52); ctx.lineTo(x + 20, y - 34); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(255,210,110,.2)"; ctx.beginPath(); ctx.arc(x + 10, y - 30, 40, 0, 7); ctx.fill(); break; }
+    case "chair": { box(x + 4, y - 20, w - 8, 26, "#3f7a4e"); box(x, y + 4, w, h - 10, "#4f8a5a"); box(x - 6, y - 4, 10, h - 4, "#3f7a4e"); box(x + w - 4, y - 4, 10, h - 4, "#3f7a4e"); break; }
+    case "books": { box(x, y - 30, w, h + 30, "#8a6238"); const c = ["#3b6fb6", BLOOD, GOLD, "#3f7a3a", "#7a4a7a"];
+      for (let yy = y - 24, j = 0; yy < y + h - 14; yy += 24, j++) { ctx.lineWidth = 1.5; line(x, yy + 20, x + w, yy + 20); for (let i = 0; i < 5; i++) { ctx.fillStyle = c[(i + j) % 5]; ctx.fillRect(x + 4 + i * 7.5, yy + 2, 6, 18); } } ctx.lineWidth = 2; break; }
+    case "hearth": { box(x, y, w, h, "#9a948a"); box(x - 8, y - 6, w + 16, 8, "#7a746a");
+      ctx.fillStyle = `rgba(230,120,40,${0.6 + 0.3 * Math.sin(clock * 9)})`; ctx.beginPath(); ctx.moveTo(x + 40, y + h); ctx.quadraticCurveTo(x + w / 2, y - 8 - 8 * Math.sin(clock * 7), x + w - 40, y + h); ctx.fill(); break; }
+    case "trophy": { box(x, y - 60, w, 50, "#8a6238"); ctx.fillStyle = INK; ctx.font = `12px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(`Stones ${stoneCount()}/7`, x + w / 2, y - 64);
+      STONES.forEach((S, i) => { const won = player.relics.includes(S.dg), sx = x + 14 + i * 22, sy = y - 35; ctx.fillStyle = won ? S.color : "rgba(255,253,246,.35)"; ctx.beginPath(); ctx.moveTo(sx, sy - 10); ctx.lineTo(sx + 8, sy); ctx.lineTo(sx, sy + 10); ctx.lineTo(sx - 8, sy); ctx.closePath(); ctx.fill(); ctx.stroke(); }); break; }
+    case "piano": { ctx.fillStyle = "#1b1b20"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w, y); ctx.quadraticCurveTo(x + w, y + h, x + w * 0.55, y + h); ctx.lineTo(x, y + h); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 3; line(x + 20, y, x + w - 10, y - 50); ctx.lineWidth = 2; box(x + 4, y + h - 2, w * 0.5, 12, "#fffdf6"); ctx.fillStyle = INK; for (let i = 1; i < 10; i++) if (i % 7 !== 3) ctx.fillRect(x + 4 + i * w * 0.05, y + h - 2, 3, 7); break; }
+    case "tank": { box(x, y, w, h, "#9fd0ea"); ctx.lineWidth = 1; for (let i = 0; i < 3; i++) { const fy = y + 20 + i * 34 + Math.sin(clock * 2 + i) * 6; ctx.fillStyle = ["#f08a3a", "#f2c640", "#e8607a"][i]; ctx.beginPath(); ctx.ellipse(x + w / 2 + Math.sin(clock + i * 2) * 8, fy, 4, 7, 0, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = "#3f7a3a"; ctx.lineWidth = 2; line(x + 10, y + h, x + 8, y + h - 30); line(x + 32, y + h, x + 36, y + h - 24); ctx.strokeStyle = INK; break; }
+    case "canopy": { ctx.lineWidth = 4; for (const [px, py] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) line(px, py, px, py - 70); ctx.lineWidth = 2;
+      ctx.fillStyle = "rgba(192,122,216,.55)"; ctx.beginPath(); ctx.moveTo(x - 4, y - 70); ctx.lineTo(x + w + 4, y - 70); ctx.lineTo(x + w + 4, y + h - 70); ctx.lineTo(x - 4, y + h - 70); ctx.closePath(); ctx.fill(); ctx.stroke(); break; }
+    case "pool": { ctx.fillStyle = "#e9e4d8"; ctx.fillRect(x - 10, y - 10, w + 20, h + 20); ctx.strokeRect(x - 10, y - 10, w + 20, h + 20); box(x, y, w, h, "#7fc4e0");
+      ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 2; for (let i = 0; i < 6; i++) { const wx = x + 30 + ((i * 53 + clock * 18) % (w - 60)), wy = y + 24 + (i * 37) % (h - 40); ctx.beginPath(); ctx.arc(wx, wy, 10, 0.2, Math.PI - 0.2); ctx.stroke(); }
+      ctx.strokeStyle = INK; ctx.lineWidth = 2; line(x + w - 30, y - 10, x + w - 30, y + 30); line(x + w - 14, y - 10, x + w - 14, y + 30); for (let yy = y; yy < y + 30; yy += 10) line(x + w - 30, yy, x + w - 14, yy); break; }
+  } });
+}
+// the Home house wears its look and roof paint
+function drawHomeLook(q) {
+  const L = player.home.look;
+  if (L === "stone") { ctx.fillStyle = "#c8c2b6"; ctx.fillRect(q.x, q.y, q.w, q.h); ctx.strokeStyle = "rgba(27,27,32,.35)"; ctx.lineWidth = 1.2;
+    for (let y = q.y + 14, i = 0; y < q.y + q.h; y += 14, i++) { line(q.x, y, q.x + q.w, y); for (let x = q.x + (i % 2) * 14; x < q.x + q.w; x += 28) line(x, y - 14, x, y); }
+    ctx.strokeStyle = "#4f8a3a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(q.x + 4, q.y + q.h); ctx.bezierCurveTo(q.x + 20, q.y + 80, q.x - 4, q.y + 40, q.x + 24, q.y + 6); ctx.stroke();
+    ctx.fillStyle = "#5a9a4a"; for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc(q.x + 8 + Math.sin(i * 1.7) * 8, q.y + 12 + i * 15, 4, 0, 7); ctx.fill(); } }
+  if (L === "timber") { ctx.fillStyle = "#f4ead2"; ctx.fillRect(q.x, q.y, q.w, q.h); ctx.strokeStyle = "#4a3424"; ctx.lineWidth = 5;
+    line(q.x, q.y + 4, q.x + q.w, q.y + 4); line(q.x, q.y + q.h * 0.5, q.x + q.w, q.y + q.h * 0.5); for (const f of [0.05, 0.36, 0.64, 0.95]) line(q.x + q.w * f, q.y, q.x + q.w * f, q.y + q.h);
+    line(q.x + q.w * 0.05, q.y + q.h * 0.5, q.x + q.w * 0.36, q.y + 4); line(q.x + q.w * 0.64, q.y + 4, q.x + q.w * 0.95, q.y + q.h * 0.5); }
+  ctx.strokeStyle = INK;
+}
+function drawHomeTop(q, roofH) { // weathervane and balcony for the manor
+  if (player.home.look !== "timber") return;
+  const cx = q.x + q.w / 2, ty = q.y - roofH; ctx.strokeStyle = INK; ctx.lineWidth = 2; line(cx, ty, cx, ty - 34); ctx.fillStyle = GOLD;
+  ctx.save(); ctx.translate(cx, ty - 30); ctx.scale(Math.cos(clock * 0.8) || 0.01, 1); ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(10, -4); ctx.lineTo(14, 0); ctx.lineTo(10, 4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = "#7a5a34"; ctx.fillRect(cx - 40, q.y + 52, 80, 6); ctx.strokeRect(cx - 40, q.y + 52, 80, 6); for (let x = cx - 36; x <= cx + 36; x += 9) line(x, q.y + 52, x, q.y + 38); line(cx - 40, q.y + 38, cx + 40, q.y + 38);
+}
+const homeRoof = q => { const R = HOME[player.home.roof]; return R && R.roof; };
+function homePrice(H) { return H.gems ? `<span class="gem">&#9670; ${H.gems} gems</span>` : `${H.coins} coins`; }
+function showHome(tab) {
+  tab = tab || "in"; const Hm = player.home;
+  const rows = Object.entries(HOME).filter(([, H]) => H.tab === tab).map(([id, H]) => {
+    const own = Hm.own.includes(id), on = homeOn(id), using = H.roof ? Hm.roof === id : H.look ? Hm.look === id : on, poor = H.gems ? player.gems < H.gems : player.coins < H.coins;
+    const btn = !own ? `<button type="button" data-act="buy" data-arg="${id}" ${poor ? "disabled" : ""}>Buy</button>`
+      : `<button type="button" data-act="${using ? "off" : "on"}" data-arg="${id}">${using ? (H.roof || H.look ? "Remove" : "Put away") : "Use"}</button>`;
+    return `<div class="item"><div>${H.name}<small>${own ? (using ? "In use" : "Yours") : homePrice(H)}${H.desc ? ` &middot; ${H.desc}` : ""}</small></div>${btn}</div>`; }).join("");
+  openPanel(`<h2>Your Home</h2><p class="soft">Make it yours. Furniture costs coins, fancy pieces cost gems. Everything is just for fun. You have ${player.coins} coins and <span class="gem">&#9670; ${player.gems} gems</span>.</p>
+    <div class="row tabs">${Object.entries(HOME_TABS).map(([k, n]) => `<button type="button" data-act="tab" data-arg="${k}" ${k === tab ? 'class="on" disabled' : ""}>${n}</button>`).join("")}</div>
+    <div class="list">${rows}</div><div class="row"><button data-act="close" type="button">Close</button></div>`,
+    { tab: k => showHome(k),
+      buy: id => { const H = HOME[id]; if (Hm.own.includes(id)) return; if (H.gems) { if (player.gems < H.gems) return; player.gems -= H.gems; } else { if (player.coins < H.coins) return; player.coins -= H.coins; }
+        Hm.own.push(id); if (H.roof) Hm.roof = id; if (H.look) Hm.look = id; sfx(H.gems ? "rare" : "coin"); syncHome(); save(); showHome(tab); toast(`${H.name} added to your home`); },
+      on: id => { const H = HOME[id]; if (H.roof) Hm.roof = id; else if (H.look) Hm.look = id; else Hm.off = Hm.off.filter(k => k !== id); syncHome(); save(); showHome(tab); },
+      off: id => { const H = HOME[id]; if (H.roof) Hm.roof = null; else if (H.look) Hm.look = null; else Hm.off.push(id); syncHome(); save(); showHome(tab); } });
+}
+function showStars() {
+  openPanel(`<h2>The Night Sky</h2><canvas id="starSky" width="640" height="360" style="width:100%;border-radius:10px;border:2px solid var(--ink)"></canvas><p class="soft">Each stone you win lights a star. ${stoneCount()} of 7 shine.</p><div class="row"><button data-act="close" type="button">Climb down</button></div>`);
+  const cv = document.getElementById("starSky"), g = cv.getContext("2d"); g.fillStyle = "#141a33"; g.fillRect(0, 0, 640, 360);
+  let s = 7; const R = () => (s = (s * 9301 + 49297) % 233280) / 233280; g.fillStyle = "#fffdf6"; for (let i = 0; i < 160; i++) { g.globalAlpha = 0.3 + R() * 0.6; g.beginPath(); g.arc(R() * 640, R() * 360, R() * 1.4 + 0.3, 0, 7); g.fill(); }
+  g.globalAlpha = 1; const pts = [[90, 250], [170, 140], [270, 200], [340, 90], [430, 170], [520, 110], [580, 240]];
+  g.strokeStyle = "rgba(255,253,246,.35)"; g.lineWidth = 1.5; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.stroke();
+  STONES.forEach((S, i) => { const [x, y] = pts[i], won = player.relics.includes(S.dg); g.fillStyle = won ? S.color : "#3a4060"; g.shadowColor = S.color; g.shadowBlur = won ? 18 : 0; g.beginPath(); g.arc(x, y, won ? 11 : 6, 0, 7); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = won ? "#fffdf6" : "#6a7090"; g.font = `26px ${FONT}`; g.textAlign = "center"; g.fillText(won ? S.name.replace(" Stone", "") : "?", x, y + 36); });
+}
+function pickGreenhouse() {
+  if (player.home.herbDay === today()) return toast("Nothing ready yet. Come back tomorrow");
+  const herb = player.level >= 20 ? "sunpetal" : "inkleaf"; player.home.herbDay = today(); addMat(herb, 2); sfx("coin"); save(); toast(`Picked 2 ${MATS[herb][0]}`);
+}
+function playPiano() { [0, 4, 7, 12, 7, 4, 0].forEach((n, i) => tone(262 * Math.pow(2, n / 12), 0.35, "triangle", 0.06, 0, i * 0.18)); toast("♪ ♫ ♪"); }
 const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: buildTemple(), pond: buildPond(), hollow: buildHollow(), wreck: buildWreck(), mine: buildMine(), summit: buildSummit(), sky: buildSky(), library: buildLibrary(), keep: buildKeep() };
+{ const h = MAPS.world.rects.find(q => q.label === "Home");
+  MAPS.world.objs.push({ kind: "object", id: "stars", hd: "tower", hidden: true, x: h.x - 57, y: h.y + 150, label: "Stargaze", name: "Astronomy Tower" },
+    { kind: "object", id: "herbs", hd: "green", hidden: true, x: h.x + 285, y: h.y + 150, label: "Pick herbs", name: "Greenhouse" }); }
 // Named quest bosses out in the world only show up once you've taken their quest (Lee)
 for (const s of MAPS.world.spawners) { const q = !Array.isArray(s.foe) && QUESTS.find(q => q.goal.type === "kill" && q.goal.n === 1 && q.goal.foe === s.foe); if (q) s.quest = q.id; }
 // ---------- Villagers going about their day (Lee): cooks, fishers, card games, drinkers, kids at play and folk out walking ----------
@@ -2421,7 +2577,7 @@ function buildFolk() {
   const S = (kind, [x, y], o) => addFolkScene(W, { kind, x, y, ...o }, r);
   // Inkwell Village
   S("fire", at(3700, 9440)); S("cards", at(3460, 9650)); S("drink", at(4260, 9700)); S("lute", at(4340, 9640), { f: -1 });
-  S("juggle", at(3650, 9010)); S("walk", at(3840, 9200), { r: 300 }); S("walk", at(3840, 9300), { r: 460 }); S("fish", at(3840, 9300), { max: 1500 }); S("fish", at(5200, 7700), { max: 900 }); S("fish", at(6500, 7900), { max: 900 });
+  S("juggle", at(3745, 8975)); S("walk", at(3840, 9200), { r: 300 }); S("walk", at(3840, 9300), { r: 460 }); S("fish", at(3840, 9300), { max: 1500 }); S("fish", at(5200, 7700), { max: 900 }); S("fish", at(6500, 7900), { max: 900 });
   S("hoe", at(0, 9100), { x0: P(5320, 0)[0], x1: P(5760, 0)[0] }); S("chop", at(4950, 9160));
   // Pip's Camp and Hillwatch
   const camp = ([cx, cy], spots, n, walkR) => {
@@ -3256,7 +3412,7 @@ const player = {
   map: "world", x: P(3460, 9110)[0], y: P(3460, 9110)[1], facing: 1, walk: 0, moving: false,
   level: 1, xp: 0, coins: 10, hp: 64,
   gear: { weapon: null, head: null, body: null, hands: null, feet: null }, bag: { potion: 2 }, dyes: [], dye: {}, gems: 0, elites: [], talents: {}, steeds: [], coats: [], coat: null, mounted: true, tut: [], relics: [], buffs: {}, tools: [], recipes: [], up: {}, glows: [], glow: null, pouch: 0, gemRec: [],
-  acd: {}, st: {}, ach: [], title: null, pets: [], pet: null, petNames: {}, petOutfits: [], petWear: {}, attackT: 0, attackCd: 0, combo: 0, lastAttack: -9, dodgeT: 0, dodgeCd: 0, dodgeDir: [0, 1],
+  acd: {}, st: {}, ach: [], title: null, pets: [], pet: null, petNames: {}, petOutfits: [], petWear: {}, home: { own: [], off: [], look: null, roof: null, herbDay: "" }, attackT: 0, attackCd: 0, combo: 0, lastAttack: -9, dodgeT: 0, dodgeCd: 0, dodgeDir: [0, 1],
   skillCd: 0, skillT: 0, potionCd: 0, hurtT: 0, lastHurt: -99, dead: 0,
 };
 const quests = {}; // id -> {state: "active"|"ready"|"done", n}
@@ -3314,7 +3470,7 @@ function save() {
   lastSave = Date.now();
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      level: player.level, xp: player.xp, coins: player.coins, name: player.name || "", gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, petOutfits: player.petOutfits || [], petWear: player.petWear || {}, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
+      level: player.level, xp: player.xp, coins: player.coins, name: player.name || "", gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, petOutfits: player.petOutfits || [], petWear: player.petWear || {}, home: player.home, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
       map: player.map, x: player.x, y: player.y, wv: 2, cls: player.cls || null, gearConv: player.gearConv || null,
       skOrder: player.skOrder || null, tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
     }));
@@ -3331,7 +3487,7 @@ function load() {
     if (s.templeRisen) setRisen(true);
     if (s.hollowRisen) setHollow(true);
     for (const id of s.dgRisen || []) if (DG[id]) setDg(DG[id], true);
-    player.name = typeof s.name === "string" ? s.name.slice(0, 16) : ""; player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.petOutfits = Array.isArray(s.petOutfits) ? s.petOutfits : []; player.petWear = s.petWear || {}; player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
+    player.name = typeof s.name === "string" ? s.name.slice(0, 16) : ""; player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.petOutfits = Array.isArray(s.petOutfits) ? s.petOutfits : []; player.petWear = s.petWear || {}; player.home = { own: [], off: [], look: null, roof: null, herbDay: "", ...(s.home || {}) }; setTimeout(syncHome); player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
     player.tools = s.tools || []; player.recipes = s.recipes || []; player.up = s.up || {}; player.glows = s.glows || []; player.glow = s.glow || null; player.pouch = s.pouch || 0; player.gemRec = s.gemRec || [];
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
@@ -4039,6 +4195,10 @@ function interact(o) {
     return openPanel(`<h2>A good rest</h2><p>You sleep like a blank page. Health restored and your progress is saved.</p><div class="row"><button data-act="close" type="button">Get up</button></div>`);
   }
   if (o.id === "chest") return showBag();
+  if (o.id === "plans") return showHome();
+  if (o.id === "stars") return showStars();
+  if (o.id === "herbs") return pickGreenhouse();
+  if (o.id === "piano") return playPiano();
   if (o.art === "cage") return openCage(o);
   if (o.id === "cocoon") {
     if (map.foes.some(f => f.d.id === "matron" && Math.hypot(f.x - o.x, f.y - o.y) < 700)) return toast("The Webspinner Matron guards the web. Beat her first!");
@@ -4953,7 +5113,7 @@ const CLASS_SK = {
   },
   hunter: {
     whirl: { name: "Multi-Shot", short: "Multi", lv: 3, cd: 7, desc: "Fire 5 arrows in a fan" },
-    dash: { name: "Disengage", short: "Leap", lv: 8, cd: 8, desc: "Leap backward out of melee. Nothing can hit you mid-leap" },
+    dash: { name: "Disengage", short: "Leap", lv: 8, cd: 8, desc: "Leap the way you are moving, or away from the nearest enemy if you stand still. Nothing can hit you mid-leap" },
     shield: { name: "Snare Trap", short: "Trap", lv: 15, cd: 14, desc: "Drop a trap that roots the first enemy for 3 seconds (1 on bosses)" },
     bomb: { name: "Explosive Shot", short: "Boom", lv: 25, cd: 10, desc: "An arrow that bursts and hits everything nearby" },
     rally: { name: "Bestial Fury", short: "Fury", lv: 35, cd: 40, desc: "Attack 30% faster for 8 seconds" },
@@ -5024,8 +5184,10 @@ const ptraps = [], prains = [], pmeteors = [];
 function hunterSkill(k, s) {
   const p = player;
   if (k === "dash") {
-    const t = nearestFoe(300); let dx = -p.facing, dy = 0;
-    if (t) { const d = Math.hypot(t.x - p.x, t.y - p.y) || 1; dx = (p.x - t.x) / d; dy = (p.y - t.y) / d; }
+    // leap the way you're moving (Lee); standing still it springs away from the nearest enemy
+    const [jx, jy] = joyDir(), t = nearestFoe(300); let dx = -p.facing, dy = 0;
+    if (jx || jy) { const d = Math.hypot(jx, jy); dx = jx / d; dy = jy / d; } else if (t) { const d = Math.hypot(t.x - p.x, t.y - p.y) || 1; dx = (p.x - t.x) / d; dy = (p.y - t.y) / d; }
+    if (dx) p.facing = Math.sign(dx);
     p.dashT = 0.22; p.dashDir = [dx, dy]; p.dashHit = new Set(); p.leap = true; sfx("dodge");
   } else if (k === "shield") { ptraps.push({ x: p.x, y: p.y + 6, life: 40 }); sfx("clank"); }
   else if (k === "bomb") { const t = nearestFoe(CLASSES.hunter.range); shootP(aimAt(t), Math.round(s.atk * 1.2), true, "explosive", 820, CLASSES.hunter.range, { boom: { r: 115, dmg: Math.round(s.atk * 2.2), cap: 10 } }); sfx("shoot"); }
@@ -6258,6 +6420,7 @@ function drawInteriorGround(m) {
 function drawRect(q) {
   ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = INK;
   switch (q.kind) {
+    case "homedecor": return q.hd === "plans" ? drawPlans(q) : drawHomeDecor(q);
     case "fence": {
       ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3;
       if (q.w > q.h) { line(q.x, q.y + 4, q.x + q.w, q.y + 4); line(q.x, q.y + 10, q.x + q.w, q.y + 10); for (let x = q.x; x <= q.x + q.w; x += 40) line(x, q.y - 8, x, q.y + 14); }
@@ -6299,9 +6462,10 @@ function drawRect(q) {
       ctx.fillStyle = "rgba(140,140,150,.3)"; for (let i = 0; i < 3; i++) { const t = (clock * 0.4 + i / 3 + q.x * 0.001) % 1; ctx.beginPath(); ctx.arc(chx + 10 + Math.sin(t * 6 + i) * 8, q.y - roofH * 0.75 - t * 70, 6 + t * 12, 0, 7); ctx.fill(); }
       ctx.fillStyle = "#fbf6e8"; ctx.fillRect(q.x, q.y, q.w, q.h); ctx.lineWidth = 2.5;
       ctx.strokeStyle = "rgba(160,120,80,.3)"; ctx.lineWidth = 1; for (let y = q.y + 12; y < q.y + q.h - 10; y += 12) line(q.x + 2, y, q.x + q.w - 2, y);
+      if (q.label === "Home" && player.home.look) drawHomeLook(q);
       ctx.fillStyle = "#b8b0a2"; ctx.fillRect(q.x, q.y + q.h - 10, q.w, 10); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; for (let x = q.x + 14; x < q.x + q.w; x += 22) line(x, q.y + q.h - 10, x, q.y + q.h);
       ctx.lineWidth = 2.5; ctx.strokeRect(q.x, q.y, q.w, q.h);
-      ctx.fillStyle = q.forge ? "#b9b2a6" : q.color || "#c98a63";
+      ctx.fillStyle = q.forge ? "#b9b2a6" : (q.label === "Home" && homeRoof(q)) || q.color || "#c98a63";
       const roof = () => { ctx.beginPath(); ctx.moveTo(q.x - 12, q.y + 6); ctx.lineTo(q.x + q.w / 2, q.y - roofH); ctx.lineTo(q.x + q.w + 12, q.y + 6); ctx.closePath(); };
       roof(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(27,27,32,.28)"; ctx.lineWidth = 1.2;
       for (let y = q.y + 2, i = 0; y > q.y - roofH; y -= 11, i++) { line(q.x - 14, y, q.x + q.w + 14, y); for (let x = q.x - 12 + (i % 2) * 9; x < q.x + q.w + 12; x += 18) line(x, y, x, y - 11); }
@@ -6319,6 +6483,7 @@ function drawRect(q) {
       if (q.forge) { ctx.fillStyle = `rgba(230,120,40,${0.5 + 0.3 * Math.sin(clock * 6)})`; ctx.fillRect(q.x + 19, q.y + 23, 24, 20); }
       if (q.label) { ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(q.label, q.x + q.w / 2, q.y - roofH * 0.35); }
       if (door) { ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(q.x + q.w / 2 + 8, q.y + q.h - 22, 3, 0, 7); ctx.fill(); }
+      if (q.label === "Home") drawHomeTop(q, roofH);
       break;
     }
     case "forge": {
@@ -7097,7 +7262,7 @@ function draw() {
   const inView = (x, y, mg) => x > x0 - mg && x < x1 + mg && y > y0 - mg && y < y1 + mg + 120;
   for (const o of near(m, x0 - (m.id === "world" ? 200 : 0), y0, x1 + (m.id === "world" ? 200 : 0), y1 + (m.id === "world" ? 700 : 240))) {
     if (o.r !== undefined) { if (inView(o.x, o.y, o.kind === "mountain" ? o.w + o.h : 80)) items.push([o.y, () => drawCircle(o)]); }
-    else if (o.kind !== "sea") items.push([o.kind === "keepwall" ? o.y + o.h : (o.kind === "wall" && o.y === 0) || o.kind === "paddock" ? -1 : o.y + o.h, () => drawRect(o)]);
+    else if (o.kind !== "sea") items.push([o.kind === "keepwall" ? o.y + o.h : (o.kind === "wall" && o.y === 0) || o.kind === "paddock" || o.flat ? -1 : o.y + o.h, () => drawRect(o)]);
   }
   for (const o of m.objs) if (inView(o.x, o.y, 60)) items.push([o.y, () => drawObj(o)]);
   for (const q of m.pens || []) if (inView(q.x + q.w / 2, q.y + q.h / 2, q.w)) { for (const h of q.herd) items.push([h.y, () => { ctx.save(); ctx.translate(h.x, h.y); ctx.scale(0.85, 0.85); drawHorse(0, 0, h.f, h.moving, h.c); ctx.restore(); }]); }
@@ -7105,6 +7270,9 @@ function draw() {
   for (const o of m.folk || []) if (inView(o.x, o.y, 60)) items.push([o.y, () => drawFolk(o)]);
   for (const f of m.foes) if (inView(f.x, f.y, 80)) items.push([f.y, () => { drawFoe(f); drawFoeIce(f); }]);
   items.push([p.y, drawPlayer]);
+  if (m.id === "home" && homeOn("pool")) { const q = m.rects.find(r => r.hd === "pool"); if (p.x > q.x && p.x < q.x + q.w && p.y > q.y + 16 && p.y < q.y + q.h) items.push([p.y + 0.1, () => { // swimming: water up to the chest
+    ctx.save(); ctx.beginPath(); ctx.rect(q.x, q.y, q.w, q.h); ctx.clip(); ctx.fillStyle = "rgba(127,196,224,.85)"; ctx.fillRect(p.x - 40, p.y - 34, 80, 60);
+    ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y - 34, 22 + 3 * Math.sin(clock * 4), 6, 0, 0, 7); ctx.stroke(); ctx.restore(); }]); }
   if (player.pet && !map.vehicle && !p.ride && pet.map === map.id) items.push([pet.y, drawPet]);
   if (hasWolf() && !map.vehicle && wolf.map === map.id && !p.dead) items.push([wolf.y, drawWolf]);
   items.sort((a, b) => a[0] - b[0]).forEach(([, fn]) => fn());
