@@ -4428,7 +4428,7 @@ function openPanel(html, acts) {
   delete sheet.dataset.shop; sheet.innerHTML = html; panelActs = acts || {}; panel.hidden = false;
   const b = sheet.querySelector("button:last-of-type"); b && b.focus({ preventScroll: true });
 }
-function closePanel() { if (classPicking) return; if (skTutPause) { skTutPause = false; paused = false; } document.body.classList.remove("mapopen", "charopen"); panel.hidden = true; joy.active = false; }
+function closePanel() { if (classPicking) return; sellAllAsk = false; if (skTutPause) { skTutPause = false; paused = false; } document.body.classList.remove("mapopen", "charopen"); panel.hidden = true; joy.active = false; }
 sheet.addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b) return;
   const act = b.dataset.act;
@@ -4462,7 +4462,7 @@ function showBag(confirmReset, tab) {
   const s = stats(), g = player.gear, mats = bagTab === "mats";
   const slot = (k, label) => `<div>${g[k] ? itName(g[k]) : "Empty"}<span>${label}</span></div>`;
   const items = Object.entries(player.bag).filter(([id, n]) => n > 0 && !ITEMS[id].mat === !mats).sort((a, b) => mats ? (ITEMS[a[0]].mat > ITEMS[b[0]].mat ? 1 : ITEMS[a[0]].mat < ITEMS[b[0]].mat ? -1 : (ITEMS[a[0]].tier || 0) - (ITEMS[b[0]].tier || 0)) : 0);
-  openPanel(`<h2>Bag</h2>
+  openPanel(`<h2>Bag <small class="soft" style="font-size:13px;float:right">Version ${GAME_VER}</small></h2>
     <p class="soft">Level ${player.level} &middot; Attack ${s.atk} &middot; Armor ${s.def} &middot; Health ${s.maxHp} &middot; ${player.coins} coins &middot; <span class="gem">&#9670; ${player.gems} gems</span></p>
     ${buffList() ? `<p class="coins">Active: ${buffList()}</p>` : ""}
     <div class="slots">${slot("weapon", "Weapon")}${slot("head", "Head")}${slot("body", "Body")}${slot("hands", "Hands")}${slot("feet", "Feet")}</div>
@@ -4585,6 +4585,10 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
+const GAME_VER = 91; // shown in the Bag so Lee can tell which version the phone has
+// Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
+let sellAllAsk = false;
+const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
 function showShop(n, tab) {
   const owned = id => ITEMS[id].scroll ? player.recipes.includes(id) : ITEMS[id].mount ? player.steeds.includes(id) : ITEMS[id].coat ? player.coats.includes(ITEMS[id].coat) : ITEMS[id].dye ? player.dyes.includes(ITEMS[id].dye) : player.bag[id] || Object.values(player.gear).includes(id);
   const sellable = Object.entries(player.bag).filter(([id, c]) => c > 0 && (ITEMS[id].slot || ITEMS[id].bp || ITEMS[id].mat));
@@ -4601,7 +4605,9 @@ function showShop(n, tab) {
   else if (tab === "coat") body = `<p class="soft">Coats change how your steed looks. You have ${player.gems} gems.</p>` + `<div class="item"><div>Natural coat<small>Each steed's own color</small></div><button type="button" data-act="wear" data-arg="" ${player.coat ? "" : "disabled"}>${player.coat ? "Wear" : "Wearing"}</button></div>` +
     n.shop.filter(id => ITEMS[id].coat).map(id => { const it = ITEMS[id], k = it.coat, mine = owned(id);
       return `<div class="item"><div><span class="swatch" style="background:${COATS[k][1]}"></span>${nm(id)}<small>${descOf(id)}</small></div>${mine ? `<button type="button" data-act="wear" data-arg="${k}" ${player.coat === k ? "disabled" : ""}>${player.coat === k ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${id}" ${player.gems < it.gems ? "disabled" : ""}>${it.gems} gems</button>`}</div>`; }).join("");
-  else if (tab === "sell") body = sellable.map(([id, c]) => `<div class="item"><div>${nm(id)}${c > 1 ? ` x${c}` : ""}<small>${descOf(id)}</small></div><button type="button" data-act="sell" data-arg="${id}">Sell ${Math.floor(ITEMS[id].price / 4)}</button></div>`).join("");
+  else if (tab === "sell") { const gear = sellGear(), worth = gear.reduce((t, [id, c]) => t + Math.floor(ITEMS[id].price / 4) * c, 0), cnt = gear.reduce((t, [, c]) => t + c, 0);
+    body = (cnt ? `<div class="item"><div>All gear in your bag<small>${cnt} piece${cnt > 1 ? "s" : ""}. Keeps what you wear, materials and blueprints</small></div><button type="button" data-act="sellall">${sellAllAsk ? `Tap again: ${worth.toLocaleString()} coins` : `Sell all ${worth.toLocaleString()}`}</button></div>` : "") +
+      sellable.map(([id, c]) => `<div class="item"><div>${nm(id)}${c > 1 ? ` x${c}` : ""}<small>${descOf(id)}</small></div>${c > 1 ? `<button type="button" data-act="sellstack" data-arg="${id}">All ${(Math.floor(ITEMS[id].price / 4) * c).toLocaleString()}</button>` : ""}<button type="button" data-act="sell" data-arg="${id}">Sell ${Math.floor(ITEMS[id].price / 4)}</button></div>`).join(""); }
   else if (tab === "forge") {
     body = `<p class="soft">Bring me a rare blueprint and I'll forge it. Blueprints drop from any enemy, about 1 in 1,000, and from bosses more often.</p>` +
       BLUEPRINTS.filter(bp => canWear(ITEMS[bp].bp) || player.bag[bp] > 0).map(bp => { const id = ITEMS[bp].bp, it = ITEMS[id], have = player.bag[bp] > 0;
@@ -4626,7 +4632,10 @@ function showShop(n, tab) {
         else if (ITEMS[id].scroll) learnPattern(ITEMS[id].scroll);
         else if (ITEMS[id].dye) { if (!player.dyes.includes(ITEMS[id].dye)) player.dyes.push(ITEMS[id].dye); toast(`Unlocked ${ITEMS[id].name}`); } else addItem(id);
         save(); showShop(n); },
-      sell: id => { if (!player.bag[id]) return; player.bag[id]--; if (!player.bag[id]) delete player.bag[id]; player.coins += Math.floor(ITEMS[id].price / 4); matsCheck(); save(); showShop(n); },
+      sell: id => { if (!player.bag[id]) return; player.bag[id]--; if (!player.bag[id]) delete player.bag[id]; player.coins += Math.floor(ITEMS[id].price / 4); sellAllAsk = false; matsCheck(); save(); showShop(n); },
+      sellstack: id => { const c = player.bag[id]; if (!c) return; delete player.bag[id]; player.coins += Math.floor(ITEMS[id].price / 4) * c; sellAllAsk = false; sfx("coin"); matsCheck(); save(); showShop(n); },
+      sellall: () => { if (!sellAllAsk) { sellAllAsk = true; return showShop(n); } sellAllAsk = false; let got = 0;
+        for (const [id, c] of sellGear()) { got += Math.floor(ITEMS[id].price / 4) * c; delete player.bag[id]; } player.coins += got; sfx("coin"); toast(`Sold your spare gear for ${got.toLocaleString()} coins`); save(); showShop(n); },
       forge: bp => { const id = ITEMS[bp].bp; if (!player.bag[bp] || player.coins < ITEMS[id].price) return;
         player.coins -= ITEMS[id].price; player.bag[bp]--; if (!player.bag[bp]) delete player.bag[bp];
         addItem(id); banner("Forged!", ITEMS[id].name); save(); showShop(n); },
