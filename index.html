@@ -496,11 +496,11 @@ const ITEMS = {
   // Mana potions (Lee): spells cost mana, so mages carry these
   mana_potion: { name: "Mana Ink", price: 40, mana: 0.5, desc: "Restores 50% mana. For mages" },
   greater_mana: { name: "Greater Mana Ink", price: 140, mana: 1, lvl: 15, desc: "Restores all your mana, level 15+. For mages" },
-  // Key 9 for warriors and hunters (Lee): their own quick boost, like the mage's Mana Ink. 20 seconds of harder hits
-  whetstone: { name: "Whetstone", price: 40, edge: 0.2, edgeCls: "warrior", desc: "20 seconds: 20% more attack. For warriors" },
-  runed_whetstone: { name: "Runed Whetstone", price: 140, edge: 0.3, edgeCls: "warrior", lvl: 15, desc: "20 seconds: 30% more attack, level 15+. For warriors" },
-  keen_arrows: { name: "Keen Arrowheads", price: 40, edge: 0.2, edgeCls: "hunter", desc: "20 seconds: 20% more attack, and your wolf bites harder too. For hunters" },
-  barbed_arrows: { name: "Barbed Arrowheads", price: 140, edge: 0.3, edgeCls: "hunter", lvl: 15, desc: "20 seconds: 30% more attack, and your wolf bites harder too, level 15+. For hunters" },
+  // Key 9 for warriors and hunters (Lee): their own quick boost, like the mage's Mana Ink. Small on purpose (Lee: 20% was far too much)
+  whetstone: { name: "Whetstone", price: 40, edge: 0.05, edgeCls: "warrior", desc: "15 seconds: 5% more attack. For warriors" },
+  runed_whetstone: { name: "Runed Whetstone", price: 140, edge: 0.08, edgeCls: "warrior", lvl: 15, desc: "15 seconds: 8% more attack, level 15+. For warriors" },
+  keen_arrows: { name: "Keen Arrowheads", price: 40, edge: 0.05, edgeCls: "hunter", desc: "15 seconds: 5% more attack, and your wolf bites harder too. For hunters" },
+  barbed_arrows: { name: "Barbed Arrowheads", price: 140, edge: 0.08, edgeCls: "hunter", lvl: 15, desc: "15 seconds: 8% more attack, and your wolf bites harder too, level 15+. For hunters" },
   stew: { name: "Inn Stew", price: 12, heal: 0.25, desc: "Restores 25% health" },
 };
 const BASE_LOOKS = {
@@ -4284,9 +4284,9 @@ function drinkMana(pick) {
   const add = Math.ceil(mx * ITEMS[id].mana); player.mp = Math.min(mx, (player.mp ?? mx) + add); player.manaCd = 10;
   floater(player.x, player.y - 80, `+${add} mana`, "#3b6fb6", 22); sfx("gulp"); save();
 }
-// Whetstones (warriors) and arrowheads (hunters): 20 seconds of harder hits, then 30 seconds before the next
+// Whetstones (warriors) and arrowheads (hunters): 15 seconds of slightly harder hits, then 45 seconds before the next
 const EDGE_ICON = { mage: "Mana", warrior: "Hone", hunter: "Arrowhead" }, EDGE_LABEL = { mage: "Mana", warrior: "Hone", hunter: "Arrows" };
-const nineOwn = () => EDGE_IDS[cls()].reduce((a, id) => a + (player.bag[id] || 0), 0), nineCd = p => cls() === "mage" ? (p.manaCd || 0) / 10 : (p.edgeCd || 0) / 30;
+const nineOwn = () => EDGE_IDS[cls()].reduce((a, id) => a + (player.bag[id] || 0), 0), nineCd = p => cls() === "mage" ? (p.manaCd || 0) / 10 : (p.edgeCd || 0) / 45;
 function useEdge(pick) {
   if (player.dead || paused || cine || (player.edgeCd || 0) > 0) return;
   const c = cls(), ids = EDGE_IDS[c];
@@ -4296,7 +4296,7 @@ function useEdge(pick) {
   if (!id) return toast(c === "warrior" ? "No whetstones. Smith Brand and the camp traders sell them" : "No arrowheads. Fletcher Ash and the camp traders sell them");
   if ((ITEMS[id].lvl || 0) > player.level) return toast(`You need level ${ITEMS[id].lvl}`);
   player.bag[id]--; if (!player.bag[id]) delete player.bag[id];
-  player.edgeT = 20; player.edgeAmt = ITEMS[id].edge; player.edgeCd = 30;
+  player.edgeT = 15; player.edgeAmt = ITEMS[id].edge; player.edgeCd = 45;
   floater(player.x, player.y - 80, c === "warrior" ? "Sharpened!" : "Keen arrows!", "#b8862a", 22); sfx("buy");
   fx.push({ kind: "ring", x: player.x, y: player.y, r: 50, life: 0.4, max: 0.4, color: "#d8a83a" }); save();
 }
@@ -4929,7 +4929,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 101; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 102; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5785,7 +5785,7 @@ function abil(a) {
   if (ABIL[a]) return ABIL[a];
   const id = a.slice(5); if (!barItem(id)) return null;
   const pot = POTIONS.includes(id), mana = !!ITEMS[id].mana, edge = !!ITEMS[id].edge;
-  if (edge) return { fn: () => useEdge(id), label: () => ITEMS[id].name.split(" ")[0], icon: () => EDGE_ICON[ITEMS[id].edgeCls], cd: p => (p.edgeCd || 0) / 30, count: true, own: () => player.bag[id] || 0 };
+  if (edge) return { fn: () => useEdge(id), label: () => ITEMS[id].name.split(" ")[0], icon: () => EDGE_ICON[ITEMS[id].edgeCls], cd: p => (p.edgeCd || 0) / 45, count: true, own: () => player.bag[id] || 0 };
   return { fn: () => { mana ? drinkMana(id) : pot ? drinkPotion(id) : useRelic(id); if (!panel.hidden && sheet.querySelector("h2")?.textContent === "Bag") showBag(); },
     label: () => SHORT[id] || ITEMS[id].name.replace(/^.*'s /, ""), icon: () => mana ? "Mana" : pot ? (id === "stew" ? "Stew" : "Potion") : "Relic", cd: p => mana ? (p.manaCd || 0) / 10 : pot ? p.potionCd / 10 : 0, count: true, own: () => player.bag[id] || 0 };
 }
