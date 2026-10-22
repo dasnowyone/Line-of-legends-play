@@ -2488,6 +2488,15 @@ function pickGreenhouse() {
 }
 function playPiano() { [0, 4, 7, 12, 7, 4, 0].forEach((n, i) => tone(262 * Math.pow(2, n / 12), 0.35, "triangle", 0.06, 0, i * 0.18)); toast("♪ ♫ ♪"); }
 const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: buildTemple(), pond: buildPond(), hollow: buildHollow(), wreck: buildWreck(), mine: buildMine(), summit: buildSummit(), sky: buildSky(), library: buildLibrary(), keep: buildKeep() };
+// Keep enemy groups well clear of camps (Lee): a group parked by the fence looked like it lived in the safe zone and never reacted
+{ const W = MAPS.world, K = 1.9;
+  for (const sp of W.spawners) { if (sp.patrol) continue;
+    for (const z of W.CAMPS) { const ux = (sp.x - z.cx) / z.rx, uy = (sp.y - z.cy) / z.ry, k = Math.hypot(ux, uy), need = K + (sp.r || 0) / Math.min(z.rx, z.ry);
+      if (k >= need || k < 0.01) continue;
+      let nx = sp.x, ny = sp.y;
+      for (let t = need; t < need + 1.5; t += 0.1) { nx = z.cx + ux / k * t * z.rx; ny = z.cy + uy / k * t * z.ry; if (!blocked(W, nx, ny, 30)) break; }
+      const dx = nx - sp.x, dy = ny - sp.y; sp.x = nx; sp.y = ny;
+      for (const f of W.foes) if (f.spawner === sp) { f.x += dx; f.y += dy; f.hx += dx; f.hy += dy; f.tx += dx; f.ty += dy; } } } }
 { const h = MAPS.world.rects.find(q => q.label === "Home");
   MAPS.world.objs.push({ kind: "object", id: "stars", hd: "tower", hidden: true, x: h.x - 57, y: h.y + 150, label: "Stargaze", name: "Astronomy Tower" },
     { kind: "object", id: "herbs", hd: "green", hidden: true, x: h.x + 285, y: h.y + 150, label: "Pick herbs", name: "Greenhouse" }); }
@@ -4850,6 +4859,8 @@ canvas.addEventListener("pointerdown", ev => {
 canvas.addEventListener("pointermove", ev => { if (joy.active && ev.pointerId === joy.id) { joy.x = ev.clientX; joy.y = ev.clientY; } });
 const endJoy = ev => { if (ev.pointerId === joy.id) joy.active = false; };
 canvas.addEventListener("pointerup", endJoy); canvas.addEventListener("pointercancel", endJoy);
+// where the hero is heading: the stick, or the way they were walking a moment ago (tapping a skill on the phone can let go of the stick)
+function moveDir() { const [jx, jy] = joyDir(); if (jx || jy) return [jx, jy]; const p = player; return p.lastDir && clock - (p.lastMoveT ?? -9) < 0.6 ? p.lastDir : [0, 0]; }
 function joyDir() {
   let x = 0, y = 0;
   if (joy.active) {
@@ -5185,7 +5196,7 @@ function hunterSkill(k, s) {
   const p = player;
   if (k === "dash") {
     // leap the way you're moving (Lee); standing still it springs away from the nearest enemy
-    const [jx, jy] = joyDir(), t = nearestFoe(300); let dx = -p.facing, dy = 0;
+    const [jx, jy] = moveDir(), t = nearestFoe(300); let dx = -p.facing, dy = 0;
     if (jx || jy) { const d = Math.hypot(jx, jy); dx = jx / d; dy = jy / d; } else if (t) { const d = Math.hypot(t.x - p.x, t.y - p.y) || 1; dx = (p.x - t.x) / d; dy = (p.y - t.y) / d; }
     if (dx) p.facing = Math.sign(dx);
     p.dashT = 0.22; p.dashDir = [dx, dy]; p.dashHit = new Set(); p.leap = true; sfx("dodge");
@@ -5307,7 +5318,7 @@ function useSkill(k) {
   if (cls() === "hunter") return hunterSkill(k, s);
   if (cls() === "mage") return mageSkill(k, s);
   if (k === "dash") {
-    const [jx, jy] = joyDir(), t = nearestFoe(260);
+    const [jx, jy] = moveDir(), t = nearestFoe(260);
     let dx = jx, dy = jy;
     if (!dx && !dy && t) { const d = Math.hypot(t.x - p.x, t.y - p.y) || 1; dx = (t.x - p.x) / d; dy = (t.y - p.y) / d; }
     if (!dx && !dy) dx = p.facing;
@@ -5765,7 +5776,7 @@ function update(dt) {
       const sp = (p.attackT > 0 && cls() === "warrior" ? 130 : 250) * (riding() ? 1 + STEEDS[bestSteed()].spd / 100 : 1) * (buffOn("feather") ? 1.2 : 1) * (cls() === "hunter" ? 1.1 : 1);
       move(p, jx * sp * dt, jy * sp * dt, 12);
       if (Math.abs(jx) > 0.15) p.facing = Math.sign(jx);
-      p.walk += dt * 10 * Math.hypot(jx, jy); p.moving = true;
+      p.walk += dt * 10 * Math.hypot(jx, jy); p.moving = true; p.lastDir = [jx, jy]; p.lastMoveT = clock;
     } else p.moving = false;
     if (clock - p.lastHurt > 8) p.hp = Math.min(s.maxHp, p.hp + s.maxHp * 0.02 * dt);
     // Doors
