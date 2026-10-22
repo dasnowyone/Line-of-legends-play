@@ -1633,7 +1633,11 @@ function buildWorld() {
     const targets = [...rects.filter(q => ["tent", "house", "forge", "cart", "potiontable", "stall"].includes(q.kind)).map(q => [q.x + q.w / 2, q.y + q.h + 22]),
       ...objs.filter(o => o.kind === "waystone" || o.kind === "board").map(o => [o.x, o.y + 34])].filter(([x, y]) => inside(x, y));
     z.steps = [];
-    for (const [tx, ty] of town ? [] : targets) { const [q, d] = roadPt(tx, ty); if (!q || d < 75 || d > 650) continue;
+    // Every stall, tent and door gets a path (Lee): the nearest first, and later ones may end on a path already laid
+    targets.sort((a, b) => roadPt(...a)[1] - roadPt(...b)[1]);
+    for (const [tx, ty] of town ? [] : targets) { let [q, d] = roadPt(tx, ty); if (!q || d < 75) continue;
+      for (const st of z.steps) { const ds = Math.hypot(st[0] - tx, st[1] - ty); if (ds + 20 < d) { d = ds; q = [st[0], st[1]]; } }
+      if (d < 75 || d > 1600) continue;
       const k = Math.floor(d / 30), ang = Math.atan2(q[1] - ty, q[0] - tx), run = [];
       for (let i = 0; i < k; i++) { const x = tx + (q[0] - tx) * i / k + (rnd() - 0.5) * 6, y = ty + (q[1] - ty) * i / k + (rnd() - 0.5) * 5;
         if (distToPaths(x, y) < 48 || !inside(x, y) || z.steps.some(s => Math.hypot(s[0] - x, s[1] - y) < 28)) break;
@@ -4785,7 +4789,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 97; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 98; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
