@@ -4589,7 +4589,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 93; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 94; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5239,7 +5239,7 @@ function classTick(dt) {
     p.surgeT = Math.max(0, (p.surgeT || 0) - dt); if (p.surgeEnd && !p.surgeT) { p.surgeEnd = false; p.drainT = 6; }
     p.drainT = Math.max(0, (p.drainT || 0) - dt);
     // Mana refills slowly (Lee: mana should matter), a bit faster once you haven't cast for 3 seconds
-    if (!p.drainT) p.mp = Math.min(mx, p.mp + dt * (clock - (p.lastCast ?? -9) > 3 ? 7 : 3));
+    if (!p.drainT) p.mp = Math.min(mx, p.mp + dt * (clock - (p.lastCast ?? -9) > 3 ? 5 : 1.5)); // slower refill (Lee): spamming spells should run you dry
     p.manaCd = Math.max(0, (p.manaCd || 0) - dt);
   }
   if (p.castT > 0 && (p.castT -= dt) <= 0) { const t = nearestFoe(CLASSES.mage.range + 40);
