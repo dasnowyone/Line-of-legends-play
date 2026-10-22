@@ -496,6 +496,11 @@ const ITEMS = {
   // Mana potions (Lee): spells cost mana, so mages carry these
   mana_potion: { name: "Mana Ink", price: 40, mana: 0.5, desc: "Restores 50% mana. For mages" },
   greater_mana: { name: "Greater Mana Ink", price: 140, mana: 1, lvl: 15, desc: "Restores all your mana, level 15+. For mages" },
+  // Key 9 for warriors and hunters (Lee): their own quick boost, like the mage's Mana Ink. 20 seconds of harder hits
+  whetstone: { name: "Whetstone", price: 40, edge: 0.2, edgeCls: "warrior", desc: "20 seconds: 20% more attack. For warriors" },
+  runed_whetstone: { name: "Runed Whetstone", price: 140, edge: 0.3, edgeCls: "warrior", lvl: 15, desc: "20 seconds: 30% more attack, level 15+. For warriors" },
+  keen_arrows: { name: "Keen Arrowheads", price: 40, edge: 0.2, edgeCls: "hunter", desc: "20 seconds: 20% more attack, and your wolf bites harder too. For hunters" },
+  barbed_arrows: { name: "Barbed Arrowheads", price: 140, edge: 0.3, edgeCls: "hunter", lvl: 15, desc: "20 seconds: 30% more attack, and your wolf bites harder too, level 15+. For hunters" },
   stew: { name: "Inn Stew", price: 12, heal: 0.25, desc: "Restores 25% health" },
 };
 const BASE_LOOKS = {
@@ -1033,7 +1038,8 @@ function P(x, y) {
 }
 const LAKE = P(5900, 7700);
 const dirWord = (dx, dy) => ["east", "northeast", "north", "northwest", "west", "southwest", "south", "southeast"][Math.round(((Math.atan2(-dy, dx) * 180 / Math.PI) + 360) % 360 / 45) % 8];
-const POTS = ["potion", "greater_potion", "mana_potion", "greater_mana"];
+const EDGE_IDS = { mage: ["mana_potion", "greater_mana"], warrior: ["whetstone", "runed_whetstone"], hunter: ["keen_arrows", "barbed_arrows"] };
+const POTS = ["potion", "greater_potion", "mana_potion", "greater_mana", "whetstone", "runed_whetstone", "keen_arrows", "barbed_arrows"];
 const MITHRIL = ["mithril_blade", "mithril_helm", "mithril_gauntlets", "mithril_plate", "mithril_sabatons", "mithril_warblade", "greatsword"];
 const TIDESTEEL = ["tidesteel_sword", "tidesteel_helm", "tidesteel_plate", "tidesteel_gauntlets", "tidesteel_halberd", "tidesteel_sabatons"];
 const DRAGON = ["dragon_blade", "dragon_helm", "dragon_plate", "dragon_gauntlets", "dragon_axe", "dragon_greaves"];
@@ -1342,13 +1348,13 @@ function buildWorld() {
   const objs = [
     npc("quill", "Elder Quill", ...at(3840, 9290), "#7a5aa6", "The world was blank once. Every line you draw makes it bigger."),
     { ...npc("brand", "Smith Brand", ...at(4250, 9110), "#8a4b2a", "Weapons and the forge. Bring me blueprints and coin, I'll bring the fire.",
-      ["wooden_sword", "dagger", "short_sword", "hatchet", "bronze_sword", "militia_spear", "hunter_spear", "iron_sword"]), classShop: false },
+      ["wooden_sword", "dagger", "short_sword", "hatchet", "bronze_sword", "militia_spear", "hunter_spear", "iron_sword", "whetstone", "runed_whetstone"]), classShop: false },
     { ...npc("carly", "Tailor Carly", ...at(3560, 9300), "#3d6b3a", "Cloth, leather and color. A hero should look the part. Mages, I stitch your robes too.",
       ["cloth_cap", "red_bandana", "straw_hat", "patched_tunic", "travel_robe", "gambeson", "cloth_wraps", "fingerless", "work_gloves", "sandals", "soft_shoes", "clogs",
        "leather_hood", "horned_cap", "leather_vest", "leather_gloves", "studded_gloves", "leather_boots", "hobnail_boots", "m_iron_helm", "m_chain_shirt", "m_iron_gauntlets", "m_iron_greaves", "m_steel_helm", "m_steel_plate", "m_steel_gauntlets", "m_steel_sabatons",
        ...Object.keys(DYES).filter(k => !DYES[k][2]).map(k => "dye_" + k)]), classShop: false },
     { ...npc("ash", "Fletcher Ash", ...at(3380, 9165), "#5a7a3a", "Bows, crossbows and good leather. Hunters, keep your distance and let the string do the work.",
-      ["h_practice_bow", "h_hunting_bow", "h_shortbow", "h_yew_longbow", "h_iron_crossbow", "h_iron_helm", "h_chain_shirt", "h_iron_gauntlets", "h_iron_greaves", "h_steel_helm", "h_steel_plate", "h_steel_gauntlets", "h_steel_sabatons"]), classShop: false },
+      ["h_practice_bow", "h_hunting_bow", "h_shortbow", "h_yew_longbow", "h_iron_crossbow", "h_iron_helm", "h_chain_shirt", "h_iron_gauntlets", "h_iron_greaves", "h_steel_helm", "h_steel_plate", "h_steel_gauntlets", "h_steel_sabatons", "keen_arrows", "barbed_arrows"]), classShop: false },
     { ...npc("fizz", "Alchemist Fizz", ...at(4296, 9452), "#7a5aa6", "Potions! Freshly bottled, mostly safe. And wands, for the sparky types.", ["potion", "greater_potion", "mana_potion", "greater_mana", "m_apprentice_wand", "m_oak_staff", "m_bone_wand", "m_quartz_staff", "m_runed_wand"]), classShop: false },
     { ...npc("wick", "Little Wick", ...at(3660, 9170), "#e0742a", "Inky's the best pup in the whole world. Don't tell the cat."), kid: true },
     npc("dot", "Farmer Dot", ...at(5110, 9120), "#d4a22a", "Mind the meadow. Those dashes nip at your ankles, and they never travel alone."),
@@ -2874,19 +2880,19 @@ const TRAIN = (() => {
   for (const o of W.objs) { if (!o.tierShop) continue; const [k, lo, hi] = o.tierShop;
     const gear = [...new Set(all.map(id => forCls(id, k)))].filter(id => { const it = ITEMS[id]; return it.cls === k && !it.crafted && !it.premium && !it.rare && (it.lvl || 1) >= lo && (it.lvl || 1) <= hi; });
     const pots = lo < 10 ? ["potion"] : lo < 20 ? ["potion", "greater_potion"] : ["greater_potion"];
-    if (k === "mage") pots.push(...(lo < 10 ? ["mana_potion"] : lo < 20 ? ["mana_potion", "greater_mana"] : ["greater_mana"]));
+    { const [a, b] = EDGE_IDS[k]; pots.push(...(lo < 10 ? [a] : lo < 20 ? [a, b] : [b])); }
     o.shop = [...pots, ...gear]; }
 })();
 const CLS_Q = (id, giver, c, lv, needs, title, goal, text, reward, done, extra) => ({ id, giver, title, needs, req: () => player.cls === c && player.level >= lv, where: extra?.where || "The wilds around Inkwell Village", goal, text, reward, done, ...extra });
 QUESTS.push(
-  CLS_Q("cls_w1", "rook", "warrior", 3, [], "Hold the Line", { type: "kill", foe: "triangle", n: 6 }, "A warrior's first job is to stand there and not fall over. Sharp Corners roam the meadow. Break six of them and come back standing.", { xp: 200, coins: 20 }, "Still standing. Good. Most don't, the first time.", { where: "Blank Meadow" }),
+  CLS_Q("cls_w1", "rook", "warrior", 3, [], "Hold the Line", { type: "kill", foe: "triangle", n: 6 }, "A warrior's first job is to stand there and not fall over. Sharp Corners roam the Margin Woods. Break six of them and come back standing.", { xp: 200, coins: 20 }, "Still standing. Good. Most don't, the first time.", { where: "Margin Woods" }),
   CLS_Q("cls_w2", "rook", "warrior", 6, ["cls_w1"], "Bandit Blades", { type: "kill", foe: "bandit", n: 6 }, "Road Bandits think plate is slow. Show six of them it isn't.", { xp: 450, coins: 40, item: "potion", qty: 3 }, "They'll think twice. Well, the ones left will.", { where: "The roads of Scratch Hills" }),
   CLS_Q("cls_w3", "rook", "warrior", 10, ["cls_w2"], "Stone Breaker", { type: "kill", foe: "golem", n: 5 }, "Last test. Scratch Golems hit like falling walls and throw rocks. Walk through the rocks and break five golems.", { xp: 900, coins: 60, item: "greater_potion", qty: 3 }, "You walked through rocks. That's a warrior. Off you go, the mainland needs you more than I do.", { where: "Scratch Hills" }),
   CLS_Q("cls_h1", "kestrel", "hunter", 3, [], "Quiet Steps", { type: "kill", foe: "spider", n: 6 }, "A hunter never lets anything get close. Inkspiders are fast and sneaky. Shoot six before they reach you.", { xp: 220, coins: 20 }, "Not one of them touched you? Good eyes.", { where: "Whisper Glade and Margin Woods" }),
   CLS_Q("cls_h2", "kestrel", "hunter", 5, ["cls_h1"], "A Loyal Friend", { type: "collect", thing: "wolfpup", n: 1 }, "A wolf pack has cornered a lost pup in the Margin Woods, and the pup is not theirs. Drive them off and bring the little one to me. If it takes to you, it is yours. A hunter with a wolf at their side never hunts alone.",
-    { xp: 400, coins: 30 }, "Look at that, it already follows you. Name's Scout. Scout fights beside you now: when something comes for you, Scout bites back.", { where: "Margin Woods", mark: TRAIN.pup, onAccept: () => { const sp = TRAIN.pack; while (sp.live < sp.n) if (!spawnFoe(MAPS.world, sp, true)) break; }, onDone: () => { setTimeout(() => banner("Scout joins you!", "Your wolf fights beside you"), 600); wolf.map = ""; } }),
+    { xp: 400, coins: 30 }, "Look at that, it already follows you. It's yours now, so it needs a name. Your wolf fights beside you: when something comes for you, it bites back.", { where: "Margin Woods", mark: TRAIN.pup, onAccept: () => { const sp = TRAIN.pack; while (sp.live < sp.n) if (!spawnFoe(MAPS.world, sp, true)) break; }, onDone: () => { wolf.map = ""; setTimeout(() => showWolfName(true), 500); } }),
   CLS_Q("cls_h3", "kestrel", "hunter", 9, ["cls_h2"], "Hunt Together", { type: "kill", foe: "goblin_archer", n: 6 }, "Goblin archers shoot from the treeline. Send Scout in close while you shoot from range. Six of them.", { xp: 800, coins: 50, item: "greater_potion", qty: 3 }, "You and Scout make a fine pair. The wilds are yours.", { where: "Northern Margin Woods" }),
-  CLS_Q("cls_m1", "orrin", "mage", 3, [], "Ink and Spark", { type: "kill", foe: "triangle", n: 6 }, "Every spell spends ink, and ink refills slowly. Bolts are free, so use them. Burn six Sharp Corners and watch your mana as you go.", { xp: 200, coins: 20, item: "mana_potion", qty: 3 }, "You didn't run dry. Good. Here, a few Mana Ink for when you do.", { where: "Blank Meadow" }),
+  CLS_Q("cls_m1", "orrin", "mage", 3, [], "Ink and Spark", { type: "kill", foe: "triangle", n: 6 }, "Every spell spends ink, and ink refills slowly. Bolts are free, so use them. Burn six Sharp Corners and watch your mana as you go.", { xp: 200, coins: 20, item: "mana_potion", qty: 3 }, "You didn't run dry. Good. Here, a few Mana Ink for when you do.", { where: "Margin Woods" }),
   CLS_Q("cls_m2", "orrin", "mage", 6, ["cls_m1"], "Hexers' Lesson", { type: "kill", foe: "goblin_shaman", n: 5 }, "Goblin shamans cast too, and badly. Show five of them how it's done.", { xp: 450, coins: 40, item: "mana_potion", qty: 5 }, "Clean work. A mage who wastes mana is a mage who walks home.", { where: "Margin Woods, the goblin camps" }),
   CLS_Q("cls_m3", "orrin", "mage", 10, ["cls_m2"], "Unmaking Stone", { type: "kill", foe: "golem", n: 5 }, "Stone doesn't burn, but it breaks. Five Scratch Golems, and keep your distance. They throw.", { xp: 900, coins: 60, item: "mana_potion", qty: 5 }, "Stone, unmade. You're ready for the mainland. Mind your mana out there.", { where: "Scratch Hills" }),
 );
@@ -3396,6 +3402,13 @@ function drawCage(o) {
 }
 // Steeds in the pen wander, graze and drink. When you buy one, the stablemaster opens the gate, fetches it and leads it out to you (Lee)
 MAPS.world.props.push(...W_PGPROPS);
+// Every hunt points somewhere (Lee): one with no marker gets the group of its foes nearest whoever gave it. With a marker,
+// accepting it also brings fresh groups of exactly that foe, so there are always enough to finish it
+for (const q of QUESTS) if (!q.mark && q.goal.type === "kill" && FOES[q.goal.foe]) { const g = MAPS.world.objs.find(o => o.id === q.giver); if (!g) continue; let best = null, bd = 1e12;
+  // groups in the zone the quest names come first, then the one nearest the trainer
+  for (const sp of MAPS.world.spawners) if ([].concat(sp.foe).includes(q.goal.foe) && !sp.questOnly && !sp.target) { const named = (q.where || "").includes(MAPS.world.zoneAt(sp.x, sp.y).name);
+    const d = Math.hypot(sp.x - g.x, sp.y - g.y) + (named ? 0 : 1e8); if (d < bd) { bd = d; best = sp; } }
+  if (best) q.mark = [best.x, best.y]; }
 // ---------- Proving Grounds daily challenges (Lee) ----------
 // Twenty seconds at the camp's targets. Yard: every hit on a dummy. Lanes: the targets sway. Sanctum: only the glowing crystal counts
 const CHAL = { yard: { name: "Dummy Drill", art: "tdummy", rule: "Hit the training dummies as many times as you can." }, lanes: { name: "Moving Targets", art: "tbutt", rule: "The archery targets sway up and down. Hit them as many times as you can." },
@@ -3755,7 +3768,7 @@ function xpToNext(l) { return Math.round(90 * l * l); }
 function stats() {
   const g = player.gear, it = s => (g[s] ? upItem(g[s]) : {});
   return {
-    atk: Math.round((6 + player.level + (it("weapon").atk || 0)) * (1 + 0.04 * tr("sharp")) * (buffOn("fang") ? 1.2 : 1) * (buffOn("might") || buffOn("spicy") ? 1.1 : 1) * (player.rallyT > 0 ? 1.2 : 1) * (1 + ARMOR_SLOTS.reduce((a, k) => a + (it(k).pow || 0), 0) / 100)),
+    atk: Math.round((6 + player.level + (it("weapon").atk || 0)) * (1 + 0.04 * tr("sharp")) * (buffOn("fang") ? 1.2 : 1) * (buffOn("might") || buffOn("spicy") ? 1.1 : 1) * (player.rallyT > 0 ? 1.2 : 1) * (player.edgeT > 0 ? 1 + (player.edgeAmt || 0) : 1) * (1 + ARMOR_SLOTS.reduce((a, k) => a + (it(k).pow || 0), 0) / 100)),
     def: Math.round((ARMOR_SLOTS.reduce((a, k) => a + (it(k).def || 0), 0) + 2 * tr("guard")) * (buffOn("ironskin") ? 1.15 : 1)),
     maxHp: Math.round((60 + 6 * player.level + ARMOR_SLOTS.reduce((a, k) => a + (it(k).hp || 0), 0)) * (1 + 0.05 * tr("thick")) * (buffOn("hearty") ? 1.1 : 1) * ({ warrior: 1.2, hunter: 1, mage: 0.85 }[player.cls] || 1)),
     reach: 44 + (it("weapon").reach || 0), range: it("weapon").range || 0,
@@ -4271,6 +4284,22 @@ function drinkMana(pick) {
   const add = Math.ceil(mx * ITEMS[id].mana); player.mp = Math.min(mx, (player.mp ?? mx) + add); player.manaCd = 10;
   floater(player.x, player.y - 80, `+${add} mana`, "#3b6fb6", 22); sfx("gulp"); save();
 }
+// Whetstones (warriors) and arrowheads (hunters): 20 seconds of harder hits, then 30 seconds before the next
+const EDGE_ICON = { mage: "Mana", warrior: "Hone", hunter: "Arrowhead" }, EDGE_LABEL = { mage: "Mana", warrior: "Hone", hunter: "Arrows" };
+const nineOwn = () => EDGE_IDS[cls()].reduce((a, id) => a + (player.bag[id] || 0), 0), nineCd = p => cls() === "mage" ? (p.manaCd || 0) / 10 : (p.edgeCd || 0) / 30;
+function useEdge(pick) {
+  if (player.dead || paused || cine || (player.edgeCd || 0) > 0) return;
+  const c = cls(), ids = EDGE_IDS[c];
+  if (c === "mage") return drinkMana(pick);
+  if (pick && ITEMS[pick].edgeCls !== c) return toast(`Only ${ITEMS[pick].edgeCls}s use that`);
+  const id = pick ? (player.bag[pick] ? pick : null) : [...ids].reverse().find(p => player.bag[p] && (ITEMS[p].lvl || 0) <= player.level);
+  if (!id) return toast(c === "warrior" ? "No whetstones. Smith Brand and the camp traders sell them" : "No arrowheads. Fletcher Ash and the camp traders sell them");
+  if ((ITEMS[id].lvl || 0) > player.level) return toast(`You need level ${ITEMS[id].lvl}`);
+  player.bag[id]--; if (!player.bag[id]) delete player.bag[id];
+  player.edgeT = 20; player.edgeAmt = ITEMS[id].edge; player.edgeCd = 30;
+  floater(player.x, player.y - 80, c === "warrior" ? "Sharpened!" : "Keen arrows!", "#b8862a", 22); sfx("buy");
+  fx.push({ kind: "ring", x: player.x, y: player.y, r: 50, life: 0.4, max: 0.4, color: "#d8a83a" }); save();
+}
 const MAX_LEVEL = 50;
 function gainXp(n) {
   if (player.level >= MAX_LEVEL) { player.xp = 0; return; }
@@ -4562,7 +4591,7 @@ function talk(n) {
   if (readyL[0]) return showTurnIn(n, readyL[0]);
   if (offerL[0]) return showOffer(n, offerL[0]);
   const active = activeL[0];
-  const body = active ? `<p>${active.text}</p><p class="soft">${progressText(active)}</p>` : `<p>${n.line}</p>`;
+  const body = active ? `<p>${wolfTxt(active.text)}</p><p class="soft">${progressText(active)}</p>` : `<p>${n.line}</p>`;
   openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${n.tierShop ? '<button data-act="looks" type="button">Looks</button>' : ""}${n.pets ? '<button data-act="pets" type="button">Pets</button>' : ""}${n.chal ? '<button data-act="chal" type="button">Challenge</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), pets: () => showPets(), looks: () => showLooks(n), chal: () => showChal(n) });
 }
 function rewardText(r) {
@@ -4576,7 +4605,7 @@ function showQuestList(n, readyL, offerL, activeL) {
     { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), turnin: id => showTurnIn(n, QUESTS.find(q => q.id === id)), view: id => showOffer(n, QUESTS.find(q => q.id === id), true) });
 }
 function showOffer(n, q, fromList) {
-  openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${q.text}</p><p class="soft">Where: ${q.where}</p><p class="reward">Reward: ${rewardText(q.reward)}</p>
+  openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${wolfTxt(q.text)}</p><p class="soft">Where: ${q.where}</p><p class="reward">Reward: ${rewardText(q.reward)}</p>
     <div class="row"><button data-act="${fromList ? "back" : "close"}" type="button">${fromList ? "Back" : "Not now"}</button><button data-act="accept" type="button">Accept</button></div>`,
     { back: () => talk(n), accept: () => { quests[q.id] = { state: "active", n: 0, at: Date.now(), ...(q.goal.type === "mats" ? { got: {} } : {}) }; toast(`Quest accepted: ${q.title}`); if (q.onAccept) q.onAccept(); matsCheck(); renderTracker(); save();
       if (questGroups(q)) setTimeout(() => toast(`Fresh ${plural(FOES[q.goal.foe].name)} have gathered at the quest marker`), 900);
@@ -4585,7 +4614,7 @@ function showOffer(n, q, fromList) {
 function showTurnIn(n, q) {
   // Handing things over: you need to be carrying them
   if (q.take && !haveAll(q.take)) return openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>Bring me ${Object.entries(q.take).map(([id, k]) => `${k > 1 ? k + " " : ""}${ITEMS[id].name}`).join(" and ")} first.</p><div class="row"><button data-act="close" type="button">OK</button></div>`);
-  openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${q.done}</p><p class="reward">You receive: ${rewardText(q.reward)}</p>
+  openPanel(`<h2>${q.title}</h2><p class="soft">${n.name}</p><p>${wolfTxt(q.done)}</p><p class="reward">You receive: ${rewardText(q.reward)}</p>
     <div class="row"><button data-act="complete" type="button">Complete quest</button></div>`,
     { complete: () => {
       if (q.take && !haveAll(q.take)) return closePanel();
@@ -4783,6 +4812,7 @@ function showBag(confirmReset, tab) {
     <div class="list">${items.length ? items.map(([id, n]) => `<div class="item"${desk && barItem(id) ? ` draggable="true" data-drag="item:${id}"` : ""}>${thumbTag(id)}<div>${ITEMS[id].mat ? `<span class="swatch" style="background:${ITEMS[id].color}"></span>` : ""}<span${ITEMS[id].rare ? ' class="rare"' : ITEMS[id].crafted ? ' class="crafted"' : ""}>${itName(id)}</span>${n > 1 ? ` x${n}` : ""}${isUpgrade(id) ? '<span class="up">&#9650; Upgrade</span>' : ""}<small>${descOf(id)}</small></div>
       ${ITEMS[id].relic && RELICS[ITEMS[id].relic].buff ? `<button type="button" data-act="use" data-arg="${id}">Use</button>` : ""}
       ${ITEMS[id].mana ? `<button type="button" data-act="mana" data-arg="${id}">Drink</button>` : ""}
+      ${ITEMS[id].edge && ITEMS[id].edgeCls === cls() ? `<button type="button" data-act="edge" data-arg="${id}">Use</button>` : ""}
       ${POTIONS.includes(id) ? `<button type="button" data-act="drink" data-arg="${id}">${id === "grilled_perch" ? "Eat" : "Drink"}</button>` : ""}
       ${ITEMS[id].buff ? `<button type="button" data-act="eat" data-arg="${id}">${BUFFS[ITEMS[id].buff] && /Stew|Pie|Skewers|Chowder|Feast/.test(ITEMS[id].name) ? "Eat" : "Drink"}</button>` : ""}
       ${dropAsk === id ? `<button type="button" class="drop" data-act="drop1" data-arg="${id}">Drop 1</button>${n > 1 ? `<button type="button" class="drop" data-act="dropall" data-arg="${id}">Drop all</button>` : ""}<button type="button" data-act="keep">Keep</button>`
@@ -4791,6 +4821,7 @@ function showBag(confirmReset, tab) {
     {
       use: id => { useRelic(id); showBag(); }, btab: t => { dropAsk = null; showBag(false, t); }, eat: id => { eatBuff(id); showBag(); },
       mana: id => { drinkMana(id); showBag(); },
+      edge: id => { useEdge(id); showBag(); },
       drink: id => { if (player.potionCd > 0) return toast(`Potions ready again in ${Math.ceil(player.potionCd)}s`); drinkPotion(id); showBag(); },
       equip: id => { if (equipItem(id)) { showBag(); if (gpId === id || !isUpgrade(gpId)) promptEquip(); } },
       best: () => { let id; while ((id = Object.keys(player.bag).filter(isUpgrade).sort((a, b) => gearScore(b) - gearScore(a))[0])) equipItem(id); showBag(); promptEquip(); },
@@ -4898,7 +4929,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 99; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 100; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -4907,6 +4938,8 @@ function showShop(n, tab) {
   const sellable = Object.entries(player.bag).filter(([id, c]) => c > 0 && (ITEMS[id].slot || ITEMS[id].bp || ITEMS[id].mat));
   // Most shops show the same pieces in your class's line; Brand, Carly, Fizz and Ash each keep their own trade
   n = { ...n, shop: n.classShop === false ? n.shop : [...new Set(n.shop.map(id => forCls(id)))] };
+  // whetstones and arrowheads only show to the class that uses them
+  n.shop = n.shop.filter(id => !ITEMS[id].edgeCls || ITEMS[id].edgeCls === cls());
   const inTab = t => t === "sell" ? sellable.length > 0 : t === "forge" ? !!n.forge : n.shop.some(id => shopCat(id) === t);
   const tabs = SHOP_TABS.filter(([t]) => inTab(t));
   tab = tab || shopTab[n.id]; if (!tabs.some(([t]) => t === tab)) tab = tabs[0][0];
@@ -5284,7 +5317,7 @@ function wolfUpdate(dt) {
   if (wolf.tgt && (!map.foes.includes(wolf.tgt) || Math.hypot(wolf.tgt.x - p.x, wolf.tgt.y - p.y) > 520)) wolf.tgt = null;
   if (!wolf.tgt) { let bd = 420; for (const f of map.foes) { const d = Math.hypot(f.x - p.x, f.y - p.y); if ((f.aggro || clock - (p.lastAttack || -9) < 2) && d < bd && seeFoe(f)) { bd = d; wolf.tgt = f; } } }
   const f = wolf.tgt, tx = f ? f.x - Math.sign(f.x - wolf.x || 1) * (f.d.r + 14) : p.x - p.facing * 56, ty = f ? f.y + 4 : p.y + 22;
-  const dx = tx - wolf.x, dy = ty - wolf.y, d = Math.hypot(dx, dy), sp = (f ? 320 : 260) * dt;
+  const dx = tx - wolf.x, dy = ty - wolf.y, d = Math.hypot(dx, dy), sp = (f ? 320 : Math.max(260, d * 4)) * dt; // the farther behind, the faster it runs, so it keeps up even with a steed (Lee)
   wolf.moving = d > 8; if (wolf.moving) { const k = Math.min(1, sp / d); wolf.x += dx * k; wolf.y += dy * k; if (Math.abs(dx) > 2) wolf.face = Math.sign(dx); }
   if (f && Math.hypot(f.x - wolf.x, f.y - wolf.y) < f.d.r + 34 && wolf.cd <= 0) {
     wolf.cd = 1.1; wolf.face = Math.sign(f.x - wolf.x) || wolf.face; wolf.bite = 0.2;
@@ -5297,7 +5330,7 @@ function drawWolf() {
   player.pet = "scout"; Object.assign(pet, { x: wolf.x, y: wolf.y, face: wolf.face, moving: wolf.moving });
   ctx.save(); ctx.translate(wolf.x, wolf.y); ctx.scale(1.5, 1.5); ctx.translate(-wolf.x, -wolf.y - (wolf.bite > 0 ? 4 : 0)); drawPet(); ctx.restore();
   player.pet = keepPet; Object.assign(pet, keep);
-  ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = "#3f7a3a"; ctx.strokeStyle = "rgba(255,253,246,.9)"; ctx.lineWidth = 3; ctx.strokeText("Scout", wolf.x, wolf.y - 52); ctx.fillText("Scout", wolf.x, wolf.y - 52);
+  ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = "#3f7a3a"; ctx.strokeStyle = "rgba(255,253,246,.9)"; ctx.lineWidth = 3; ctx.strokeText(wolfName(), wolf.x, wolf.y - 52); ctx.fillText(wolfName(), wolf.x, wolf.y - 52);
 }
 function drawPet() {
   const P = PETS[player.pet]; if (!P || player.dead) return;
@@ -5410,6 +5443,17 @@ function showPetOutfits(k) {
   }
 }
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+// The hunter's wolf (Lee): you name it when Kestrel hands it over, and can rename it in Pets
+const wolfName = () => player.petNames.scout || "Scout", wolfTxt = t => t && t.replace(/\bScout\b/g, wolfName());
+function showWolfName(first) {
+  openPanel(`<h2>${first ? "Name your wolf" : "Rename your wolf"}</h2><p class="soft">${first ? "The pup won't leave your side. What will you call it?" : "Up to 16 letters."}</p>
+    <input id="petNameInput" type="text" maxlength="16" autocomplete="off" value="${esc(player.petNames.scout || "Scout")}" style="font:inherit;font-size:18px;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;width:100%;box-sizing:border-box">
+    <div class="row">${first ? "" : '<button type="button" data-act="back">Cancel</button>'}<button type="button" data-act="ok">${first ? "That's the name" : "Save"}</button></div>`,
+    { ok: () => { const v = document.getElementById("petNameInput").value.replace(/\s+/g, " ").trim().slice(0, 16) || "Scout"; player.petNames.scout = v; save(); closePanel();
+      if (first) banner(`${v} joins you!`, "Your wolf fights beside you"); else showPets(); }, back: () => showPets() });
+  const inp = document.getElementById("petNameInput"); inp.focus(); inp.select();
+  inp.addEventListener("keydown", ev => { if (ev.key === "Enter") { ev.preventDefault(); sheet.querySelector('[data-act="ok"]').click(); } });
+}
 function showPetName(k) {
   openPanel(`<h2>Name your ${PETS[k].name}</h2><p class="soft">Up to 16 letters. Leave it empty to use no name.</p>
     <input id="petNameInput" type="text" maxlength="16" autocomplete="off" value="${esc(player.petNames[k] || "")}" style="font:inherit;font-size:18px;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;width:100%;box-sizing:border-box">
@@ -5663,6 +5707,7 @@ function skillsUpdate(dt) {
   const p = player, s = stats();
   for (const k in p.acd) p.acd[k] = Math.max(0, p.acd[k] - dt);
   p.shieldT = Math.max(0, (p.shieldT || 0) - dt); p.rallyT = Math.max(0, (p.rallyT || 0) - dt);
+  p.edgeT = Math.max(0, (p.edgeT || 0) - dt); p.edgeCd = Math.max(0, (p.edgeCd || 0) - dt);
   for (const b of pbombs) {
     if ((b.t -= dt) > 0) continue;
     fx.push({ kind: "ring", x: b.x, y: b.y, r: 120, life: 0.35, max: 0.35, color: INK }); sfx("boom"); shake = Math.max(shake, 6);
@@ -5708,6 +5753,7 @@ const NB_ICON = (() => {
     Barrier: "M50 14 A36 36 0 1 1 49.9 14 M28 40 A24 24 0 0 1 48 25", Surge: "M58 8 L32 54 L52 54 L40 92 L74 42 L52 42 L64 8 Z",
     Meteor: "M62 62 m-17 0 a17 17 0 1 0 34 0 a17 17 0 1 0 -34 0 M12 12 L46 46 M30 8 L54 38 M8 30 L38 54",
     Volley: "M12 82 Q46 6 88 64 M80 54 L88 66 L74 68", Stew: "M14 50 H86 Q82 86 50 86 Q18 86 14 50 Z M36 40 Q30 30 38 20 M56 40 Q50 30 58 20",
+    Hone: "M14 74 L58 30 L72 44 L28 88 Z M60 22 L84 10 L78 34 M66 18 L72 12 M74 26 L80 20", Arrowhead: "M50 8 L76 50 L58 46 V90 H42 V46 L24 50 Z",
     Relic: "M30 20 H70 L86 40 L50 86 L14 40 Z M14 40 H86 M38 20 L50 40 L62 20", lock: "M30 48 H70 V84 H30 Z M38 48 V32 Q50 16 62 32 V48",
   };
   const cache = {};
@@ -5725,17 +5771,19 @@ const ABIL = {
   whirl: { fn: () => skill(), label: p => p.level < 3 ? "Lv 3" : map.vehicle ? "Volley" : WHIRL().short, icon: p => p.level < 3 ? "lock" : map.vehicle ? "Volley" : WHIRL().short, cd: p => p.skillCd / skillCdMax() },
   potion: { fn: () => drinkPotion(), label: () => "Potion", icon: () => "Potion", cd: p => p.potionCd / 10, count: true },
   mana: { fn: () => drinkMana(), label: () => "Mana", icon: () => "Mana", cd: p => (p.manaCd || 0) / 10, count: true, own: () => (player.bag.mana_potion || 0) + (player.bag.greater_mana || 0) },
+  edge: { fn: () => useEdge(), label: () => EDGE_LABEL[cls()], icon: () => EDGE_ICON[cls()], cd: p => nineCd(p), count: true, own: () => nineOwn() },
 };
 // class abilities read SKILLS at call time, so a class change shows its own names and icons
 for (const k of ["dash", "shield", "bomb", "rally", "storm"]) ABIL[k] = { fn: () => useSkill(k), label: p => p.level < SKILLS[k].lv ? `Lv ${SKILLS[k].lv}` : SKILLS[k].short, icon: p => p.level < SKILLS[k].lv ? "lock" : SKILLS[k].short, cd: p => (p.acd[k] || 0) / SKILLS[k].cd };
 // any potion or relic you can use can go on the bar too ("item:<id>")
-const barItem = id => ITEMS[id] && (POTIONS.includes(id) || (ITEMS[id].mana && cls() === "mage") || (ITEMS[id].relic && RELICS[ITEMS[id].relic].buff));
+const barItem = id => ITEMS[id] && (POTIONS.includes(id) || (ITEMS[id].mana && cls() === "mage") || ITEMS[id].edgeCls === cls() || (ITEMS[id].relic && RELICS[ITEMS[id].relic].buff));
 const SHORT = { potion: "Ink Potion", greater_potion: "Greater Potion", stew: "Stew" };
 function abil(a) {
   if (!a) return null;
   if (ABIL[a]) return ABIL[a];
   const id = a.slice(5); if (!barItem(id)) return null;
-  const pot = POTIONS.includes(id), mana = !!ITEMS[id].mana;
+  const pot = POTIONS.includes(id), mana = !!ITEMS[id].mana, edge = !!ITEMS[id].edge;
+  if (edge) return { fn: () => useEdge(id), label: () => ITEMS[id].name.split(" ")[0], icon: () => EDGE_ICON[ITEMS[id].edgeCls], cd: p => (p.edgeCd || 0) / 30, count: true, own: () => player.bag[id] || 0 };
   return { fn: () => { mana ? drinkMana(id) : pot ? drinkPotion(id) : useRelic(id); if (!panel.hidden && sheet.querySelector("h2")?.textContent === "Bag") showBag(); },
     label: () => SHORT[id] || ITEMS[id].name.replace(/^.*'s /, ""), icon: () => mana ? "Mana" : pot ? (id === "stew" ? "Stew" : "Potion") : "Relic", cd: p => mana ? (p.manaCd || 0) / 10 : pot ? p.potionCd / 10 : 0, count: true, own: () => player.bag[id] || 0 };
 }
@@ -5747,7 +5795,9 @@ function useSlot(i) { const a = abil(abar.slots[i]); if (a && !cine) a.fn(); }
 function saveBar() { try { localStorage.setItem(BAR_KEY, JSON.stringify(abar.slots)); } catch {} }
 function buildBar() {
   // Mages get Mana on key 9 if it's free; other classes don't keep it
+  // warriors and hunters get their whetstone or arrowheads there instead
   const mi = abar.slots.indexOf("mana"); if (cls() === "mage" && mi < 0 && abar.slots[8] === null) abar.slots[8] = "mana"; else if (cls() !== "mage" && mi >= 0) abar.slots[mi] = null;
+  const ei = abar.slots.indexOf("edge"); if (cls() !== "mage" && ei < 0 && abar.slots[8] === null) abar.slots[8] = "edge"; else if (cls() === "mage" && ei >= 0) abar.slots[ei] = null;
   abar.el.innerHTML = "";
   abar.slots.forEach((a, i) => {
     const A = abil(a);
@@ -5862,7 +5912,7 @@ addEventListener("keydown", ev => {
   if (k === "k" || k === "shift") dodge();
   if (k === "l") skill();
   if (k === "h") drinkPotion();
-  if (k === "n") drinkMana();
+  if (k === "n") useEdge();
   if (k === "q") showQuestLog();
   if (k === "m") showMap();
   if (k === "i" || k === "b") showBag();
@@ -5878,7 +5928,7 @@ addEventListener("blur", () => keys.clear());
 const press = (id, fn) => document.getElementById(id).addEventListener("pointerdown", ev => { ev.preventDefault(); fn(); });
 { const ba = document.getElementById("btnAttack"); let hold = 0;
   ba.addEventListener("pointerdown", ev => { ev.preventDefault(); attack(); clearInterval(hold); hold = setInterval(() => { if (player.attackCd <= 0 && !nearObj()) attack(); }, 60); });
-  for (const e of ["pointerup", "pointercancel", "pointerleave"]) ba.addEventListener(e, () => clearInterval(hold)); } press("btnDodge", dodge); press("btnSkill", skill); press("btnPotion", drinkPotion); press("btnMana", () => drinkMana());
+  for (const e of ["pointerup", "pointercancel", "pointerleave"]) ba.addEventListener(e, () => clearInterval(hold)); } press("btnDodge", dodge); press("btnSkill", skill); press("btnPotion", drinkPotion); press("btnMana", () => useEdge());
 document.getElementById("btnQuests").addEventListener("click", showQuestLog);
 const btnSound = document.getElementById("btnSound");
 function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off"); btnSound.style.textDecoration = soundOn ? "none" : "line-through"; }
@@ -8641,7 +8691,7 @@ function drawHud() {
   const s = stats(), p = player;
   const pots = POTIONS.reduce((a, id) => a + (p.bag[id] || 0), 0);
   const tp = talentPoints();
-  const key = [p.level, Math.ceil(p.hp), s.maxHp, p.xp, p.coins, pots, s.def, tp, cls(), Math.round(p.mp ?? 0), maxMana(), (p.bag.mana_potion || 0) + (p.bag.greater_mana || 0)].join();
+  const key = [p.level, Math.ceil(p.hp), s.maxHp, p.xp, p.coins, pots, s.def, tp, cls(), Math.round(p.mp ?? 0), maxMana(), nineOwn()].join();
   if (key !== hudKey) {
     hudKey = key;
     el("lvl").textContent = `Lv ${p.level}`; el("hptext").textContent = `${Math.ceil(p.hp)}/${s.maxHp}`;
@@ -8651,7 +8701,7 @@ function drawHud() {
     if (mage) { const mx = maxMana(), mp = Math.round(p.mp ?? mx); el("mpbar").style.width = `${100 * mp / mx}%`; el("mptext").textContent = `${mp}/${mx}`; }
     el("xpbar").style.width = p.level >= MAX_LEVEL ? "100%" : `${100 * p.xp / xpToNext(p.level)}%`;
     el("potCount").innerHTML = tally(pots);
-    { const bm = el("btnMana"); if (bm.hidden !== (!mage || desk)) bm.hidden = !mage || desk; if (mage) { setIcon(bm, "Mana"); el("manaCount").innerHTML = tally((p.bag.mana_potion || 0) + (p.bag.greater_mana || 0)); } }
+    { const bm = el("btnMana"); if (bm.hidden !== desk) bm.hidden = desk; if (!desk) { setIcon(bm, EDGE_ICON[cls()]); bm.querySelector(".l").textContent = EDGE_LABEL[cls()]; el("manaCount").innerHTML = tally(nineOwn()); } }
     el("armorVal").textContent = `Armor ${s.def}`;
     // computers show the hotkey in each name
     const hk = c => desk ? ` (${c})` : "";
@@ -8670,7 +8720,7 @@ function drawHud() {
   el("cdSkill").style.setProperty("--p", `${p.skillCd / skillCdMax() * 100}%`); el("btnSkill").classList.toggle("nomana", p.level >= 3 && !map.vehicle && lowMana(WHIRL()));
   el("cdDodge").style.setProperty("--p", `${p.dodgeCd / 1.0 * 100}%`);
   el("cdPotion").style.setProperty("--p", `${p.potionCd / 10 * 100}%`);
-  el("cdMana").style.setProperty("--p", `${(p.manaCd || 0) / 10 * 100}%`);
+  el("cdMana").style.setProperty("--p", `${nineCd(p) * 100}%`);
   if (desk) abarHud(pots); else pad2Hud();
 }
 
@@ -8739,7 +8789,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { showLooks, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
