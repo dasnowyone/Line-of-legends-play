@@ -3509,16 +3509,20 @@ function drawMascot(m) {
 }
 // ---------- Night in the Proving Grounds (Lee): after dark on your own clock, braziers, lanterns and the temple light the camps ----------
 let nightForce = null;
-const isNight = () => nightForce != null ? nightForce : (h => h >= 20 || h < 6)(new Date().getHours());
+// Night (Lee): one minute of every twenty, on the real clock so everyone's nights line up. It fades in and out over 6 seconds
+const NIGHT_EVERY = 1200, NIGHT_LEN = 60, NIGHT_FADE = 6;
+const nightAmt = () => { if (nightForce != null) return nightForce ? 1 : 0; const t = (Date.now() / 1000) % NIGHT_EVERY - (NIGHT_EVERY - NIGHT_LEN);
+  return t < 0 ? 0 : Math.min(1, t / NIGHT_FADE, (NIGHT_LEN - t) / NIGHT_FADE); };
+const isNight = () => nightAmt() > 0.5;
 const PG_LIGHTS = () => [...W_PGPROPS.filter(p => p.kind !== "bunting").map(p => p.kind === "glow" ? [p.x, p.y, p.r, "255,200,110"] : [p.x, p.y - (p.kind === "brazier" ? 40 : 56), p.kind === "brazier" ? 150 : 110, "255,170,70"]),
   [12372, 30300, 150, "255,150,60"], [4300, 29700, 380, "170,140,255"], [3335, 30060, 160, "250,220,120"], [2830, 27500, 130, "250,210,110"], [2385, 27420, 100, "250,210,110"], [3150, 27980, 170, "255,160,60"],
   ...[[4300, 26310], [4300, 26310]].map(([x, y], i) => [x + (i ? 92 : -92), y + 140, 110, "255,170,70"]), [3620, 25800, 120, "250,210,110"], [4995, 25800, 120, "250,210,110"], [4705, 25760, 150, "255,140,50"]];
 function drawNight() {
-  if (map.id !== "world" || !isNight()) return; const z = map.zoneAt(player.x, player.y); if (!["proving", "yard_camp", "lanes_camp", "sanctum_camp", "square_camp", "village"].includes(z.id)) return;
-  ctx.fillStyle = "rgba(14,18,52,.42)"; ctx.fillRect(0, 0, cssW, cssH);
+  const na = nightAmt(); if (map.id !== "world" || na <= 0) return; // the whole outdoors gets dark, not only the towns
+  ctx.fillStyle = `rgba(14,18,52,${0.24 * na})`; ctx.fillRect(0, 0, cssW, cssH); // lighter than before (Lee: not as dark)
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const [x, y, r, c] of PG_LIGHTS()) { const sx = (x - camX) * view, sy = (y - camY) * view, rr = r * view * (0.95 + 0.05 * Math.sin(clock * 6 + x)); if (sx < -rr || sy < -rr || sx > cssW + rr || sy > cssH + rr) continue;
-    const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, rr); g.addColorStop(0, `rgba(${c},.42)`); g.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, rr, 0, 7); ctx.fill(); }
+    const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, rr); g.addColorStop(0, `rgba(${c},${0.34 * na})`); g.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, rr, 0, 7); ctx.fill(); }
   ctx.restore();
 }
 // trophy walls: a slot for each of the Seven Stones and a plaque with your best challenge score
@@ -4981,7 +4985,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 103; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 104; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6051,7 +6055,7 @@ document.getElementById("hud").addEventListener("click", () => {
       <div class="item"><div>Pet rescues<small>Level 12, Inky already rescued, at Sorrel's Watch where the fox kit rescue starts</small></div><button type="button" data-act="rescue">Go</button></div>
       <div class="item"><div>Go to Miner Sange<small>Level 5, at the start of the pick quest</small></div><button type="button" data-act="sange">Go</button></div>
       <div class="item"><div>Go to Angler Tobin<small>Level 6, no rod yet, at the start of the fishing rod quest</small></div><button type="button" data-act="tobin">Go</button></div>
-      <div class="item"><div>Night look<small>Switches the Proving Grounds between day and night. Normally night follows your clock, 8pm to 6am</small></div><button type="button" data-act="night">Switch</button></div>
+      <div class="item"><div>Night look<small>Switches between day and night. Normally night comes for one minute every 20 minutes</small></div><button type="button" data-act="night">Switch</button></div>
       <div class="item"><div>Unlock every waystone<small>Travel anywhere from any waystone</small></div><button type="button" data-act="ways">Go</button></div></div>
     <div class="row"><button data-act="close" type="button">Close</button></div>`,
     { rescue: () => { if (player.level < 12) { player.level = 12; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["pet_a", "pet_b", "pet_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
@@ -6060,7 +6064,7 @@ document.getElementById("hud").addEventListener("click", () => {
       kit: () => { player.tools = ["pick", "axe", "rod"]; for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) quests[id] = { state: "done", n: 0, at: Date.now() };
         player.recipes = [3, 4, 5].map(t => "pattern_" + t); player.pouch = 2; for (const id of Object.keys(MATS)) player.bag[id] = 40; player.coins += 200000;
         save(); renderTracker(); closePanel(); banner("Crafting kit", "Every tool, pattern and plenty of materials"); },
-      night: () => { nightForce = !isNight(); closePanel(); toast(nightForce ? "Night in the Proving Grounds" : "Day in the Proving Grounds"); }, tobin: () => { if (player.level < 6) { player.level = 6; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
+      night: () => { nightForce = !isNight(); closePanel(); toast(nightForce ? "Night" : "Day"); }, tobin: () => { if (player.level < 6) { player.level = 6; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c"]) quests[id] = { state: "done", n: 0, at: Date.now() };
         for (const id of ["fish_r", "fish_b"]) delete quests[id]; quests.fish_a = { state: "done", n: 0, at: Date.now() }; delete player.bag.lucky_lure;
         player.tools = (player.tools || []).filter(t => t !== "rod"); goTo("world", TOBIN.at[0] + 70, TOBIN.at[1] + 50, true); save(); renderTracker(); closePanel(); },
       sange: () => { if (player.level < 5) { player.level = 5; player.xp = 0; player.hp = stats().maxHp; } for (const id of ["craft_a", "craft_b", "craft_c", "craft_d", "craft_e", "fish_a", "fish_r", "fish_b"]) delete quests[id];
