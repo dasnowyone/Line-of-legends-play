@@ -1,0 +1,11 @@
+{
+  "appId": "com.dasnowyone.lineoflegends",
+  "appName": "Line of Legends",
+  "webDir": "www",
+  "backgroundColor": "#f6f3ea",
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "backgroundColor": "#f6f3ea"
+  }
+}
