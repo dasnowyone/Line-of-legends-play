@@ -314,6 +314,30 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 #fade { inset: 0; background: var(--paper); opacity: 0; pointer-events: none; z-index: 4; transition: opacity .2s; }
 #fade.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .toast { animation-duration: 3s; } #banner, #fade { transition: none; } }
+/* Lee plays the phone sideways: quest box up beside the minimap, skills in a row next to the main buttons,
+   gear prompt up top out of the fight */
+@media (orientation: landscape) and (max-height: 520px) {
+  #mapbox { grid-template-columns: auto auto; align-items: start; column-gap: 8px; row-gap: 4px; }
+  #minimap, body.desk #minimap { grid-column: 2; grid-row: 1; width: 90px; height: 120px; }
+  #zoneTag, body.desk #zoneTag { grid-column: 2; grid-row: 2; width: 90px; font-size: 13px; }
+  #stoneDial, body.desk #stoneDial { position: static; grid-column: 1; grid-row: 2 / span 2; justify-self: end; width: 40px; height: 40px; }
+  #tracker, #tracker.fold { grid-column: 1; grid-row: 1; max-width: min(30vw, 210px); }
+  .ccard canvas { max-width: 92px; } .sheet h2 { font-size: 24px; }
+  #skillcol { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1));
+    flex-direction: row-reverse; align-items: flex-end; transform-origin: 100% 100%; scale: var(--padk, 1); }
+  #gearPrompt { left: calc(max(10px, env(safe-area-inset-left, 0px)) + 186px); transform: none; top: calc(56px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(300px, 36vw); font-size: 15px; padding: 5px 8px 5px 10px; }
+  #gearPrompt small { font-size: 12px; }
+  #coach { top: calc(64px + env(safe-area-inset-top, 0px)); }
+}
+/* Phones held upright get a nudge to turn sideways (Lee) */
+#turnTip { left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 7; width: min(82vw, 320px); background: var(--card); border: 2.5px solid var(--ink); border-radius: 14px; padding: 14px 16px; text-align: center; display: grid; gap: 8px; justify-items: center; font-size: 19px; line-height: 1.25; box-shadow: 0 4px 0 rgba(0,0,0,.12); }
+#turnTip[hidden] { display: none; }
+#turnTip svg { width: 92px; height: 70px; }
+#turnTip svg .ph { animation: turnph 2.4s ease-in-out infinite; transform-origin: 46px 38px; }
+@keyframes turnph { 0%, 25% { rotate: 0deg; } 55%, 100% { rotate: -90deg; } }
+#turnTip small { color: var(--ink-soft); font-size: 14px; }
+#turnTip .row { display: flex; gap: 8px; }
+@media (orientation: landscape) { #turnTip { display: none; } }
 body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #pad2, body.cine #abar, body.cine #gearPrompt, body.cine #coach, body.cine #toasts, body.cine #tracker { opacity: 0; pointer-events: none; transition: opacity .4s; }
 .qnew, .qready { color: var(--gold); font-weight: bold; }
 .tdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-left: 5px; vertical-align: middle; }
@@ -359,6 +383,8 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
 <div id="coach" class="ui" hidden><span id="coachText"></span><button type="button" id="coachSkip">Skip tips</button></div>
 <div id="gearPrompt" class="ui" hidden><div id="gpText"></div><button type="button" id="gpEquip">Equip</button><button type="button" id="gpNo" aria-label="Dismiss">&times;</button></div>
 <div id="getUp" class="ui" hidden></div>
+<div id="turnTip" class="ui" hidden><svg viewBox="0 0 92 70" aria-hidden="true"><g class="ph"><rect x="31" y="8" width="30" height="56" rx="6" fill="#fffdf6" stroke="#1b1b20" stroke-width="2.5"/><line x1="42" y1="57" x2="50" y2="57" stroke="#1b1b20" stroke-width="2.5" stroke-linecap="round"/></g><path d="M74 20 a30 30 0 0 1 4 26" fill="none" stroke="#c99a17" stroke-width="2.5" stroke-linecap="round"/><path d="M73 42 l5 5 l4 -6" fill="none" stroke="#c99a17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div>Turn your phone sideways</div><small>Line of Legends plays best held sideways: more room to see and to fight.</small><div class="row"><button type="button" id="turnOk">Keep upright</button></div></div>
 <div id="fade" class="ui"></div>
 <div id="panel" class="ui" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 
@@ -1234,8 +1260,9 @@ function buildWorld() {
 
   const SP = (foe, x, y, r, n, respawn) => { const [nx, ny] = P(x, y); return { foe, x: nx, y: ny, r: Math.round(r * 1.3), n, respawn }; };
   const spawners = [
-    SP("dash", 3000, 7600, 260, 5), SP("dash", 4600, 7900, 260, 5), SP("dash", 3300, 8450, 200, 4), SP("dash", 4500, 8450, 200, 4),
-    SP("dash", 5300, 7100, 260, 5), SP("dash", 2400, 7000, 240, 4),
+    // Lee: the first quest felt like a swarm. Dashes roam in threes, spread over the meadow
+    SP("dash", 3000, 7600, 200, 3), SP("dash", 4600, 7900, 200, 3), SP("dash", 3300, 8450, 180, 3), SP("dash", 4500, 8450, 180, 3),
+    SP("dash", 5300, 7100, 200, 3), SP("dash", 2400, 7000, 200, 3), SP("dash", 3900, 7050, 180, 3),
     SP("squiggle", 6600, 8600, 280, 5), SP("squiggle", 7000, 7200, 260, 4), SP("squiggle", 2200, 8800, 240, 4), SP("squiggle", 5000, 8200, 220, 4),
     SP("spider", 500, 7300, 300, 5), SP("spider", 1100, 9000, 280, 5), SP("spider", 600, 9500, 220, 4),
     SP("triangle", 3100, 5300, 280, 6), SP("triangle", 1900, 6300, 260, 5), SP("triangle", 3300, 6150, 220, 5),
@@ -3036,7 +3063,7 @@ const perchSpot = () => MAPS.world.objs.filter(o => o.node === "fish" && o.item 
 // The pick and axe quest (from level 5), then the rod and Mara's kitchen
 QUESTS.push(
   { id: "craft_a", giver: "quill", title: "The Miner in Town", needs: [], req: () => player.level >= 5, where: "Inkwell Village, by the east gate", goal: { type: "talk", npc: "sange" },
-    text: "A miner named Sange has opened a mining shop by the east gate. He says the hills are full of ore, if you have a pick to dig it out. Go and meet him.", reward: { xp: 120, coins: 40 }, mark: CRAFT_SPOTS.sange,
+    text: "A miner named Sange has opened a mining shop by the east gate. He says the hills are full of ore, if you have a pick to dig it out. Go and meet him. (Crafting is never needed to finish your journey, but it opens up the finest gear, capes and more.)", reward: { xp: 120, coins: 40 }, mark: CRAFT_SPOTS.sange,
     done: "Quill sent you? Good. Name's Sange. Ever swung a pick? No? We'll fix that." },
   { id: "craft_b", giver: "sange", title: "A Pick of Your Own", needs: ["craft_a"], where: "The old dig, northeast of Inkwell Village", goal: { type: "mats", need: { copper_ore: 3, wood: 4 } }, turnin: "brand", take: { copper_ore: 3 },
     text: "Every miner makes their own first pick. Bring 3 Copper Ore and 4 Wood. Loose copper lies all over the old dig northeast of town, and there are fallen logs in the meadow. Then take the ore to Smith Brand.",
@@ -3911,7 +3938,7 @@ function save() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       level: player.level, xp: player.xp, coins: player.coins, name: player.name || "", gear: player.gear, bag: player.bag, dyes: player.dyes, dye: player.dye, gems: player.gems, elites: player.elites, talents: player.talents, templeRisen: temple.risen, hollowRisen: hollow.risen, dgRisen: DGL.filter(g => g.risen).map(g => g.id), tut: player.tut, st: player.st, ach: player.ach, title: player.title, pets: player.pets, pet: player.pet, petNames: player.petNames, petOutfits: player.petOutfits || [], petWear: player.petWear || {}, looks: player.looks || [], lookOn: player.lookOn || null, chal: player.chal || {}, home: player.home, relics: player.relics, buffs: player.buffs, steeds: player.steeds, coats: player.coats, coat: player.coat, mounted: player.mounted, quests, taken, found, bounty,
       map: player.map, x: player.x, y: player.y, wv: 2, cls: player.cls || null, gearConv: player.gearConv || null,
-      skOrder: player.skOrder || null, tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
+      skOrder: player.skOrder || null, craftAsk: !!player.craftAsk, tools: player.tools, recipes: player.recipes, up: player.up, glows: player.glows, glow: player.glow, pouch: player.pouch, gemRec: player.gemRec,
     }));
   } catch {}
 }
@@ -3926,7 +3953,7 @@ function load() {
     if (s.templeRisen) setRisen(true);
     if (s.hollowRisen) setHollow(true);
     for (const id of s.dgRisen || []) if (DG[id]) setDg(DG[id], true);
-    player.name = typeof s.name === "string" ? s.name.slice(0, 16) : ""; player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.petOutfits = Array.isArray(s.petOutfits) ? s.petOutfits : []; player.petWear = s.petWear || {}; player.looks = Array.isArray(s.looks) ? s.looks : []; player.lookOn = s.lookOn || null; player.chal = s.chal || {}; player.home = { own: [], off: [], look: null, roof: null, herbDay: "", ...(s.home || {}) }; setTimeout(syncHome); player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
+    player.name = typeof s.name === "string" ? s.name.slice(0, 16) : ""; player.skOrder = Array.isArray(s.skOrder) ? s.skOrder : null; player.craftAsk = !!s.craftAsk; player.cls = CLASSES_OK(s.cls); if (player.cls) setTimeout(pruneTalents, 0); player.st = s.st || {}; player.ach = s.ach || []; player.title = s.title || null; player.pets = s.pets || []; player.pet = s.pet || null; player.petNames = s.petNames || {}; player.petOutfits = Array.isArray(s.petOutfits) ? s.petOutfits : []; player.petWear = s.petWear || {}; player.looks = Array.isArray(s.looks) ? s.looks : []; player.lookOn = s.lookOn || null; player.chal = s.chal || {}; player.home = { own: [], off: [], look: null, roof: null, herbDay: "", ...(s.home || {}) }; setTimeout(syncHome); player.tut = s.tut || ["all"]; player.relics = s.relics || []; player.buffs = s.buffs || {};
     player.tools = s.tools || []; player.recipes = s.recipes || []; player.up = s.up || {}; player.glows = s.glows || []; player.glow = s.glow || null; player.pouch = s.pouch || 0; player.gemRec = s.gemRec || [];
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
@@ -3973,12 +4000,14 @@ for (const q of QUESTS) if (quests[q.id]?.state === "active") questGroups(q);
 // Hunt quests (Lee): taking one brings fresh groups of its enemy to the quest marker. They leave once the hunt is done
 function questGroups(q) {
   const g = q.goal, W = MAPS.world; if (g.type !== "kill" || g.n < 2 || !q.mark || !FOES[g.foe] || W.spawners.some(s => s.questOnly === q.id)) return 0;
-  const groups = Math.ceil(g.n / 4); let made = 0;
-  for (let t = 0; t < 240 && made < groups; t++) {
-    const a = Math.random() * 6.28, d = 220 + Math.random() * (t < 120 ? 520 : 900), x = q.mark[0] + Math.cos(a) * d, y = q.mark[1] + Math.sin(a) * d;
+  // Lee: no swarm. Only top up what already roams near the marker, in pairs spread well apart
+  const near = (W.foes || []).filter(f => (f.d.id === g.foe || f.type === g.foe) && Math.hypot(f.x - q.mark[0], f.y - q.mark[1]) < 1100).length;
+  const groups = Math.ceil(Math.max(0, g.n - near) / 2); let made = 0;
+  for (let t = 0; t < 300 && made < groups; t++) {
+    const a = Math.random() * 6.28, d = 300 + Math.random() * (t < 150 ? 700 : 1100), x = q.mark[0] + Math.cos(a) * d, y = q.mark[1] + Math.sin(a) * d;
     // never in or right next to a camp, where enemies won't fight (Lee saw a hunt group standing in Sorrel's Watch)
-    if (blocked(W, x, y, 40) || inCamp(W, x, y, 2.1) || W.spawners.some(s => s.questOnly === q.id && Math.hypot(s.x - x, s.y - y) < 360)) continue;
-    const s = { foe: g.foe, x: Math.round(x), y: Math.round(y), r: 160, n: 4, questOnly: q.id, timer: 0, live: 0, back: [] };
+    if (blocked(W, x, y, 40) || inCamp(W, x, y, 2.1) || W.spawners.some(s => Math.hypot(s.x - x, s.y - y) < (s.questOnly === q.id ? 480 : s.foe === g.foe ? 320 : 0))) continue;
+    const s = { foe: g.foe, x: Math.round(x), y: Math.round(y), r: 90, n: 2, questOnly: q.id, timer: 0, live: 0, back: [] };
     W.spawners.push(s); for (let i = 0; i < s.n; i++) spawnFoe(W, s); made++;
   }
   return made;
@@ -4259,7 +4288,7 @@ const resetTemple = () => resetDungeon("temple");
 function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05)) || (map.SAFE && map.SAFE.some(z => Math.hypot(player.x - z.x, player.y - z.y) < z.r))); }
 function hurtPlayer(raw, lv) {
   if (inSafe()) return;
-  if (player.dead || player.dodgeT > 0 || player.dashT > 0) return;
+  if (player.dead || player.dodgeT > 0 || player.dashT > 0 || player.graceT > 0) return;
   const s = stats();
   const gap = Math.max(0, lv - player.level);
   raw = raw * (1 + 0.12 * gap) * (0.85 + Math.random() * 0.3);
@@ -4289,7 +4318,9 @@ function showGetUp() {
 function getUp() {
   if (!player.dead || player.gems < GETUP_GEMS) return;
   player.gems -= GETUP_GEMS; player.coins += player.lostCoins || 0; player.lostCoins = 0;
-  player.dead = 0; player.hp = Math.round(stats().maxHp * 0.6); player.dodgeT = 1.2; player.hurtT = 0;
+  player.dead = 0; player.hp = Math.round(stats().maxHp * 0.6); player.graceT = 1.5; player.hurtT = 0; player.dodgeT = 0;
+  // Lee: stand still after getting up, not keep walking the way you were going when you fell
+  joy.active = false; keys.clear(); player.vx = player.vy = 0; player.lastDir = null; player.moving = false;
   document.getElementById("getUp").hidden = true; bannerTimer = 0; document.getElementById("banner").classList.remove("show");
   floater(player.x, player.y - 90, "Back on your feet!", GOLD, 22); sfx("rare"); save();
 }
@@ -4607,7 +4638,11 @@ function equipItem(id) {
 }
 // Show an "Equip" card for the best upgrade waiting in the bag.
 let gpId = null, gpTimer = 0;
+// Lee: an upgrade picked up mid-fight waits until the fight is over, so the prompt never covers the action
+let gpWait = null, gpQuiet = 0;
+const fighting = () => !player.dead && (map.foes || []).some(f => f.aggro && f.hp > 0 && Math.hypot(f.x - player.x, f.y - player.y) < 900);
 function promptEquip(id) {
+  if (fighting()) { gpWait = id || gpWait || true; gpQuiet = 0; document.getElementById("gearPrompt").hidden = true; return; }
   if (!id) id = Object.keys(player.bag).filter(isUpgrade).sort((a, b) => (gearScore(b) - gearScore(player.gear[ITEMS[b].slot])) - (gearScore(a) - gearScore(player.gear[ITEMS[a].slot])))[0];
   const el = document.getElementById("gearPrompt");
   if (!id) { el.hidden = true; gpId = null; return; }
@@ -4781,12 +4816,22 @@ function renderTracker() {
     ? act.map(q => `<div><b>${q.title}</b><span class="${quests[q.id].state === "ready" ? "done" : ""}">${progressText(q)}</span>${quests[q.id].state === "active" ? `<i>${q.where}</i>` : ""}</div>`).join("")
     : "");
 }
+function craftInvite() {
+  player.craftAsk = true; save(); sfx("quest");
+  openPanel(`<h2>Crafting is open</h2><p>Miner Sange has opened a mining shop by the east gate. Learn to mine ore, cut wood and fish, and the crafters in town will make things for you: Smith Brand, Tailor Carly, Carpenter Clegg and Alchemist Fizz.</p>
+    <p class="soft">Crafting is never needed to finish the game. It does open up cool items: the finest gear of each tier, capes, upgrades up to +5, potions, stew and weapon glows.</p>
+    <p class="reward">Elder Quill has the first quest: The Miner in Town.</p>
+    <div class="row"><button data-act="close" type="button">Maybe later</button><button data-act="go" type="button">Start crafting</button></div>`,
+    { go: () => { const q = QUESTS.find(q => q.id === "craft_a"); if (questAvailable(q)) { quests.craft_a = { state: "active", n: 0, at: Date.now() }; toast(`Quest accepted: ${q.title}`); renderTracker(); save(); } closePanel(); } });
+}
 // Lee: no standing "New quests" box. When a quest opens up, one notice names who has it
 let questSeen = null;
 setInterval(() => {
   if (cine || classPicking) return;
   const av = QUESTS.filter(questAvailable);
   if (!questSeen) { questSeen = new Set(av.map(q => q.id)); return; }
+  // Lee: crafting gets a proper invitation, not just a notice
+  if (av.some(q => q.id === "craft_a") && !player.craftAsk && panel.hidden && !player.dead && !paused && !fighting() && window.__started) craftInvite();
   const fresh = av.filter(q => !questSeen.has(q.id)); fresh.forEach(q => questSeen.add(q.id));
   if (!fresh.length) return;
   const who = [...new Set(fresh.map(q => npcById(q.giver).name))];
@@ -5056,7 +5101,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 105; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 106; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5996,7 +6041,7 @@ function pad2Hud() {
     if (skillcol.children.length && !p.tut.includes("skillcol") && window.__started) {
       p.tut.push("skillcol"); save(); const S = SKILLS[skillcol.children[0].dataset.k];
       setTimeout(() => { paused = true; skTutPause = true;
-        openPanel(`<h2>New skill: ${S.name}</h2><p>${S.desc || ""}</p><p>New skills line up down the right side of the screen, under your quest, one at a time as you unlock them. Tap one to use it.</p>
+        openPanel(`<h2>New skill: ${S.name}</h2><p>${S.desc || ""}</p><p>${sideways() ? "New skills line up along the bottom, next to Attack," : "New skills line up down the right side of the screen, under your quest,"} one at a time as you unlock them. Tap one to use it.</p>
           <p><b>Want them in a different order?</b> Press and hold a skill until it wiggles, then tap the skill you want it to trade places with.</p>
           <div class="skdemo"><span class="pick">Hold</span>&#8644;<span>Tap</span></div><p class="soft">The game is paused until you tap Got it.</p>
           <div class="row"><button data-act="close" type="button">Got it</button></div>`); }, 900);
@@ -6019,7 +6064,12 @@ function showMore() {
     <div class="row">${bestSteed() ? `<button type="button" data-act="ride">${player.mounted ? "Walk" : "Ride"}</button>` : ""}<button type="button" data-act="map">Map</button><button type="button" data-act="pets">Pets</button><button type="button" data-act="sound">Sound ${soundOn ? "on" : "off"}</button><button data-act="close" type="button">Close</button></div>`,
     { sound: () => { btnSound.click(); showMore(); }, use: id => { ITEMS[id].mana ? drinkMana(id) : POTIONS.includes(id) ? drinkPotion(id) : useRelic(id); closePanel(); }, ride: () => { closePanel(); btnRide.click(); }, map: () => { closePanel(); showMap(); }, pets: () => showPets() });
 }
-{ const fit = () => document.body.style.setProperty("--padk", desk ? 1 : Math.max(0.78, Math.min(1, innerHeight / 820, innerWidth / 430)).toFixed(3)); fit(); addEventListener("resize", fit); }
+const sideways = () => !desk && innerWidth > innerHeight && innerHeight <= 520;
+{ const fit = () => document.body.style.setProperty("--padk", desk ? 1 : (sideways() ? Math.min(1, innerHeight / 440) : Math.max(0.78, Math.min(1, innerHeight / 820, innerWidth / 430))).toFixed(3)); fit(); addEventListener("resize", fit); }
+// Phones held upright: ask once per visit to turn sideways (Lee). Turning the phone hides it, "Keep upright" puts it away
+let turnDone = false;
+document.getElementById("turnOk").onclick = () => { turnDone = true; document.getElementById("turnTip").hidden = true; };
+function turnTick() { const el = document.getElementById("turnTip"), show = !desk && !turnDone && !!window.__started && !!player.cls && !cine && document.getElementById("panel").hidden && innerHeight > innerWidth; if (el.hidden === show) el.hidden = !show; if (show === false && innerWidth > innerHeight && window.__started) turnDone = true; }
 if (desk) { document.body.classList.add("desk"); abar.el.hidden = false; buildBar(); }
 // the menu row sits just under the HUD box, which grew a mana bar with classes
 { const hud = document.getElementById("hud"); new ResizeObserver(() => document.body.style.setProperty("--hudb", `${hud.offsetTop + hud.offsetHeight + 8}px`)).observe(hud); }
@@ -6253,6 +6303,8 @@ function update(dt) {
   clock += dt; shake = Math.max(0, shake - dt * 14);
   if (bannerTimer > 0 && (bannerTimer -= dt) <= 0) document.getElementById("banner").classList.remove("show");
   if (gpTimer > 0 && (gpTimer -= dt) <= 0) document.getElementById("gearPrompt").hidden = true;
+  if (player.graceT > 0) player.graceT -= dt; // a moment of safety after getting back up
+  if (gpWait) { if (fighting()) gpQuiet = 0; else if ((gpQuiet += dt) > 1.5) { const w = gpWait; gpWait = null; promptEquip(w === true || !isUpgrade(w) ? undefined : w); } }
   musicTick(dt); ambienceTick(dt); folkTick(dt); keeperTick(dt); penTick(dt); beastTick(dt); mascotTick(dt); chalTick(dt); gatherTick(dt); lessonTick(dt);
   // Save your spot every few seconds, so a page reload puts you back where you were
   if ((autoSaveT -= dt) <= 0) { autoSaveT = 5; if (window.__started && !player.dead && !transition && !cine && !player.ride && (!map.fall || onFloor(map, player.x, player.y))) save(); }
@@ -8301,7 +8353,7 @@ function drawPlayer() {
   const p = player;
   if (p.dead) return;
   shadow(p.x, p.y, riding() ? 30 : 12);
-  ctx.globalAlpha = p.dodgeT > 0 ? 0.45 : 1;
+  ctx.globalAlpha = p.dodgeT > 0 || (p.graceT > 0 && clock * 8 % 2 < 1) ? 0.45 : 1;
   if (p.ride) drawCartPlayer(p);
   else if (map.vehicle) drawVehiclePlayer(p);
   else if (riding()) { drawHorse(p.x, p.y, p.facing, p.moving, steedColor()); stickFigure(p.x - p.facing * 2, p.y - 30, { ...heroLook(), moving: false, ride: true }); }
@@ -9067,7 +9119,7 @@ function drawHud() {
 let last = performance.now();
 function frame(now) {
   const dt = Math.max(0, Math.min((now - last) / 1000, 0.05)); last = now;
-  update(dt); if (!paused && !cine) buffUpdate(dt); tutUpdate(); draw(); drawMini(); drawDial(); drawHud();
+  update(dt); if (!paused && !cine) buffUpdate(dt); tutUpdate(); turnTick(); draw(); drawMini(); drawDial(); drawHud();
   requestAnimationFrame(frame);
 }
 // =====================================================================
@@ -9126,7 +9178,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { hurtPlayer, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
