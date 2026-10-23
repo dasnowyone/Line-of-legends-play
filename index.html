@@ -5101,7 +5101,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 106; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 107; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5474,7 +5474,8 @@ const petOwned = k => player.pets.includes(k) || (PETS[k].has && PETS[k].has());
 const pet = { x: 0, y: 0, map: "" }, PET_POS = pet;
 function petUpdate(dt) {
   const p = player; if (!p.pet) return;
-  const tx = p.x - p.facing * 46, ty = p.y + 14;
+  // with the hunter's wolf along, the pet trots a step higher so the two (and their names) don't sit on top of each other
+  const w = hasWolf() && !map.vehicle, tx = p.x - p.facing * (w ? 34 : 46), ty = p.y + (w ? -34 : 14);
   if (pet.map !== map.id || Math.hypot(tx - pet.x, ty - pet.y) > 600) { pet.x = tx; pet.y = ty; pet.map = map.id; }
   const k = Math.min(1, dt * 5); pet.moving = Math.hypot(tx - pet.x, ty - pet.y) > 6;
   pet.x += (tx - pet.x) * k; pet.y += (ty - pet.y) * k; if (Math.abs(tx - pet.x) > 2) pet.face = Math.sign(tx - pet.x);
@@ -5498,10 +5499,11 @@ function wolfUpdate(dt) {
   wolf.bite = Math.max(0, (wolf.bite || 0) - dt);
 }
 function drawWolf() {
-  const keepPet = player.pet, keep = { ...pet };
-  player.pet = "scout"; Object.assign(pet, { x: wolf.x, y: wolf.y, face: wolf.face, moving: wolf.moving });
-  ctx.save(); ctx.translate(wolf.x, wolf.y); ctx.scale(1.5, 1.5); ctx.translate(-wolf.x, -wolf.y - (wolf.bite > 0 ? 4 : 0)); drawPet(); ctx.restore();
-  player.pet = keepPet; Object.assign(pet, keep);
+  // Lee: the wolf's name shows once, above it (drawPet would add a second one from the pet names)
+  const keepPet = player.pet, keepNames = player.petNames, keep = { ...pet };
+  player.pet = "scout"; player.petNames = {}; Object.assign(pet, { x: wolf.x, y: wolf.y, face: wolf.face, moving: wolf.moving });
+  try { ctx.save(); ctx.translate(wolf.x, wolf.y); ctx.scale(1.5, 1.5); ctx.translate(-wolf.x, -wolf.y - (wolf.bite > 0 ? 4 : 0)); drawPet(); ctx.restore(); }
+  finally { player.pet = keepPet; player.petNames = keepNames; Object.assign(pet, keep); }
   ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillStyle = "#3f7a3a"; ctx.strokeStyle = "rgba(255,253,246,.9)"; ctx.lineWidth = 3; ctx.strokeText(wolfName(), wolf.x, wolf.y - 52); ctx.fillText(wolfName(), wolf.x, wolf.y - 52);
 }
 function drawPet() {
