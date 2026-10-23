@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 40
     defaults:
       run:
+        shell: bash
         working-directory: ios-app
     env:
       HAS_KEY: ${{ secrets.ASC_KEY_P8 != '' && secrets.APPLE_TEAM_ID != '' }}
@@ -43,8 +44,17 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Secrets pasted by hand can carry stray spaces, line breaks or Windows line endings: clean them up.
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
+          TEAM_ID=$(trim "$TEAM_ID"); ASC_KEY_ID=$(trim "$ASC_KEY_ID"); ASC_ISSUER_ID=$(trim "$ASC_ISSUER_ID")
           KEY="$RUNNER_TEMP/AuthKey.p8"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          BODY=$(printf '%s' "$ASC_KEY_P8" | tr -d '\r' | sed -e 's/-----[A-Z ]*-----//g' | tr -d '[:space:]')
+          { echo "-----BEGIN PRIVATE KEY-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END PRIVATE KEY-----"; } > "$KEY"
+          echo "Team ID: ${#TEAM_ID} characters (should be 10). Key ID: ${#ASC_KEY_ID} (should be 10). Issuer ID: ${#ASC_ISSUER_ID} (should be 36). Key body: ${#BODY} characters (about 184)."
+          if ! openssl pkey -in "$KEY" -noout 2>/dev/null; then
+            echo "::error::ASC_KEY_P8 is not a valid App Store Connect key. Paste the whole text of the AuthKey .p8 file, BEGIN and END lines included."
+            exit 1
+          fi
           AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
           VER=$(grep -o 'const GAME_VER = [0-9]*' ../index.html | grep -o '[0-9]*$')
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
