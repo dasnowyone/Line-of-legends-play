@@ -1616,6 +1616,51 @@ function buildWorld() {
       circles.push(rock ? { x: Math.round(tx), y: Math.round(ty), r: 14 + PGR() * 16, kind: "rock" } : pgTree(tx, ty, r0, PGR() < 0.3 ? "rgba(130,170,120,.93)" : "rgba(150,180,120,.92)")); }
     for (let i = 0; i < 4200; i++) { const x = 1050 + PGR() * 5180, y = 23020 + PGR() * 8300, kd = ["grass", "grass", "flower", "grass"][Math.floor(PGR() * 4)], sv = PGR();
       if (inQ(x, y, 1.02) || distToPaths(x, y) < 30 || ellipses.some(e => ((x - e.x) / (e.rx + 10)) ** 2 + ((y - e.y) / (e.ry + 10)) ** 2 < 1)) continue; decor.push({ x, y, kind: kd, s: sv }); } }
+  // Inkwell Village, made over (Lee): a bigger town inside a stone wall with towers at the corners and gates. Paved streets run to
+  // every door: a main street from the west wall to the east gate, a lane along the north and one along the south, the square round the well.
+  // Shops for the tailor, fletcher, alchemist and miner, a covered smithy beside the forge, Clegg's lumber yard and more cottages
+  { const V = { x0: 10850, y0: 29760, x1: 13150, y1: 31220 }, inV = (x, y, pad = 0) => x > V.x0 - pad && x < V.x1 + pad && y > V.y0 - pad && y < V.y1 + pad;
+    const vz = Z("village"); Object.assign(vz, { x: V.x0, y: V.y0, w: V.x1 - V.x0, h: V.y1 - V.y0 });
+    // the old fence and stalls make way; trees and rocks inside the new wall are cleared
+    for (let i = rects.length - 1; i >= 0; i--) { const q = rects[i]; if (["fence", "cart", "potiontable"].includes(q.kind) && inV(q.x, q.y, 10)) rects.splice(i, 1); }
+    for (let i = circles.length - 1; i >= 0; i--) { const c = circles[i]; if (c.kind !== "well" && inV(c.x, c.y, 60)) circles.splice(i, 1); }
+    // the east road now runs straight in along the main street to a gate in the east wall
+    for (const L of PATHS) for (const pt of L) if (pt[0] === 12600 && pt[1] === 30590) { pt[0] = V.x1; pt[1] = 30600; } else if (pt[0] === 12460 && pt[1] === 30590) pt[1] = 30600;
+    // the wall, in short pieces so it sorts in depth; gaps for the north gate and the east gate
+    const wall = (x, y, w, h) => rects.push({ x, y, w, h, kind: "townwall" });
+    for (let x = V.x0; x < V.x1; x += 200) { const e = Math.min(x + 200, V.x1); if (x < 12060 && e > 11940) { if (x < 11940) wall(x, V.y0, 11940 - x, 14); if (e > 12060) wall(12060, V.y0, e - 12060, 14); } else wall(x, V.y0, e - x, 14); wall(x, V.y1 - 14, e - x, 14); }
+    for (let y = V.y0; y < V.y1; y += 100) { const e = Math.min(y + 100, V.y1); wall(V.x0, y, 14, e - y); if (e <= 30550 || y >= 30650) wall(V.x1 - 14, y, 14, e - y); else { if (y < 30550) wall(V.x1 - 14, y, 14, 30550 - y); if (e > 30650) wall(V.x1 - 14, 30650, 14, e - 30650); } }
+    for (const [x, y, gate] of [[V.x0 - 16, V.y0 - 14], [V.x1 - 30, V.y0 - 14], [V.x0 - 16, V.y1 - 24], [V.x1 - 30, V.y1 - 24], [11896, V.y0 - 14, 1], [12060, V.y0 - 14, 1], [V.x1 - 30, 30514, 1], [V.x1 - 30, 30650, 1]])
+      rects.push({ x, y, w: 46, h: 36, kind: "towntower", gate: !!gate });
+    // shops, the smithy, the lumber yard and the cottages
+    const shop = (x, y, label, color, icon) => rects.push({ x, y, w: 180, h: 120, kind: "house", style: "shop", label, color, icon });
+    shop(10955, 30370, "Tailor", "#c0504a", "needle"); shop(11165, 30370, "Fletcher", "#3f7a3a", "bow"); shop(12880, 30260, "Mining", "#8a6a3a", "pick"); shop(12460, 30700, "Alchemist", "#6a4a9a", "potion");
+    // Brand's forge and the smithy are one shop (Lee): the hall stands against the forge and a lean-to roof covers both
+    rects.push({ x: 12515, y: 30240, w: 240, h: 150, kind: "house", style: "smithy", label: "Brand's Smithy", color: "#8a4b2a", lean: 12300 });
+    for (const q of rects) if (q.kind === "forge" && inV(q.x, q.y)) q.joined = true;
+    // the top row: two homes going up and a lot for sale
+    rects.push({ x: 11420, y: 29890, w: 170, h: 115, kind: "house", style: "build" }, { x: 11650, y: 29890, w: 170, h: 115, kind: "house", style: "build", stage: 1 },
+      { x: 12110, y: 29880, w: 200, h: 130, kind: "forsale", ghost: true, flat: true });
+    rects.push({ x: 10945, y: 30680, w: 455, h: 250, kind: "lumberyard", ghost: true, flat: true });
+    const roofs = ["thatch", "slate", "#b0603e", "thatch", "#7a9cc6", "slate", "#c98a63", "thatch"];
+    [[10945, 29890, 170, 115], [11160, 29890, 170, 115], [12580, 29890, 170, 115], [12820, 29890, 170, 115], [10955, 30975, 160, 100], [11170, 30975, 160, 100], [12700, 30700, 170, 115], [12920, 30700, 160, 115]]
+      .forEach(([x, y, w, h], i) => rects.push({ x, y, w, h, kind: "house", timber: i % 2 === 0, roof: roofs[i], cottage: true }));
+    for (const q of rects) if (q.kind === "house" && inV(q.x, q.y)) { if (!q.label && !q.cottage) { q.timber = true; q.roof = q.x < 11700 ? "thatch" : "slate"; }
+      if (q.style !== "smithy" && q.style !== "build") for (const wx of [q.x + 31, q.x + q.w - 31]) W_PGPROPS.push({ kind: "glow", x: wx, y: q.y + 33, r: 60 }); }
+    // the shopkeepers stand by their shop doors
+    const put = (id, x, y) => { const o = objs.find(o => o.id === id); if (o) { o.x = x; o.y = y; } };
+    put("carly", 11095, 30530); put("ash", 11305, 30530); put("fizz", 12625, 30850);
+    // paved streets: [x1, y1, x2, y2], every one level or upright
+    vz.streets = [[10900, 30600, V.x1, 30600], [12000, V.y0, 12000, 30420], [10900, 30060, 13060, 30060], [10900, 31120, 13060, 31120], [10900, 30060, 10900, 31120], [12035, 30600, 12035, 31120],
+      [11620, 30345, 11620, 30410], [11620, 30410, 11975, 30410], [11040, 30490, 11040, 30600], [11250, 30490, 11250, 30600], [11030, 30005, 11030, 30060], [11245, 30005, 11245, 30060],
+      [12665, 30005, 12665, 30060], [12905, 30005, 12905, 30060], [11505, 30005, 11505, 30060], [11735, 30005, 11735, 30060], [12210, 30010, 12210, 30060], [11035, 31075, 11035, 31120], [11250, 31075, 11250, 31120], [11620, 30860, 11620, 31120], [11865, 31010, 11865, 31120],
+      [12250, 30890, 12250, 31120], [12415, 30335, 12415, 30600], [12635, 30390, 12635, 30600], [12970, 30380, 12970, 30600], [12550, 30820, 12550, 31120], [12785, 30815, 12785, 31120], [13000, 30815, 13000, 31120]];
+    vz.plaza = { x: 12000, y: 30530, r: 175 };
+    for (const [x, y] of [[11140, 30562], [11480, 30562], [11880, 30562], [12290, 30562], [12540, 30562], [12850, 30562], [13060, 30562], [11470, 30668], [12340, 30668], [12640, 30668],
+      [11620, 30030], [12075, 30030], [12520, 30030], [11420, 31085], [12130, 31085], [12700, 31085], [11930, 30330], [12070, 30330], [11900, 29800], [12100, 29800]]) W_PGPROPS.push({ kind: "lantern", x, y, town: true });
+    W_PGPROPS.push({ kind: "bunting", x: 11935, y: 30332, x1: 12065, y1: 30332 }, { kind: "bunting", x: 12295, y: 30564, x1: 12535, y1: 30564 }, { kind: "bunting", x: 11485, y: 30564, x1: 11875, y1: 30564 });
+    for (const [x, y, r0] of [[11890, 29880, 13], [12470, 29900, 14], [11450, 31010, 13], [12200, 30250, 12], [11720, 30180, 12]]) circles.push(pgTree(x, y, r0, "rgba(140,180,110,.93)")); }
+
   // Camps get real ground instead of a tan square (Lee): grass, dirt or shoveled snow, gravel where the roads run through,
   // stepping stones to the tents and waystone, and a fence (or snowbanks in the cold) around parts of the edge
   // Pip's Camp and Hillwatch get the same ground and fence, without becoming zones of their own
@@ -1652,7 +1697,7 @@ function buildWorld() {
     const roadPt = (x, y) => { let best = null, bd = 1e9; for (const L of PATHS) for (let j = 0; j < L.length - 1; j++) { const [ax, ay] = L[j], [bx, by] = L[j + 1], dx = bx - ax, dy = by - ay;
       const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1))), qx = ax + t * dx, qy = ay + t * dy, d = Math.hypot(x - qx, y - qy); if (d < bd) { bd = d; best = [qx, qy]; } } return [best, bd]; };
     const inR = (x, y, p) => rects.some(q => q.kind !== "sea" && x > q.x - p && x < q.x + q.w + p && y > q.y - p && y < q.y + q.h + p);
-    const targets = [...rects.filter(q => ["tent", "house", "forge", "cart", "potiontable", "stall"].includes(q.kind)).map(q => [q.x + q.w / 2, q.y + q.h + 22]),
+    const targets = [...rects.filter(q => ["tent", "house", "forge", "cart", "potiontable", "stall", "fletchstall"].includes(q.kind)).map(q => [q.x + q.w / 2, q.y + q.h + 22]),
       ...objs.filter(o => o.kind === "waystone" || o.kind === "board").map(o => [o.x, o.y + 34])].filter(([x, y]) => inside(x, y));
     z.steps = [];
     // Every stall, tent and door gets a path (Lee): the nearest first, and later ones may end on a path already laid
@@ -2782,15 +2827,16 @@ buildFolk();
   }
 })();
 // ---------- Crafting in the world (Lee): Miner Sange, Carpenter Clegg, ore veins, herbs, fallen logs and fishing spots ----------
-const VZ = MAPS.world.ZONES.find(z => z.id === "village"), VAT = (dx, dy) => [VZ.x + dx, VZ.y + dy];
-const CRAFT_SPOTS = { sange: VAT(1112, 410), clegg: VAT(700, 872), vein: VAT(1330, 372), dig: P(4620, 8330) };
+// spots in town are measured from where the old village fence stood
+const VZ = MAPS.world.ZONES.find(z => z.id === "village"), VAT = (dx, dy) => [11400 + dx, 30090 + dy];
+const CRAFT_SPOTS = { sange: [12900, 30450], clegg: [11150, 30780], vein: VAT(1330, 372), dig: P(4620, 8330) };
 (function craftWorld() {
   const W = MAPS.world, rnd = folkRng(9091);
   const sange = npc("sange", "Miner Sange", ...CRAFT_SPOTS.sange, "#c9a227", "Ore's in the hills, if you've the arms for it. Copper and iron first, then the deep stuff.");
   const clegg = npc("clegg", "Carpenter Clegg", ...CRAFT_SPOTS.clegg, "#7a5a34", "Wood remembers how it grew. Treat it right and it'll hold for you.");
   W.objs.push(sange, clegg);
   const [cx, cy] = CRAFT_SPOTS.clegg, [sx, sy] = CRAFT_SPOTS.sange;
-  W.props.push({ kind: "workbench", x: cx + 70, y: cy + 18 }, { kind: "sawhorse", x: cx - 66, y: cy + 22 }, { kind: "woodpile", x: cx + 150, y: cy + 4 }, { kind: "orecart", x: sx + 30, y: sy - 52 });
+  W.props.push({ kind: "workbench", x: cx + 70, y: cy + 18 }, { kind: "sawhorse", x: cx - 66, y: cy + 22 }, { kind: "woodpile", x: cx + 150, y: cy + 4 }, { kind: "orecart", x: sx - 60, y: sy - 52 });
   // roads, camps and other things to keep clear of
   const roadD = (x, y) => { let g = 1e9; for (const L of W.PATHS) for (let j = 0; j < L.length - 1; j++) { const [ax, ay] = L[j], [bx, by] = L[j + 1], dx = bx - ax, dy = by - ay;
     if (Math.min(ax, bx) - 200 > x || Math.max(ax, bx) + 200 < x || Math.min(ay, by) - 200 > y || Math.max(ay, by) + 200 < y) continue;
@@ -2923,20 +2969,20 @@ const perchSpot = () => MAPS.world.objs.filter(o => o.node === "fish" && o.item 
 // The pick and axe quest (from level 5), then the rod and Mara's kitchen
 QUESTS.push(
   { id: "craft_a", giver: "quill", title: "The Miner in Town", needs: [], req: () => player.level >= 5, where: "Inkwell Village, by the east gate", goal: { type: "talk", npc: "sange" },
-    text: "A miner named Sange has set up by the east gate. He says the hills are full of ore, if you have a pick to dig it out. Go and meet him.", reward: { xp: 120, coins: 40 }, mark: CRAFT_SPOTS.sange,
+    text: "A miner named Sange has opened a mining shop by the east gate. He says the hills are full of ore, if you have a pick to dig it out. Go and meet him.", reward: { xp: 120, coins: 40 }, mark: CRAFT_SPOTS.sange,
     done: "Quill sent you? Good. Name's Sange. Ever swung a pick? No? We'll fix that." },
   { id: "craft_b", giver: "sange", title: "A Pick of Your Own", needs: ["craft_a"], where: "The old dig, northeast of Inkwell Village", goal: { type: "mats", need: { copper_ore: 3, wood: 4 } }, turnin: "brand", take: { copper_ore: 3 },
     text: "Every miner makes their own first pick. Bring 3 Copper Ore and 4 Wood. Loose copper lies all over the old dig northeast of town, and there are fallen logs in the meadow. Then take the ore to Smith Brand.",
     reward: { xp: 200, item: "pick_head" }, mark: CRAFT_SPOTS.dig,
-    done: "Copper from Sange's old dig? Ha. Give it here... There. One pick head, still warm. Now for a handle. Carpenter Clegg's your man, down by the south houses." },
+    done: "Copper from Sange's old dig? Ha. Give it here... There. One pick head, still warm. Now for a handle. Carpenter Clegg's your man, in the lumber yard by the west wall." },
   { id: "craft_c", giver: "brand", title: "A Sturdy Handle", needs: ["craft_b"], where: "Inkwell Village, Clegg's workshop", goal: { type: "talk", npc: "clegg" }, take: { wood: 4 },
-    text: "Take your 4 Wood to Carpenter Clegg by the south houses. He'll shape a handle for the pick head.", reward: { xp: 150, item: "pick_handle", tool: "axe" }, mark: CRAFT_SPOTS.clegg,
+    text: "Take your 4 Wood to Carpenter Clegg in the lumber yard by the west wall. He'll shape a handle for the pick head.", reward: { xp: 150, item: "pick_handle", tool: "axe" }, mark: CRAFT_SPOTS.clegg,
     done: "Four good lengths. Here's your handle, smooth as a river stone. And take this axe too. Next time you need wood, cut it yourself. Trees grow back." },
   { id: "craft_d", giver: "clegg", title: "Head Meets Handle", needs: ["craft_c"], where: "Inkwell Village, by the east gate", goal: { type: "talk", npc: "sange" }, take: { pick_head: 1, pick_handle: 1 },
     text: "Bring the pick head and the handle back to Miner Sange.", reward: { xp: 150, tool: "pick" }, mark: CRAFT_SPOTS.sange,
     done: "Fits like it grew there. That's your pick now. Come on, I'll show you how to swing it." },
-  { id: "craft_e", giver: "sange", title: "First Swing", needs: ["craft_d"], where: "The copper vein outside the east gate", goal: { type: "collect", thing: "mine", n: 3 }, onAccept: () => startLesson(),
-    text: "Follow me to the copper vein outside the east gate. Watch how I swing, then mine 3 ore yourself.", reward: { xp: 400, coins: 150 }, mark: CRAFT_SPOTS.vein,
+  { id: "craft_e", giver: "sange", title: "First Swing", needs: ["craft_d"], where: "The copper vein by the mining shop", goal: { type: "collect", thing: "mine", n: 3 }, onAccept: () => startLesson(),
+    text: "Follow me to the copper vein down the street. Watch how I swing, then mine 3 ore yourself.", reward: { xp: 400, coins: 150 }, mark: CRAFT_SPOTS.vein,
     done: "Not bad at all! Veins come back about three minutes after you mine them. Copper and iron need level 5, mithril 10, tidesteel 20, drakestone 30 and inkstone 40. Ore can't be bought, only mined or won from enemies. Brand, Carly, Clegg and Fizz can all craft for you now." },
   { id: "fish_a", giver: "mara", title: "Catch of the Day", needs: ["craft_c"], where: "Angler Tobin's pond, western Margin Woods", goal: { type: "talk", npc: "tobin" },
     text: "My stew pot's empty and my fisherman ran off to the mainland. Old Tobin fishes the big pond out in the Margin Woods. Ask him how a body gets a fishing rod round here.", reward: { xp: 100 }, mark: TOBIN.at,
@@ -3067,8 +3113,8 @@ function lessonTick(dt) {
   if (s.sayT > 0) s.sayT -= dt;
   if (s.swing > 0) s.swing = Math.max(0, s.swing - dt / 0.35);
   const st = quests.craft_e?.state, out = st === "active" || st === "ready";
-  // through the gate, not the fence: a waypoint on each side of it
-  const route = [VAT(1150, 500), VAT(1232, 500), [CRAFT_SPOTS.vein[0] - 52, CRAFT_SPOTS.vein[1] + 12]], path = out ? route : [VAT(1232, 500), VAT(1150, 500), [s.hx, s.hy]];
+  // the practice vein is just down the street from his shop
+  const route = [[CRAFT_SPOTS.vein[0] - 52, CRAFT_SPOTS.vein[1] + 12]], path = out ? route : [[s.hx, s.hy]];
   s.leg = s.leg || 0; if (s.legFor !== out) { s.legFor = out; s.leg = 0;
     // start from the nearest point on the route, so a reload puts him straight back on his way
     let bi = 0, bd = Infinity; path.forEach((p, i) => { const d = Math.hypot(p[0] - s.x, p[1] - s.y); if (d < bd) { bd = d; bi = i; } }); s.leg = bi; }
@@ -3464,11 +3510,11 @@ function drawMascot(m) {
 // ---------- Night in the Proving Grounds (Lee): after dark on your own clock, braziers, lanterns and the temple light the camps ----------
 let nightForce = null;
 const isNight = () => nightForce != null ? nightForce : (h => h >= 20 || h < 6)(new Date().getHours());
-const PG_LIGHTS = () => [...W_PGPROPS.map(p => [p.x, p.y - (p.kind === "brazier" ? 40 : 56), p.kind === "brazier" ? 150 : 110, "255,170,70"]),
-  [4300, 29700, 380, "170,140,255"], [3335, 30060, 160, "250,220,120"], [2830, 27500, 130, "250,210,110"], [2385, 27420, 100, "250,210,110"], [3150, 27980, 170, "255,160,60"],
+const PG_LIGHTS = () => [...W_PGPROPS.filter(p => p.kind !== "bunting").map(p => p.kind === "glow" ? [p.x, p.y, p.r, "255,200,110"] : [p.x, p.y - (p.kind === "brazier" ? 40 : 56), p.kind === "brazier" ? 150 : 110, "255,170,70"]),
+  [12372, 30300, 150, "255,150,60"], [4300, 29700, 380, "170,140,255"], [3335, 30060, 160, "250,220,120"], [2830, 27500, 130, "250,210,110"], [2385, 27420, 100, "250,210,110"], [3150, 27980, 170, "255,160,60"],
   ...[[4300, 26310], [4300, 26310]].map(([x, y], i) => [x + (i ? 92 : -92), y + 140, 110, "255,170,70"]), [3620, 25800, 120, "250,210,110"], [4995, 25800, 120, "250,210,110"], [4705, 25760, 150, "255,140,50"]];
 function drawNight() {
-  if (map.id !== "world" || !isNight()) return; const z = map.zoneAt(player.x, player.y); if (!["proving", "yard_camp", "lanes_camp", "sanctum_camp", "square_camp"].includes(z.id)) return;
+  if (map.id !== "world" || !isNight()) return; const z = map.zoneAt(player.x, player.y); if (!["proving", "yard_camp", "lanes_camp", "sanctum_camp", "square_camp", "village"].includes(z.id)) return;
   ctx.fillStyle = "rgba(14,18,52,.42)"; ctx.fillRect(0, 0, cssW, cssH);
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const [x, y, r, c] of PG_LIGHTS()) { const sx = (x - camX) * view, sy = (y - camY) * view, rr = r * view * (0.95 + 0.05 * Math.sin(clock * 6 + x)); if (sx < -rr || sy < -rr || sx > cssW + rr || sy > cssH + rr) continue;
@@ -3496,6 +3542,12 @@ function drawPgProp(p) {
     ctx.fillStyle = "#4a4650"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 14, y - 32); ctx.lineTo(x + 14, y - 32); ctx.lineTo(x + 9, y - 22); ctx.lineTo(x - 9, y - 22); ctx.closePath(); ctx.fill(); ctx.stroke();
     const fl = Math.sin(clock * 11 + x) * 3, hgt = lit ? 26 : 16; ctx.fillStyle = "#e07a2a"; ctx.beginPath(); ctx.moveTo(x - 10, y - 32); ctx.quadraticCurveTo(x - 4, y - 32 - hgt, x + fl, y - 34 - hgt); ctx.quadraticCurveTo(x + 6, y - 32 - hgt * 0.6, x + 10, y - 32); ctx.closePath(); ctx.fill();
     ctx.fillStyle = "#f2c12e"; ctx.beginPath(); ctx.moveTo(x - 5, y - 32); ctx.quadraticCurveTo(x, y - 32 - hgt * 0.7, x + fl * 0.5, y - 32 - hgt * 0.8); ctx.quadraticCurveTo(x + 3, y - 34, x + 5, y - 32); ctx.closePath(); ctx.fill(); return true; }
+  if (p.kind === "glow") return true; // only a light at night (a lit window)
+  if (p.kind === "bunting") { // a string of little flags between two lamp posts
+    const sag = 22, n = 9, col = ["#c0504a", "#f2c640", "#3b6fb6", "#3d6b3a", "#7a5aa6"], ax = x + 14, ay = y - 62, bx = p.x1 - 0, by = p.y1 - 62, pt = t => [ax + (bx - ax) * t, ay + (by - ay) * t + Math.sin(t * Math.PI) * sag];
+    ctx.strokeStyle = "#5a4a3a"; ctx.lineWidth = 1.5; ctx.beginPath(); for (let i = 0; i <= 20; i++) { const [px, py] = pt(i / 20); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.stroke();
+    for (let i = 1; i < n; i++) { const [px, py] = pt(i / n), sw = Math.sin(clock * 3 + i) * 2; ctx.fillStyle = col[i % col.length]; ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px - 6, py); ctx.lineTo(px + 6, py); ctx.lineTo(px + sw, py + 13); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    return true; }
   if (p.kind === "lantern") { shadow(x, y, 8); ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 4; line(x, y, x, y - 64); ctx.lineWidth = 3; line(x, y - 62, x + 14, y - 62);
     ctx.strokeStyle = INK; ctx.lineWidth = 1.2; line(x + 14, y - 62, x + 14, y - 56); ctx.fillStyle = lit ? "#ffd86a" : "#f4e7b8"; ctx.fillRect(x + 8, y - 56, 12, 15); ctx.strokeRect(x + 8, y - 56, 12, 15); ctx.fillStyle = "#3a3640"; ctx.fillRect(x + 7, y - 58, 14, 3); ctx.fillRect(x + 7, y - 42, 14, 3); return true; }
   return false;
@@ -4929,7 +4981,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 102; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 103; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6345,10 +6397,34 @@ function drawCampPaths(m, x0, y0, x1, y1) {
       ctx.strokeStyle = "#cfc6b4"; ctx.lineWidth = 56; ctx.stroke(); ctx.strokeStyle = "rgba(120,110,95,.5)"; ctx.lineWidth = 2; ctx.setLineDash([2, 9]); ctx.lineDashOffset = 0; ctx.stroke();
       ctx.lineWidth = 3; ctx.setLineDash([1, 17]); ctx.lineDashOffset = 6; ctx.strokeStyle = "rgba(90,85,80,.45)"; ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
+    if (z.streets) drawTown(z);
     // footpaths of stepping stones from the road to the tents, doors, waystone and board
     ctx.strokeStyle = "rgba(27,27,32,.45)"; ctx.lineWidth = 1.3;
     for (const [x, y, h, a] of z.steps) { ctx.fillStyle = z.ground === "snow" ? "#cfd3d6" : "#d8d2c6"; ctx.beginPath(); ctx.ellipse(x, y, 12 + h * 3, 7.5, a + Math.PI / 2 + (h - 0.5) * 0.4, 0, 7); ctx.fill(); ctx.stroke(); }
   }
+}
+// The town's paving (Lee: a paved street to every building): streets and the square round the well, laid in cobbles once onto a
+// picture of the whole town, which is then drawn like the ground. Flower beds and benches sit at the edge of the square
+function drawTown(z) {
+  if (!z.pave) { const c = document.createElement("canvas"); c.width = z.w; c.height = z.h; const g = c.getContext("2d"), P = z.plaza, S = 32;
+    g.translate(-z.x, -z.y);
+    const shape = grow => { g.beginPath(); g.ellipse(P.x, P.y, P.r + grow, P.r * 0.8 + grow, 0, 0, 7);
+      for (const [ax, ay, bx, by] of z.streets) g.rect(Math.min(ax, bx) - S - grow, Math.min(ay, by) - S - grow, Math.abs(bx - ax) + 2 * (S + grow), Math.abs(by - ay) + 2 * (S + grow)); };
+    // a darker kerb, then the cobbles in rows, each a rounded stone in its own shade
+    g.fillStyle = "#a89e8a"; shape(3); g.fill("nonzero"); g.fillStyle = "#d9d1c0"; shape(0); g.fill("nonzero"); g.save(); shape(0); g.clip("nonzero");
+    for (let yy = z.y, row = 0; yy < z.y + z.h; yy += 15, row++) for (let xx = z.x + (row % 2) * 9; xx < z.x + z.w; xx += 18) {
+      const h = Math.abs(Math.sin(xx * 12.9898 + yy * 78.233) * 43758.5) % 1; g.fillStyle = h < 0.33 ? "#cfc6b2" : h < 0.66 ? "#c6bca6" : "#d6cebd";
+      g.beginPath(); g.roundRect(xx - 7.5, yy - 5.5, 15, 11, 4); g.fill(); g.strokeStyle = "rgba(90,80,65,.35)"; g.lineWidth = 1; g.stroke(); }
+    g.strokeStyle = "rgba(110,98,80,.55)"; g.lineWidth = 10; g.setLineDash([12, 4]); g.beginPath(); g.ellipse(P.x, P.y - 40, 74, 58, 0, 0, 7); g.stroke(); g.setLineDash([]); g.restore();
+    // flower beds with a low stone edge, and two benches facing the well
+    for (const a of [2.35, 0.75]) { const fx = P.x + Math.cos(a) * P.r * 0.86, fy = P.y + Math.sin(a) * P.r * 0.7;
+      g.fillStyle = "#7a5a3a"; g.strokeStyle = "#8a8070"; g.lineWidth = 4; g.beginPath(); g.ellipse(fx, fy, 34, 16, 0, 0, 7); g.fill(); g.stroke();
+      for (let i = 0; i < 9; i++) { const px = fx - 24 + (i * 6.1) % 48, py = fy - 8 + ((i * 7) % 15); g.fillStyle = "#4f8a3a"; g.beginPath(); g.arc(px, py + 2, 4, 0, 7); g.fill();
+        g.fillStyle = ["#e8607a", "#f2c640", "#c07ad8", "#fffdf6", "#e88a3a"][i % 5]; g.beginPath(); g.arc(px, py - 1, 3, 0, 7); g.fill(); } }
+    for (const [bx, by] of [[P.x - P.r * 0.62, P.y - 40], [P.x + P.r * 0.62, P.y - 40]]) { g.fillStyle = "#9a6a3a"; g.strokeStyle = INK; g.lineWidth = 1.8;
+      g.fillRect(bx - 8, by - 26, 16, 52); g.strokeRect(bx - 8, by - 26, 16, 52); g.lineWidth = 1; for (const dy of [-9, 9]) { g.beginPath(); g.moveTo(bx - 8, by + dy); g.lineTo(bx + 8, by + dy); g.stroke(); } }
+    z.pave = c; }
+  ctx.drawImage(z.pave, z.x, z.y);
 }
 function drawBridges(m, x0, y0, x1, y1) {
   for (const b of m.bridges || []) {
@@ -7006,6 +7082,103 @@ function drawProving(q) {
   }
 }
 // Class camp buildings (Lee): warriors build in heavy stone, hunters in logs under mossy roofs, mages raise glowing towers
+// Inkwell's shops (Lee): a timbered shopfront with a striped awning, a window full of the trade's goods and a hanging sign
+function shopIcon(icon, x, y, k) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+  if (icon === "needle") { ctx.strokeStyle = "#c8ced8"; ctx.lineWidth = 2.5; line(-8, 8, 8, -8); ctx.strokeStyle = "#c0504a"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(7, -7); ctx.bezierCurveTo(14, 0, -10, 2, -4, 10); ctx.stroke(); }
+  else if (icon === "bow") { ctx.strokeStyle = "#8a5a2a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(-4, 0, 11, -1.1, 1.1); ctx.stroke(); ctx.strokeStyle = "#efe4c8"; ctx.lineWidth = 1; line(-4 + Math.cos(-1.1) * 11, Math.sin(-1.1) * 11, -4 + Math.cos(1.1) * 11, Math.sin(1.1) * 11);
+    ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 1.5; line(-8, 0, 10, 0); ctx.fillStyle = "#c8ced8"; ctx.beginPath(); ctx.moveTo(10, -3); ctx.lineTo(14, 0); ctx.lineTo(10, 3); ctx.fill(); }
+  else if (icon === "potion") { ctx.fillStyle = "#a45ad8"; ctx.beginPath(); ctx.arc(0, 3, 7, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#efe4c8"; ctx.fillRect(-2.5, -10, 5, 7); ctx.strokeRect(-2.5, -10, 5, 7); }
+  else if (icon === "pick") { ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 2.5; line(-6, 9, 5, -6); ctx.strokeStyle = "#5a5a64"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(5, 4, 11, -2.4, -0.6); ctx.stroke(); }
+  else if (icon === "hammer") { ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 2.5; line(-7, 9, 4, -4); ctx.fillStyle = "#5a5a64"; ctx.save(); ctx.translate(4, -4); ctx.rotate(-0.8); ctx.fillRect(-8, -4, 16, 8); ctx.strokeRect(-8, -4, 16, 8); ctx.restore(); }
+  ctx.restore();
+}
+// A home going up (Lee): the frame stands, the lower walls are in, scaffolding and a ladder, timber and a pile of tiles waiting
+function drawBuild(q) {
+  const X = q.x, Y = q.y, W = q.w, H = q.h, B = Y + H, mid = X + W / 2, roofH = H * 0.9, done = q.stage ? 0.75 : 0.4; ctx.lineCap = "round";
+  ctx.fillStyle = "#b8b0a2"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(X - 4, B - 10, W + 8, 10); ctx.strokeRect(X - 4, B - 10, W + 8, 10);
+  ctx.fillStyle = "#fbf6e8"; const wh = (H - 10) * done; ctx.fillRect(X, B - 10 - wh, W, wh); ctx.strokeRect(X, B - 10 - wh, W, wh);
+  ctx.strokeStyle = "rgba(160,120,80,.4)"; ctx.lineWidth = 1; for (let y = B - 22; y > B - 10 - wh; y -= 12) line(X + 2, y, X + W - 2, y);
+  ctx.strokeStyle = "#b08a5a"; ctx.lineWidth = 5; for (const px of [X + 3, X + W * 0.33, X + W * 0.67, X + W - 3]) line(px, B - 10, px, Y); line(X, Y + 3, X + W, Y + 3);
+  // the roof frame: the gable rafters, a king post, a collar beam and purlins across
+  ctx.lineWidth = 5; line(X - 10, Y + 4, mid, Y - roofH); line(X + W + 10, Y + 4, mid, Y - roofH); ctx.lineWidth = 4; line(mid, Y + 3, mid, Y - roofH);
+  line(X + W * 0.22, Y - roofH * 0.42, X + W * 0.78, Y - roofH * 0.42); ctx.lineWidth = 2.5; for (const t of [0.25, 0.55, 0.8]) { const yy = Y + 4 - (roofH + 4) * t, hw = (W / 2 + 10) * (1 - t); line(mid - hw, yy, mid - hw * 0.15, yy); line(mid + hw * 0.15, yy, mid + hw, yy); }
+  if (q.stage) { ctx.fillStyle = "#c98a63"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X - 10, Y + 6); ctx.lineTo(mid - 20, Y - roofH * 0.7); ctx.lineTo(mid - 20, Y - roofH * 0.25); ctx.lineTo(X + 30, Y + 6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  // scaffolding and a ladder
+  ctx.strokeStyle = "#8a6438"; ctx.lineWidth = 3; const sx = X + W + 12; line(sx, B, sx, Y - 20); line(sx + 26, B, sx + 26, Y - 20); for (const y of [Y - 10, Y + H * 0.45]) { ctx.lineWidth = 5; line(sx - 6, y, sx + 32, y); } ctx.lineWidth = 2; line(sx, B, sx + 26, Y + H * 0.45); line(sx + 26, Y + H * 0.45, sx, Y - 10);
+  ctx.strokeStyle = "#a07a48"; ctx.lineWidth = 2.5; line(X - 26, B, X - 12, Y + 6); line(X - 14, B, X, Y + 6); for (let k = 1; k < 7; k++) { const t = k / 7; line(X - 26 + 14 * t, B - (B - Y - 6) * t, X - 14 + 14 * t, B - (B - Y - 6) * t); }
+  // timber and tiles waiting on the ground
+  // inside the walls, off the street
+  for (let k = 0; k < 3; k++) { ctx.fillStyle = "#d8b47a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(X + 8 + k * 2, B - 16 - k * 5, 34, 5); ctx.strokeRect(X + 8 + k * 2, B - 16 - k * 5, 34, 5); }
+  ctx.fillStyle = "#c98a63"; for (let k = 0; k < 4; k++) { ctx.fillRect(X + W - 38 + k * 2, B - 16 - k * 5, 28, 5); ctx.strokeRect(X + W - 38 + k * 2, B - 16 - k * 5, 28, 5); }
+  ctx.fillStyle = "#f1e4bf"; ctx.lineWidth = 1.5; ctx.fillRect(mid - 40, Y + 14, 80, 20); ctx.strokeRect(mid - 40, Y + 14, 80, 20); ctx.fillStyle = INK; ctx.font = `13px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Coming soon", mid, Y + 29);
+}
+function drawShop(q, label, smoke) {
+  const X = q.x, Y = q.y, W = q.w, H = q.h, B = Y + H, mid = X + W / 2, C = q.color, roofH = H * 0.85;
+  const chx = X + W * 0.72; ctx.fillStyle = "#a8a29a"; ctx.lineWidth = 2; ctx.fillRect(chx, Y - roofH * 0.7, 18, roofH * 0.6); ctx.strokeRect(chx, Y - roofH * 0.7, 18, roofH * 0.6); smoke(chx + 9, Y - roofH * 0.72);
+  // plaster walls with timbers, a stone footing
+  ctx.fillStyle = "#fbf3e0"; ctx.fillRect(X, Y, W, H); ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; line(X, Y + 4, X + W, Y + 4); line(X + 4, Y, X + 4, B - 10); line(X + W - 4, Y, X + W - 4, B - 10);
+  ctx.fillStyle = "#b8b0a2"; ctx.fillRect(X, B - 10, W, 10); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; for (let x = X + 14; x < X + W; x += 22) line(x, B - 10, x, B); ctx.lineWidth = 2.5; ctx.strokeRect(X, Y, W, H);
+  // the roof
+  const roof = () => { ctx.beginPath(); ctx.moveTo(X - 12, Y + 6); ctx.lineTo(mid, Y - roofH); ctx.lineTo(X + W + 12, Y + 6); ctx.closePath(); };
+  ctx.fillStyle = C; roof(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(27,27,32,.28)"; ctx.lineWidth = 1.2;
+  for (let y = Y + 2, i = 0; y > Y - roofH; y -= 11, i++) { line(X - 14, y, X + W + 14, y); for (let x = X - 12 + (i % 2) * 9; x < X + W + 12; x += 18) line(x, y, x, y - 11); }
+  ctx.fillStyle = "rgba(27,27,32,.14)"; ctx.beginPath(); ctx.moveTo(mid, Y - roofH); ctx.lineTo(X + W + 12, Y + 6); ctx.lineTo(mid, Y + 6); ctx.closePath(); ctx.fill(); ctx.restore(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; roof(); ctx.stroke();
+  // a round sign in the gable
+  ctx.fillStyle = "#f1e4bf"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mid, Y - roofH * 0.42, 15, 0, 7); ctx.fill(); ctx.stroke(); shopIcon(q.icon, mid, Y - roofH * 0.42, 0.9);
+  // the display window with its goods, and the door
+  const wx = X + 16, ww = W * 0.5, wy = Y + 30, wh = H - 52; ctx.fillStyle = "#cfe0ee"; ctx.lineWidth = 2; ctx.fillRect(wx, wy, ww, wh); ctx.strokeRect(wx, wy, ww, wh);
+  const gy = wy + wh - 6;
+  if (q.icon === "needle") ["#c0504a", "#3b6fb6", "#3d6b3a", "#c99a17", "#7a5aa6"].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(wx + 10 + i * 15, gy - 9, 6, 10, 0.2, 0, 7); ctx.fill(); ctx.lineWidth = 1.2; ctx.stroke(); });
+  else if (q.icon === "bow") for (let i = 0; i < 3; i++) shopIcon("bow", wx + 18 + i * 26, gy - 14, 0.9);
+  else if (q.icon === "potion") ["#d8433a", "#3b8ee0", "#45b04f", "#c99a17", "#a45ad8"].forEach((c, i) => { ctx.fillStyle = c; ctx.globalAlpha = 0.8 + 0.2 * Math.sin(clock * 3 + i); ctx.beginPath(); ctx.arc(wx + 10 + i * 15, gy - 6, 5.5, 0, 7); ctx.fill(); ctx.globalAlpha = 1; ctx.lineWidth = 1.2; ctx.stroke(); ctx.strokeRect(wx + 8 + i * 15, gy - 18, 4, 7); });
+  else if (q.icon === "pick") { ["#b87333", "#9aa0aa", "#7fb8d8", "#b87333"].forEach((c, i) => { ctx.fillStyle = c; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(wx + 8 + i * 18, gy); ctx.lineTo(wx + 12 + i * 18, gy - 12); ctx.lineTo(wx + 22 + i * 18, gy - 9); ctx.lineTo(wx + 24 + i * 18, gy); ctx.closePath(); ctx.fill(); ctx.stroke(); }); shopIcon("pick", wx + ww - 14, wy + 12, 0.7); }
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.2; line(wx + ww / 2, wy, wx + ww / 2, wy + wh); ctx.lineWidth = 2;
+  const dx = X + W - 52; ctx.fillStyle = C; ctx.fillRect(dx, B - 50, 32, 50); ctx.strokeRect(dx, B - 50, 32, 50); ctx.fillStyle = "#cfe0ee"; ctx.fillRect(dx + 8, B - 44, 16, 12); ctx.strokeRect(dx + 8, B - 44, 16, 12);
+  ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(dx + 25, B - 24, 2.5, 0, 7); ctx.fill();
+  // the striped awning over window and door
+  const ay = Y + 18, al = X + 8, ar = X + W - 8; ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(al - 6, ay + 16); ctx.lineTo(ar + 6, ay + 16); ctx.lineTo(ar, ay); ctx.lineTo(al, ay); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.clip(); ctx.fillStyle = C; for (let x = al - 6; x < ar + 6; x += 20) ctx.fillRect(x, ay, 10, 16); ctx.restore(); ctx.strokeStyle = INK; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.beginPath(); const n = 9, sw = (ar - al + 12) / n; for (let i = 0; i < n; i++) { ctx.moveTo(al - 6 + i * sw, ay + 16); ctx.arc(al - 6 + i * sw + sw / 2, ay + 16, sw / 2, Math.PI, 0, true); } ctx.fillStyle = C; ctx.fill(); ctx.stroke();
+  // a sign hanging from a bracket at the corner
+  const sx = X + W + 6, sy = Y + 40, swg = Math.sin(clock * 1.6 + X) * 0.07; ctx.strokeStyle = "#3a3640"; ctx.lineWidth = 3; line(X + W, sy, sx + 40, sy);
+  ctx.save(); ctx.translate(sx + 26, sy); ctx.rotate(swg); ctx.lineWidth = 1.2; line(-10, 0, -10, 8); line(10, 0, 10, 8); ctx.fillStyle = "#f1e4bf"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-16, 8, 32, 28, 4); ctx.fill(); ctx.stroke(); shopIcon(q.icon, 0, 22, 0.85); ctx.restore();
+  // and something of the trade out front
+  if (q.icon === "needle") { const fx = X - 18, fy = B; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(fx, fy, fx, fy - 20); line(fx - 8, fy, fx + 8, fy); ctx.fillStyle = "#3b6fb6"; ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(fx - 10, fy - 54); ctx.quadraticCurveTo(fx - 15, fy - 38, fx - 8, fy - 20); ctx.lineTo(fx + 8, fy - 20); ctx.quadraticCurveTo(fx + 15, fy - 38, fx + 10, fy - 54); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#6a4a2a"; ctx.beginPath(); ctx.arc(fx, fy - 57, 4, 0, 7); ctx.fill(); }
+  else if (q.icon === "bow") { const tx = X - 16, ty = B - 26; ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3; line(tx - 8, B, tx, ty); line(tx + 8, B, tx, ty);
+    for (const [rr, c] of [[15, "#e9d7a8"], [10, "#c0504a"], [5, "#e9d7a8"], [2, "#c0504a"]]) { ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(tx, ty - 6, rr, 0, 7); ctx.fill(); ctx.stroke(); } }
+  else if (q.icon === "potion") { const cx = X - 18, cy = B - 12; ctx.fillStyle = "#3a3640"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy - 4, 15, 0, Math.PI); ctx.lineTo(cx - 15, cy - 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#6ac46a"; ctx.beginPath(); ctx.ellipse(cx, cy - 6, 14, 4, 0, 0, 7); ctx.fill(); ctx.fillStyle = `rgba(240,130,40,${0.6 + 0.3 * Math.sin(clock * 7)})`; ctx.beginPath(); ctx.arc(cx, cy + 14, 6, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "rgba(120,200,120,.5)"; for (let i = 0; i < 3; i++) { const t = (clock * 0.7 + i / 3) % 1; ctx.beginPath(); ctx.arc(cx - 6 + i * 6, cy - 10 - t * 26, 2 + t * 3, 0, 7); ctx.fill(); } }
+  label(Y - roofH - 12);
+}
+// The smithy (Lee): a covered hall beside the forge, open at the front, with the hearth glowing inside, anvils and racks of tools
+function drawSmithy(q, label, smoke, blocks) {
+  const X = q.x, Y = q.y, W = q.w, H = q.h, B = Y + H, mid = X + W / 2, roofH = H * 0.75, glow = 0.6 + 0.3 * Math.sin(clock * 7);
+  const chx = X + W * 0.18; blocks(chx, Y - roofH - 20, 34, roofH + 30, "#a8a29a", "rgba(255,255,255,.1)"); smoke(chx + 17, Y - roofH - 24); smoke(chx + 10, Y - roofH - 30);
+  // the back wall in stone, the dark inside, the hearth
+  blocks(X, Y, W, H - 6, "#b9b4aa", "rgba(255,255,255,.12)"); ctx.fillStyle = "#3a3236"; ctx.fillRect(X + 16, Y + 26, W - 32, H - 32);
+  ctx.fillStyle = "#6a6266"; ctx.fillRect(X + 26, Y + 36, 70, H - 48); ctx.fillStyle = `rgba(240,130,40,${glow})`; ctx.beginPath(); ctx.arc(X + 61, B - 18, 24, Math.PI, 0); ctx.fill(); ctx.fillStyle = `rgba(255,210,90,${glow})`; ctx.beginPath(); ctx.arc(X + 61, B - 14, 12, Math.PI, 0); ctx.fill();
+  const g = ctx.createRadialGradient(X + 61, B - 24, 4, X + 61, B - 24, 90); g.addColorStop(0, `rgba(255,150,60,${0.35 * glow})`); g.addColorStop(1, "rgba(255,150,60,0)"); ctx.fillStyle = g; ctx.fillRect(X + 16, Y + 26, W - 32, H - 32);
+  // racks of hammers and tongs on the back wall, an anvil and a grindstone
+  ctx.strokeStyle = "#9a7448"; ctx.lineWidth = 3; line(X + 110, Y + 44, X + W - 26, Y + 44); for (let i = 0; i < 5; i++) shopIcon(i % 2 ? "pick" : "hammer", X + 124 + i * 20, Y + 60, 0.75);
+  ctx.fillStyle = "#3a3640"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; const ax = X + 140, ay = B - 30; ctx.beginPath(); ctx.moveTo(ax - 24, ay); ctx.lineTo(ax + 24, ay); ctx.lineTo(ax + 16, ay + 8); ctx.lineTo(ax + 8, ay + 8); ctx.lineTo(ax + 8, ay + 16); ctx.lineTo(ax - 8, ay + 16); ctx.lineTo(ax - 8, ay + 8); ctx.lineTo(ax - 18, ay + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#8a6238"; ctx.fillRect(ax - 10, ay + 16, 20, 14); ctx.strokeRect(ax - 10, ay + 16, 20, 14);
+  ctx.fillStyle = "#a8a29a"; ctx.beginPath(); ctx.arc(X + W - 46, B - 22, 14, 0, 7); ctx.fill(); ctx.stroke(); ctx.lineWidth = 1; line(X + W - 46 + Math.cos(clock * 4) * 12, B - 22 + Math.sin(clock * 4) * 12, X + W - 46, B - 22);
+  // heavy timber posts and a broad slate roof that keeps the rain off
+  ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 9; for (const px of [X + 10, mid, X + W - 10]) line(px, B, px, Y + 20); ctx.lineWidth = 7; line(X, Y + 22, X + W, Y + 22);
+  const roof = () => { ctx.beginPath(); ctx.moveTo(X - 18, Y + 26); ctx.lineTo(X + 30, Y - roofH); ctx.lineTo(X + W - 30, Y - roofH); ctx.lineTo(X + W + 18, Y + 26); ctx.closePath(); };
+  ctx.fillStyle = "#5a6070"; roof(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(255,255,255,.16)"; ctx.lineWidth = 1.2; for (let y = Y + 24, i = 0; y > Y - roofH; y -= 10, i++) { line(X - 20, y, X + W + 20, y); for (let x = X - 18 + (i % 2) * 9; x < X + W + 18; x += 18) line(x, y, x, y - 10); } ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5; roof(); ctx.stroke();
+  // the lean-to roof that reaches over the forge, on posts, so forge and hall are one shop
+  if (q.lean) { const L = q.lean, top = Y - 40, low = Y - 12; ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 7; line(L + 6, B - 64, L + 6, low + 4); line(L + 104, B - 64, L + 104, low + 2);
+    ctx.fillStyle = "#5a6070"; ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(X - 18, top); ctx.lineTo(X - 18, low + 22); ctx.lineTo(L - 10, low + 30); ctx.lineTo(L - 10, low); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(255,255,255,.16)"; ctx.lineWidth = 1.2; for (let x = L - 10, i = 0; x < X; x += 16, i++) line(x, top - 10, x, low + 40); ctx.restore(); ctx.stroke();
+    ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 5; line(L - 10, low + 30, X - 18, low + 22); }
+  ctx.fillStyle = "#f1e4bf"; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(mid - 30, Y - roofH * 0.55, 60, 30, 5); ctx.fill(); ctx.stroke(); shopIcon("hammer", mid, Y - roofH * 0.55 + 15, 1);
+  label(Y - roofH - 12);
+}
 function drawClassHouse(q) {
   const X = q.x, Y = q.y, W = q.w, H = q.h, B = Y + H, mid = X + W / 2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = INK;
   const label = (y) => { ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = PAPER; ctx.strokeText(q.label, mid, y); ctx.fillText(q.label, mid, y); ctx.strokeStyle = INK; };
@@ -7014,6 +7187,9 @@ function drawClassHouse(q) {
     for (let y = y0 + h, i = 0; y > y0; y -= 14, i++) { line(x0, y, x0 + w, y); for (let x = x0 + (i % 2) * 14; x < x0 + w; x += 28) line(x, y, x, Math.max(y0, y - 14)); }
     ctx.fillStyle = c2; for (let i = 0; i < w * h / 900; i++) { const bx = x0 + ((i * 53 + X) % (w - 20)) + 4, by = y0 + ((i * 37 + Y) % Math.max(1, h - 14)) + 2; ctx.fillRect(bx, by, 22, 10); }
     ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.strokeRect(x0, y0, w, h); };
+  if (q.style === "shop") return drawShop(q, label, smoke);
+  if (q.style === "smithy") return drawSmithy(q, label, smoke, blocks);
+  if (q.style === "build") return drawBuild(q);
   if (q.style === "keep") {
     // a stone hall with a slate roof, square towers at the corners with battlements, a banded door and arrow slits
     const roofH = H * 0.55, tw = Math.min(54, W * 0.22);
@@ -7090,6 +7266,68 @@ function drawRect(q) {
       else { line(q.x + 4, q.y, q.x + 4, q.y + q.h); line(q.x + 10, q.y, q.x + 10, q.y + q.h); for (let y = q.y; y <= q.y + q.h; y += 40) line(q.x, y, q.x + 14, y); }
       break;
     }
+    case "forsale": {
+      // an empty plot roped off on stakes, the grass trodden flat, and a sign
+      const X = q.x, Y = q.y, W = q.w, H = q.h; ctx.fillStyle = "rgba(170,140,90,.22)"; ctx.fillRect(X, Y, W, H);
+      ctx.strokeStyle = "#c0504a"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.strokeRect(X, Y, W, H); ctx.setLineDash([]);
+      ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3; for (const [sx, sy] of [[X, Y], [X + W, Y], [X, Y + H], [X + W, Y + H], [X + W / 2, Y], [X + W / 2, Y + H]]) line(sx, sy + 4, sx, sy - 12);
+      const mx = X + W / 2, my = Y + H - 20; ctx.lineWidth = 4; line(mx, my, mx, my - 56); ctx.fillStyle = "#fffdf6"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(mx - 46, my - 76, 92, 38); ctx.strokeRect(mx - 46, my - 76, 92, 38);
+      ctx.fillStyle = "#c0504a"; ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.font = `17px ${FONT}`; ctx.fillText("Lot for sale", mx, my - 52);
+      break;
+    }
+    case "lumberyard": {
+      // Clegg's lumber yard (Lee): a rail fence, stacked logs, piles of planks, a sawpit with a log across it and a half-built frame
+      const X = q.x, Y = q.y, W = q.w, H = q.h; ctx.fillStyle = "rgba(196,160,110,.35)"; ctx.beginPath(); ctx.roundRect(X + 6, Y + 6, W - 12, H - 12, 20); ctx.fill();
+      ctx.fillStyle = "rgba(230,200,150,.8)"; for (let i = 0; i < 40; i++) { ctx.beginPath(); ctx.arc(X + 20 + (i * 97) % (W - 40), Y + 20 + (i * 61) % (H - 40), 2, 0, 7); ctx.fill(); }
+      ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3; const rail = (ax, ay, bx, by) => { line(ax, ay, bx, by); line(ax, ay + 8, bx, by + 8); const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / 40)); for (let i = 0; i <= n; i++) line(ax + (bx - ax) * i / n, ay + (by - ay) * i / n - 6, ax + (bx - ax) * i / n, ay + (by - ay) * i / n + 14); };
+      rail(X, Y + 30, X, Y + H); rail(X + W, Y + 30, X + W, Y + H); rail(X, Y + H, X + W * 0.4, Y + H); rail(X + W * 0.6, Y + H, X + W, Y + H);
+      // logs stacked in a pyramid
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 4 - r; c++) { const lx = X + 40 + c * 26 + r * 13, ly = Y + 70 - r * 20; ctx.fillStyle = "#8a6438"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(lx - 4, ly - 10, 60, 20); ctx.strokeRect(lx - 4, ly - 10, 60, 20);
+        ctx.fillStyle = "#c9a874"; ctx.beginPath(); ctx.arc(lx - 4, ly, 10, 0, 7); ctx.fill(); ctx.stroke(); ctx.strokeStyle = "rgba(122,90,40,.6)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(lx - 4, ly, 5, 0, 7); ctx.stroke(); }
+      // piles of planks
+      for (const [px, py] of [[X + W - 150, Y + 60], [X + W - 150, Y + 190]]) for (let k = 0; k < 5; k++) { ctx.fillStyle = k % 2 ? "#d8b47a" : "#c9a46a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.fillRect(px + k * 2, py - k * 6, 110, 6); ctx.strokeRect(px + k * 2, py - k * 6, 110, 6); }
+      // a half-built frame: posts and beams, ready for walls
+      { const fx = X + W - 130, fy = Y + 150; ctx.strokeStyle = "#9a7448"; ctx.lineWidth = 5; for (const dx of [0, 50, 100]) line(fx + dx, fy, fx + dx, fy - 60); line(fx - 4, fy - 58, fx + 104, fy - 58); line(fx, fy - 58, fx + 50, fy - 90); line(fx + 100, fy - 58, fx + 50, fy - 90); ctx.lineWidth = 3; line(fx, fy - 30, fx + 50, fy - 58); }
+      // the sawpit with a log laid across it
+      { const sx = X + 60, sy = Y + 190; ctx.fillStyle = "#5a4630"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(sx, sy - 12, 90, 24); ctx.strokeRect(sx, sy - 12, 90, 24); ctx.fillStyle = "#8a6438"; ctx.fillRect(sx - 14, sy - 6, 118, 12); ctx.strokeRect(sx - 14, sy - 6, 118, 12);
+        ctx.strokeStyle = "#9aa0aa"; ctx.lineWidth = 2; const t = Math.sin(clock * 2.4) * 10; line(sx + 45 + t, sy - 30, sx + 45 + t, sy + 14); }
+      ctx.fillStyle = INK; ctx.font = `18px ${FONT}`; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = PAPER; ctx.strokeText("Lumber Yard", X + W / 2, Y + 24); ctx.fillText("Lumber Yard", X + W / 2, Y + 24);
+      break;
+    }
+    case "townwall": {
+      // Inkwell's town wall: grey stone with a walk of merlons along the top
+      const stones = (x0, y0, w, h) => { ctx.fillStyle = "#c9c2b4"; ctx.fillRect(x0, y0, w, h); ctx.strokeStyle = "rgba(27,27,32,.3)"; ctx.lineWidth = 1;
+        for (let yy = y0 + 10, i = 0; yy < y0 + h; yy += 10, i++) { line(x0, yy, x0 + w, yy); } for (let yy = y0, i = 0; yy < y0 + h; yy += 10, i++) for (let xx = x0 + (i % 2) * 11; xx < x0 + w; xx += 22) line(xx, yy, xx, Math.min(y0 + h, yy + 10));
+        ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, w, h); };
+      if (q.w > q.h) { stones(q.x, q.y - 22, q.w, 36); ctx.fillStyle = "#d6cfc1"; for (let x = q.x + 4; x < q.x + q.w - 10; x += 26) { ctx.fillRect(x, q.y - 34, 14, 12); ctx.lineWidth = 1.5; ctx.strokeRect(x, q.y - 34, 14, 12); }
+        ctx.fillStyle = "rgba(90,130,60,.6)"; for (let x = q.x + 30; x < q.x + q.w; x += 170) { ctx.beginPath(); ctx.ellipse(x, q.y + 12, 16, 6, 0, 0, 7); ctx.fill(); } }
+      else { stones(q.x - 4, q.y - 12, 22, q.h + 12); ctx.fillStyle = "#d6cfc1"; for (let y = q.y - 8; y < q.y + q.h - 8; y += 26) for (const xx of [q.x - 6, q.x + 12]) { ctx.fillRect(xx, y, 8, 12); ctx.lineWidth = 1.2; ctx.strokeRect(xx, y, 8, 12); } }
+      break;
+    }
+    case "towntower": {
+      // a round stone tower; the ones beside a gate fly the village's blue banner
+      const cx = q.x + q.w / 2, B = q.y + q.h, top = q.y - 50; ctx.fillStyle = "#bfb8aa"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(q.x - 4, B); ctx.lineTo(q.x - 4, top); ctx.lineTo(q.x + q.w + 4, top); ctx.lineTo(q.x + q.w + 4, B); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(27,27,32,.3)"; ctx.lineWidth = 1; for (let y = B - 10, i = 0; y > top; y -= 11, i++) { line(q.x - 4, y, q.x + q.w + 4, y); for (let x = q.x - 4 + (i % 2) * 9; x < q.x + q.w + 4; x += 18) line(x, y, x, y + 11); }
+      ctx.fillStyle = "rgba(27,27,32,.1)"; ctx.fillRect(cx + 6, top, q.w, B - top); ctx.restore(); ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(q.x - 4, B); ctx.lineTo(q.x - 4, top); ctx.lineTo(q.x + q.w + 4, top); ctx.lineTo(q.x + q.w + 4, B); ctx.stroke();
+      ctx.fillStyle = "#d6cfc1"; for (let i = 0; i < 3; i++) { const mx = q.x - 6 + i * (q.w + 4) / 2; ctx.fillRect(mx, top - 14, 14, 15); ctx.lineWidth = 1.8; ctx.strokeRect(mx, top - 14, 14, 15); }
+      ctx.fillStyle = "#2a2226"; ctx.fillRect(cx - 3, top + 18, 6, 16);
+      if (q.gate) { ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(cx, top - 14, cx, top - 56); const fl = Math.sin(clock * 3 + q.x) * 3; ctx.fillStyle = "#3b6fb6"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, top - 56); ctx.quadraticCurveTo(cx + 16, top - 52 + fl, cx + 30, top - 48 + fl); ctx.quadraticCurveTo(cx + 16, top - 42 + fl, cx, top - 38); ctx.closePath(); ctx.fill(); ctx.stroke();
+        // a hanging banner with the village's ink drop
+        ctx.fillStyle = "#3b6fb6"; ctx.beginPath(); ctx.moveTo(cx - 11, top + 2); ctx.lineTo(cx + 11, top + 2); ctx.lineTo(cx + 11, top + 34); ctx.lineTo(cx, top + 28); ctx.lineTo(cx - 11, top + 34); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(cx, top + 8); ctx.quadraticCurveTo(cx + 6, top + 16, cx, top + 20); ctx.quadraticCurveTo(cx - 6, top + 16, cx, top + 8); ctx.fill(); }
+      break;
+    }
+    case "fletchstall": {
+      // Ash's rack: bows hung on pegs, a quiver of arrows and a straw target
+      const X = q.x, B = q.y + q.h; ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 5; line(X + 4, B, X + 4, B - 70); line(X + q.w - 4, B, X + q.w - 4, B - 70); ctx.lineWidth = 4; line(X - 2, B - 66, X + q.w + 2, B - 66); line(X + 2, B - 30, X + q.w - 2, B - 30);
+      for (let i = 0; i < 3; i++) { const bx = X + 18 + i * 19; ctx.strokeStyle = "#8a5a2a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(bx - 10, B - 50, 18, -0.9, 0.9); ctx.stroke(); ctx.strokeStyle = "#efe4c8"; ctx.lineWidth = 1; line(bx - 10 + Math.cos(-0.9) * 18, B - 50 + Math.sin(-0.9) * 18, bx - 10 + Math.cos(0.9) * 18, B - 50 + Math.sin(0.9) * 18); }
+      ctx.fillStyle = "#6a4a2a"; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.fillRect(X + q.w + 8, B - 26, 12, 26); ctx.strokeRect(X + q.w + 8, B - 26, 12, 26);
+      ctx.strokeStyle = "#8a6238"; ctx.lineWidth = 1.5; for (let i = 0; i < 4; i++) line(X + q.w + 10 + i * 3, B - 26, X + q.w + 9 + i * 3.5, B - 38); ctx.fillStyle = "#e8e0c8"; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(X + q.w + 9 + i * 3.5, B - 38); ctx.lineTo(X + q.w + 6 + i * 3.5, B - 44); ctx.lineTo(X + q.w + 12 + i * 3.5, B - 42); ctx.fill(); }
+      const tx = X - 18, ty = B - 26; ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3; line(tx - 8, B, tx, ty); line(tx + 8, B, tx, ty);
+      for (const [rr, c] of [[16, "#e9d7a8"], [11, "#c0504a"], [6, "#e9d7a8"], [2.5, "#c0504a"]]) { ctx.fillStyle = c; ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(tx, ty - 6, rr, 0, 7); ctx.fill(); ctx.stroke(); }
+      break;
+    }
     case "keepwall": {
       ctx.fillStyle = "#cfcbd4"; ctx.lineWidth = 2.5; ctx.fillRect(q.x, q.y - 60, q.w, q.h + 60); ctx.strokeRect(q.x, q.y - 60, q.w, q.h + 60);
       ctx.lineWidth = 1.5;
@@ -7127,9 +7365,13 @@ function drawRect(q) {
       ctx.fillStyle = "#fbf6e8"; ctx.fillRect(q.x, q.y, q.w, q.h); ctx.lineWidth = 2.5;
       ctx.strokeStyle = "rgba(160,120,80,.3)"; ctx.lineWidth = 1; for (let y = q.y + 12; y < q.y + q.h - 10; y += 12) line(q.x + 2, y, q.x + q.w - 2, y);
       if (q.label === "Home" && player.home.look) drawHomeLook(q);
+      // timbered cottages: dark beams across the plaster
+      if (q.timber) { ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 5; line(q.x, q.y + 4, q.x + q.w, q.y + 4); line(q.x, q.y + q.h * 0.5, q.x + q.w, q.y + q.h * 0.5);
+        for (const bx of [q.x + 4, q.x + q.w * 0.33, q.x + q.w * 0.67, q.x + q.w - 4]) line(bx, q.y, bx, q.y + q.h - 10);
+        ctx.lineWidth = 4; line(q.x + 4, q.y + q.h * 0.5, q.x + q.w * 0.33, q.y + 4); line(q.x + q.w * 0.67, q.y + 4, q.x + q.w - 4, q.y + q.h * 0.5); }
       ctx.fillStyle = "#b8b0a2"; ctx.fillRect(q.x, q.y + q.h - 10, q.w, 10); ctx.strokeStyle = INK; ctx.lineWidth = 1.2; for (let x = q.x + 14; x < q.x + q.w; x += 22) line(x, q.y + q.h - 10, x, q.y + q.h);
       ctx.lineWidth = 2.5; ctx.strokeRect(q.x, q.y, q.w, q.h);
-      ctx.fillStyle = q.forge ? "#b9b2a6" : (q.label === "Home" && homeRoof(q)) || q.color || "#c98a63";
+      ctx.fillStyle = q.forge ? "#b9b2a6" : (q.label === "Home" && homeRoof(q)) || (q.roof === "thatch" ? "#d8b060" : q.roof === "slate" ? "#6a7488" : q.color) || "#c98a63";
       const roof = () => { ctx.beginPath(); ctx.moveTo(q.x - 12, q.y + 6); ctx.lineTo(q.x + q.w / 2, q.y - roofH); ctx.lineTo(q.x + q.w + 12, q.y + 6); ctx.closePath(); };
       roof(); ctx.fill(); ctx.save(); ctx.clip(); ctx.strokeStyle = "rgba(27,27,32,.28)"; ctx.lineWidth = 1.2;
       for (let y = q.y + 2, i = 0; y > q.y - roofH; y -= 11, i++) { line(q.x - 14, y, q.x + q.w + 14, y); for (let x = q.x - 12 + (i % 2) * 9; x < q.x + q.w + 12; x += 18) line(x, y, x, y - 11); }
@@ -7148,6 +7390,14 @@ function drawRect(q) {
       if (q.label) { ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(q.label, q.x + q.w / 2, q.y - roofH * 0.35); }
       if (door) { ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(q.x + q.w / 2 + 8, q.y + q.h - 22, 3, 0, 7); ctx.fill(); }
       if (q.label === "Home") drawHomeTop(q, roofH);
+      if (q.sign) { // the Leaky Inkwell's sign swings from an iron bracket, with barrels by the door
+        const sx = q.x - 6, sy = q.y + 30, sw = Math.sin(clock * 1.6) * 0.06; ctx.strokeStyle = "#3a3640"; ctx.lineWidth = 3; line(q.x, sy, sx - 58, sy); line(q.x, sy + 16, sx - 30, sy);
+        ctx.save(); ctx.translate(sx - 34, sy); ctx.rotate(sw); ctx.lineWidth = 1.5; line(-18, 0, -18, 10); line(18, 0, 18, 10);
+        ctx.fillStyle = "#8a5a34"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-30, 10, 60, 40, 5); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#26262e"; ctx.beginPath(); ctx.moveTo(0, 16); ctx.quadraticCurveTo(10, 30, 0, 36); ctx.quadraticCurveTo(-10, 30, 0, 16); ctx.fill();
+        ctx.fillStyle = "#f1e4bf"; ctx.font = `11px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Leaky Inkwell", 0, 47); ctx.restore();
+        for (const bx of [q.x + q.w / 2 + 30, q.x + q.w / 2 + 52]) { ctx.fillStyle = "#9a6a3a"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(bx - 9, q.y + q.h - 28, 18, 28, 4); ctx.fill(); ctx.stroke();
+          ctx.strokeStyle = "#3a3640"; ctx.lineWidth = 1.5; line(bx - 9, q.y + q.h - 20, bx + 9, q.y + q.h - 20); line(bx - 9, q.y + q.h - 8, bx + 9, q.y + q.h - 8); } }
       break;
     }
     case "forge": {
@@ -7170,20 +7420,24 @@ function drawRect(q) {
       // quench barrel
       ctx.fillStyle = "#9a6a3a"; ctx.fillRect(fx0 + 160, fy + 26, 28, 34); ctx.strokeRect(fx0 + 160, fy + 26, 28, 34);
       ctx.fillStyle = "#5b8fc4"; ctx.beginPath(); ctx.ellipse(fx0 + 174, fy + 26, 14, 5, 0, 0, 7); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Forge", fx0 + 52, fy - 108);
+      if (!q.joined) { ctx.fillStyle = INK; ctx.font = `20px ${FONT}`; ctx.textAlign = "center"; ctx.fillText("Forge", fx0 + 52, fy - 108); }
       break;
     }
     case "cart": {
-      // fabric cart: wooden bed, wheels, bolts of cloth, a little awning
+      // Carly's market stall: a striped canopy with a scalloped edge, bolts of cloth and a dress form beside it
       const cx0 = q.x, cy0 = q.y; ctx.lineWidth = 2.5;
-      ctx.strokeStyle = "#7a5a34"; line(cx0 + 4, cy0 - 50, cx0 + 4, cy0 + 10); line(cx0 + q.w - 4, cy0 - 50, cx0 + q.w - 4, cy0 + 10);
-      ctx.strokeStyle = INK; ctx.fillStyle = "#e9d7a8"; ctx.beginPath(); ctx.moveTo(cx0 - 8, cy0 - 44); ctx.lineTo(cx0 + q.w + 8, cy0 - 44); ctx.lineTo(cx0 + q.w, cy0 - 60); ctx.lineTo(cx0, cy0 - 60); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#c0504a"; for (let i = 0; i < 4; i++) ctx.fillRect(cx0 + 2 + i * 24, cy0 - 59, 11, 14);
+      ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 5; line(cx0 + 2, cy0 - 74, cx0 + 2, cy0 + 24); line(cx0 + q.w - 2, cy0 - 74, cx0 + q.w - 2, cy0 + 24); ctx.lineWidth = 2.5;
+      ctx.strokeStyle = INK; ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(cx0 - 14, cy0 - 56); ctx.lineTo(cx0 + q.w + 14, cy0 - 56); ctx.lineTo(cx0 + q.w + 4, cy0 - 84); ctx.lineTo(cx0 - 4, cy0 - 84); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.clip(); ctx.fillStyle = "#c0504a"; for (let i = 0; i < 7; i++) { const sx = cx0 - 14 + i * 18; ctx.beginPath(); ctx.moveTo(sx, cy0 - 56); ctx.lineTo(sx + 9, cy0 - 56); ctx.lineTo(sx + 9 + 3, cy0 - 84); ctx.lineTo(sx + 3, cy0 - 84); ctx.fill(); } ctx.restore(); ctx.stroke();
+      ctx.beginPath(); for (let i = 0; i < 7; i++) { const sx = cx0 - 14 + i * ((q.w + 28) / 7); ctx.moveTo(sx, cy0 - 56); ctx.arc(sx + (q.w + 28) / 14, cy0 - 56, (q.w + 28) / 14, Math.PI, 0, true); } ctx.fillStyle = "#c0504a"; ctx.fill(); ctx.stroke();
+      // the dress form, in this season's blue
+      { const dx = cx0 - 26, dy = cy0 + 24; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 2.5; line(dx, dy, dx, dy - 22); line(dx - 8, dy, dx + 8, dy); ctx.fillStyle = "#3b6fb6"; ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(dx - 10, dy - 56); ctx.quadraticCurveTo(dx - 15, dy - 40, dx - 8, dy - 22); ctx.lineTo(dx + 8, dy - 22); ctx.quadraticCurveTo(dx + 15, dy - 40, dx + 10, dy - 56); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#6a4a2a"; ctx.beginPath(); ctx.arc(dx, dy - 59, 4, 0, 7); ctx.fill(); }
       const bolts = ["#c0504a", "#3b6fb6", "#3d6b3a", "#c99a17", "#7a5aa6"];
       bolts.forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx0 + 12 + i * 17, cy0 - 2 - (i % 2) * 6, 8, 14, 0.2, 0, 7); ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke(); });
       ctx.lineWidth = 2.5; ctx.fillStyle = "#a87a48"; ctx.fillRect(cx0, cy0 + 4, q.w, 20); ctx.strokeRect(cx0, cy0 + 4, q.w, 20);
-      ctx.fillStyle = "#6b4a2a"; [cx0 + 18, cx0 + q.w - 18].forEach(wx => { ctx.beginPath(); ctx.arc(wx, cy0 + 30, 13, 0, 7); ctx.fill(); ctx.stroke(); line(wx - 9, cy0 + 30, wx + 9, cy0 + 30); line(wx, cy0 + 21, wx, cy0 + 39); });
-      ctx.strokeStyle = "#7a5a34"; line(cx0 + q.w, cy0 + 14, cx0 + q.w + 30, cy0 + 22);
+      ctx.fillStyle = "#8a6238"; ctx.fillRect(cx0 + 4, cy0 + 24, 8, 8); ctx.fillRect(cx0 + q.w - 12, cy0 + 24, 8, 8);
       break;
     }
     case "potiontable": {
@@ -7198,6 +7452,12 @@ function drawRect(q) {
         ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by - 5, 6, 0, 7); ctx.stroke(); ctx.strokeRect(bx - 2.5, by - 5 - h, 5, h);
       });
       if (Math.sin(clock * 2) > 0.6) { ctx.fillStyle = "rgba(164,90,216,.35)"; ctx.beginPath(); ctx.arc(tx + 70, ty - 34 - (clock % 1) * 12, 5, 0, 7); ctx.fill(); }
+      // Fizz's canopy: purple with gold stars, dried herbs hanging from the front
+      ctx.strokeStyle = "#5a3a20"; ctx.lineWidth = 4; line(tx + 2, ty + 36, tx + 2, ty - 66); line(tx + q.w - 2, ty + 36, tx + q.w - 2, ty - 66);
+      ctx.fillStyle = "#6a4a9a"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tx - 12, ty - 50); ctx.lineTo(tx + q.w + 12, ty - 50); ctx.lineTo(tx + q.w + 2, ty - 76); ctx.lineTo(tx - 2, ty - 76); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tx - 12, ty - 50); for (let i = 0; i <= 8; i++) ctx.lineTo(tx - 12 + i * (q.w + 24) / 8, ty - 50 + (i % 2 ? 8 : 0)); ctx.lineTo(tx + q.w + 12, ty - 50); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = GOLD; for (const [sx, sy] of [[tx + 14, ty - 66], [tx + 42, ty - 60], [tx + 68, ty - 68]]) { ctx.beginPath(); for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - Math.PI / 2, rr = k % 2 ? 2 : 5; ctx.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+      ctx.strokeStyle = "#5a7a3a"; ctx.lineWidth = 2; for (const hx of [tx + 18, tx + 40, tx + 62]) { line(hx, ty - 46, hx, ty - 34); ctx.fillStyle = "#6a9a4a"; ctx.beginPath(); ctx.ellipse(hx, ty - 30, 5, 7, 0, 0, 7); ctx.fill(); }
       break;
     }
     case "dgate": drawDgate(q); break;
