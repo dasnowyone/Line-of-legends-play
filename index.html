@@ -1640,7 +1640,10 @@ function buildWorld() {
     for (const q of rects) if (q.kind === "forge" && inV(q.x, q.y)) q.joined = true;
     // the top row: two homes going up and a lot for sale
     rects.push({ x: 11420, y: 29890, w: 170, h: 115, kind: "house", style: "build" }, { x: 11650, y: 29890, w: 170, h: 115, kind: "house", style: "build", stage: 1 },
-      { x: 12110, y: 29880, w: 200, h: 130, kind: "forsale", ghost: true, flat: true });
+      { x: 12080, y: 29800, w: 460, h: 210, kind: "forsale", ghost: true, flat: true });
+    { const e = (hd, x, y, w, h, o) => rects.push({ kind: "homedecor", hd, x, y, w, h, ghost: true, ...o });
+      e("lot", 12080, 29800, 460, 210, { flat: true }); e("garden", 12385, 29820, 145, 85); e("gazebo", 12095, 29835, 120, 100); e("statue", 12290, 29860, 40, 30);
+      e("reflect", 12385, 29925, 140, 50, { flat: true }); e("arch", 12270, 29998, 80, 12); for (const [x, y] of [[12092, 29812], [12518, 29812], [12092, 29990], [12518, 29990]]) e("lamps", x, y, 10, 8); }
     rects.push({ x: 10945, y: 30680, w: 455, h: 250, kind: "lumberyard", ghost: true, flat: true });
     const roofs = ["thatch", "slate", "#b0603e", "thatch", "#7a9cc6", "slate", "#c98a63", "thatch"];
     [[10945, 29890, 170, 115], [11160, 29890, 170, 115], [12580, 29890, 170, 115], [12820, 29890, 170, 115], [10955, 30975, 160, 100], [11170, 30975, 160, 100], [12700, 30700, 170, 115], [12920, 30700, 160, 115]]
@@ -1653,13 +1656,13 @@ function buildWorld() {
     // paved streets: [x1, y1, x2, y2], every one level or upright
     vz.streets = [[10900, 30600, V.x1, 30600], [12000, V.y0, 12000, 30420], [10900, 30060, 13060, 30060], [10900, 31120, 13060, 31120], [10900, 30060, 10900, 31120], [12035, 30600, 12035, 31120],
       [11620, 30345, 11620, 30410], [11620, 30410, 11975, 30410], [11040, 30490, 11040, 30600], [11250, 30490, 11250, 30600], [11030, 30005, 11030, 30060], [11245, 30005, 11245, 30060],
-      [12665, 30005, 12665, 30060], [12905, 30005, 12905, 30060], [11505, 30005, 11505, 30060], [11735, 30005, 11735, 30060], [12210, 30010, 12210, 30060], [11035, 31075, 11035, 31120], [11250, 31075, 11250, 31120], [11620, 30860, 11620, 31120], [11865, 31010, 11865, 31120],
+      [12665, 30005, 12665, 30060], [12905, 30005, 12905, 30060], [11505, 30005, 11505, 30060], [11735, 30005, 11735, 30060], [12310, 30010, 12310, 30060], [11035, 31075, 11035, 31120], [11250, 31075, 11250, 31120], [11620, 30860, 11620, 31120], [11865, 31010, 11865, 31120],
       [12250, 30890, 12250, 31120], [12415, 30335, 12415, 30600], [12635, 30390, 12635, 30600], [12970, 30380, 12970, 30600], [12550, 30820, 12550, 31120], [12785, 30815, 12785, 31120], [13000, 30815, 13000, 31120]];
     vz.plaza = { x: 12000, y: 30530, r: 175 };
     for (const [x, y] of [[11140, 30562], [11480, 30562], [11880, 30562], [12290, 30562], [12540, 30562], [12850, 30562], [13060, 30562], [11470, 30668], [12340, 30668], [12640, 30668],
       [11620, 30030], [12075, 30030], [12520, 30030], [11420, 31085], [12130, 31085], [12700, 31085], [11930, 30330], [12070, 30330], [11900, 29800], [12100, 29800]]) W_PGPROPS.push({ kind: "lantern", x, y, town: true });
     W_PGPROPS.push({ kind: "bunting", x: 11935, y: 30332, x1: 12065, y1: 30332 }, { kind: "bunting", x: 12295, y: 30564, x1: 12535, y1: 30564 }, { kind: "bunting", x: 11485, y: 30564, x1: 11875, y1: 30564 });
-    for (const [x, y, r0] of [[11890, 29880, 13], [12470, 29900, 14], [11450, 31010, 13], [12200, 30250, 12], [11720, 30180, 12]]) circles.push(pgTree(x, y, r0, "rgba(140,180,110,.93)")); }
+    for (const [x, y, r0] of [[11890, 29880, 13], [11450, 31010, 13], [12200, 30250, 12], [11720, 30180, 12]]) circles.push(pgTree(x, y, r0, "rgba(140,180,110,.93)")); }
 
   // Camps get real ground instead of a tan square (Lee): grass, dirt or shoveled snow, gravel where the roads run through,
   // stepping stones to the tents and waystone, and a fence (or snowbanks in the cold) around parts of the edge
@@ -2513,14 +2516,22 @@ const HOME = {
   tower: { name: "Astronomy Tower", tab: "add", gems: 300, desc: "Climb up and look at the stars. Stones you have won light up the sky" },
   green: { name: "Glass Greenhouse", tab: "add", gems: 300, desc: "Grows 2 herbs a day for you to pick" },
   pool: { name: "Indoor Pool", tab: "add", gems: 400, desc: "A pool inside your house. Walk in for a swim" },
+  // The estate (Lee): the lot for sale by the north road becomes yours, with grand pieces to fill it
+  lot: { name: "Estate Lot", tab: "estate", coins: 20000, desc: "The lot by the north road becomes your estate: a lawn, an iron fence and a gate" },
+  lamps: { name: "Grand Lamps", tab: "estate", coins: 2500, lot: true, desc: "Four tall iron lamps that light up at night" },
+  arch: { name: "Rose Arch", tab: "estate", coins: 3000, lot: true, desc: "Climbing roses over the estate gate" },
+  garden: { name: "Formal Hedge Garden", tab: "estate", coins: 6000, lot: true, desc: "Clipped box hedges in a knot pattern, roses in the middle" },
+  reflect: { name: "Reflecting Pool", tab: "estate", gems: 200, lot: true, desc: "A long pool with fountain jets" },
+  gazebo: { name: "Marble Gazebo", tab: "estate", gems: 250, lot: true, desc: "White columns and a domed roof" },
+  statue: { name: "Hero Statue", tab: "estate", gems: 300, lot: true, desc: "A golden statue of your hero, raising your class's weapon" },
 };
-const HOME_TABS = { in: "Inside", yard: "Yard", house: "House", add: "Additions" };
+const HOME_TABS = { in: "Inside", yard: "Yard", house: "House", add: "Additions", estate: "Estate" };
 const homeOn = id => player.home.own.includes(id) && !player.home.off.includes(id);
 // where each piece sits: yard pieces next to the Home house in the village, inside pieces in the house
 function homeYard(h) {
   const r = (hd, dx, dy, w, ht, o) => ({ kind: "homedecor", hd, x: h.x + dx, y: h.y + dy, w, h: ht, ghost: true, ...o });
   return [r("tower", -92, 10, 70, 120), r("green", 215, 40, 140, 90), r("beds", 8, 132, 70, 14, { flat: true }), r("beds", 122, 132, 70, 14, { flat: true }),
-    r("lanterns", 66, 160, 10, 8), r("lanterns", 124, 160, 10, 8), r("gnome", 10, 170, 16, 10), r("flamingo", 185, 160, 12, 8), r("bath", -62, 190, 30, 18),
+    r("lanterns", 56, 160, 10, 8), r("lanterns", 136, 160, 10, 8), r("gnome", 10, 170, 16, 10), r("flamingo", 185, 160, 12, 8), r("bath", -62, 190, 30, 18),
     r("topiary", -80, 255, 54, 26), r("fountain", 70, 248, 60, 30), r("pond", 232, 292, 100, 40, { flat: true })];
 }
 const HOME_IN = [["rug", 250, 370, 270, 130, { flat: true }], ["fern", 190, 84, 30, 30], ["lamp", 192, 296, 20, 20], ["chair", 230, 280, 50, 46], ["books", 28, 250, 44, 130],
@@ -2554,23 +2565,77 @@ function drawHomeDecor(q) {
       for (let i = 0; i < 6; i++) { const px = x + 14 + i * 22; ctx.fillStyle = ["#5a8a3a", "#3f7a3a", "#e8607a", "#f2c640"][i % 4]; ctx.beginPath(); ctx.arc(px, y + h - 22, 9, 0, 7); ctx.fill(); ctx.fillStyle = "#3f7a3a"; ctx.fillRect(px - 1, y + h - 14, 2, 10); }
       ctx.lineWidth = 1.2; for (let xx = x + 28; xx < x + w; xx += 28) line(xx, y + h, xx, y - 20 - Math.min(xx - x, x + w - xx) * 0.57); line(x, y + 30, x + w, y + 30); ctx.lineWidth = 2;
       box(x + w / 2 - 13, y + h - 40, 26, 40, "rgba(200,232,240,.8)"); break; }
-    case "beds": { box(x, y, w, h, "#7a5a34"); for (let i = 0; i < 6; i++) ell(x + 7 + i * 11.5, y + 5, 4, 4, ["#e8607a", "#f2c640", "#c07ad8", "#fffdf6"][i % 4]); break; }
-    case "lanterns": { shadow(x + 5, y + 8, 8); ctx.lineWidth = 3; line(x + 5, y + 8, x + 5, y - 34); ctx.lineWidth = 2; box(x - 2, y - 46, 14, 14, `rgba(255,200,90,${0.85 + 0.15 * Math.sin(clock * 5 + x)})`);
-      ctx.fillStyle = "rgba(255,200,90,.22)"; ctx.beginPath(); ctx.arc(x + 5, y - 39, 22, 0, 7); ctx.fill(); break; }
-    case "gnome": { shadow(x + 8, y + 8, 9); box(x + 2, y - 10, 12, 16, "#3b6fb6"); ell(x + 8, y - 14, 6, 6, "#f0c8a0"); ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(x + 2, y - 12); ctx.lineTo(x + 8, y - 2); ctx.lineTo(x + 14, y - 12); ctx.fill();
-      ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.moveTo(x + 1, y - 16); ctx.lineTo(x + 8, y - 34); ctx.lineTo(x + 15, y - 16); ctx.closePath(); ctx.fill(); ctx.stroke(); break; }
-    case "flamingo": { shadow(x + 6, y + 6, 8); ctx.lineWidth = 1.5; line(x + 6, y + 6, x + 6, y - 18); ctx.lineWidth = 2; ell(x + 6, y - 24, 11, 7, "#f08aa8");
-      ctx.strokeStyle = "#f08aa8"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + 14, y - 26); ctx.quadraticCurveTo(x + 22, y - 44, x + 14, y - 46); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ell(x + 13, y - 47, 4, 3.5, "#f08aa8"); break; }
-    case "bath": { shadow(x + w / 2, y + h, 14); box(x + w / 2 - 4, y - 14, 8, h + 14, "#b9b2a6"); ell(x + w / 2, y - 16, 20, 7, "#b9b2a6"); ell(x + w / 2, y - 17, 14, 4, "#9fd0ea"); ell(x + w / 2 + 6, y - 22, 4, 3, "#c98a63"); break; }
-    case "topiary": { shadow(x + w / 2, y + h, 26); ctx.fillStyle = "#4f8a3a"; // a hedge cut like a little dragon
-      ell(x + 24, y + 6, 22, 14, "#4f8a3a"); ell(x + 46, y - 14, 10, 14, "#4f8a3a"); ell(x + 52, y - 30, 10, 8, "#4f8a3a"); ell(x + 4, y, 10, 6, "#4f8a3a");
-      for (const sx of [12, 22, 32]) { ctx.fillStyle = "#3f7a3a"; ctx.beginPath(); ctx.moveTo(x + sx - 5, y - 6); ctx.lineTo(x + sx, y - 16); ctx.lineTo(x + sx + 5, y - 6); ctx.fill(); ctx.stroke(); }
-      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 55, y - 32, 1.8, 0, 7); ctx.fill(); break; }
-    case "fountain": { const cx = x + w / 2; ell(cx, y + h / 2, w / 2, h / 2 + 2, "#b9b2a6"); ell(cx, y + h / 2 - 2, w / 2 - 7, h / 2 - 5, "#9fd0ea"); box(cx - 5, y - 18, 10, 24, "#b9b2a6"); ell(cx, y - 20, 14, 5, "#b9b2a6");
-      ctx.strokeStyle = "rgba(120,180,220,.9)"; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx, y - 24); ctx.quadraticCurveTo(cx + s * 14, y - 40 - 3 * Math.sin(clock * 6), cx + s * 20, y + 4); ctx.stroke(); } break; }
-    case "pond": { const cx = x + w / 2, cy = y + h / 2; ell(cx, cy, w / 2, h / 2, "#7fb8d8"); ctx.lineWidth = 1;
-      for (let i = 0; i < 3; i++) { const a = clock * 0.7 + i * 2.1; ctx.fillStyle = ["#f08a3a", "#fffdf6", "#e0662a"][i]; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 30, cy + Math.sin(a) * 12, 6, 3, a + Math.PI / 2, 0, 7); ctx.fill(); }
-      ctx.lineWidth = 2; ell(cx - 34, cy + 10, 9, 5, "#5a9a4a"); ell(x + 10, y + 6, 8, 6, "#a8a29a"); ell(x + w - 8, y + h - 6, 9, 6, "#a8a29a"); break; }
+    // The yard, made grand (Lee): stone planters of roses, iron lamp posts, a marble birdbath, a winged dragon hedge, a three-tier fountain, a koi pond with a bridge
+    case "beds": { box(x - 2, y - 6, w + 4, h + 6, "#c9c2b4"); ctx.lineWidth = 1; for (let xx = x + 12; xx < x + w; xx += 14) line(xx, y - 6, xx, y + h); ctx.lineWidth = 2; box(x - 4, y - 9, w + 8, 5, "#d9d2c4");
+      for (let i = 0; i < 7; i++) { const bx = x + 6 + i * (w - 12) / 6, by = y - 14 - (i % 2) * 4; ell(bx, by + 4, 7, 6, "#3f7a3a"); ell(bx, by, 4.5, 4.5, ["#c0392b", "#e8607a", "#fffdf6", "#c0392b"][i % 4]); } break; }
+    case "lanterns": { shadow(x + 5, y + 8, 10); box(x - 2, y, 14, 8, "#3a3640"); ctx.strokeStyle = "#3a3640"; ctx.lineWidth = 4; line(x + 5, y, x + 5, y - 60); ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x - 3, y - 60, 8, -Math.PI / 2, Math.PI / 2, true); ctx.stroke(); ctx.beginPath(); ctx.arc(x + 13, y - 60, 8, -Math.PI / 2, Math.PI / 2); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      for (const lx of [x - 7, x + 17]) { ctx.fillStyle = `rgba(255,200,90,${0.85 + 0.15 * Math.sin(clock * 5 + lx)})`; ctx.beginPath(); ctx.moveTo(lx - 5, y - 52); ctx.lineTo(lx + 5, y - 52); ctx.lineTo(lx + 4, y - 40); ctx.lineTo(lx - 4, y - 40); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "rgba(255,200,90,.2)"; ctx.beginPath(); ctx.arc(lx, y - 46, 18, 0, 7); ctx.fill(); }
+      ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(x + 5, y - 66, 3.5, 0, 7); ctx.fill(); ctx.stroke(); break; }
+    case "gnome": { shadow(x + 8, y + 8, 12); box(x - 4, y, 24, 8, "#c9c2b4"); box(x, y - 16, 16, 18, "#3b6fb6"); ell(x + 8, y - 20, 8, 8, "#f0c8a0"); ctx.fillStyle = "#fffdf6"; ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(x + 8, y - 4); ctx.lineTo(x + 16, y - 18); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#c0392b"; ctx.beginPath(); ctx.moveTo(x - 1, y - 24); ctx.lineTo(x + 8, y - 48); ctx.lineTo(x + 17, y - 24); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.strokeStyle = "#8a6238"; ctx.lineWidth = 3; line(x + 18, y - 4, x + 26, y - 26); ctx.strokeStyle = INK; ctx.lineWidth = 2; break; }
+    case "flamingo": { shadow(x + 6, y + 6, 10); ctx.lineWidth = 1.8; line(x + 4, y + 6, x + 6, y - 22); line(x + 8, y + 6, x + 6, y - 22); ctx.lineWidth = 2; ell(x + 6, y - 30, 14, 9, "#f08aa8"); ell(x + 2, y - 31, 7, 5, "#e86a90");
+      ctx.strokeStyle = "#f08aa8"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + 16, y - 32); ctx.quadraticCurveTo(x + 28, y - 56, x + 17, y - 60); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ell(x + 16, y - 61, 5, 4.5, "#f08aa8");
+      ctx.fillStyle = "#26262e"; ctx.beginPath(); ctx.moveTo(x + 11, y - 61); ctx.lineTo(x + 6, y - 55); ctx.lineTo(x + 12, y - 58); ctx.fill(); break; }
+    case "bath": { const cx = x + w / 2; shadow(cx, y + h, 18); box(cx - 14, y + h - 8, 28, 8, "#e6e1d6"); ctx.fillStyle = "#efeae0"; ctx.beginPath(); ctx.moveTo(cx - 6, y + h - 8); ctx.quadraticCurveTo(cx - 12, y - 4, cx - 5, y - 20); ctx.lineTo(cx + 5, y - 20); ctx.quadraticCurveTo(cx + 12, y - 4, cx + 6, y + h - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ell(cx, y - 24, 26, 9, "#efeae0"); ell(cx, y - 25, 19, 5, "#9fd0ea"); const hop = Math.max(0, Math.sin(clock * 3 + x)) * 4; ell(cx + 10, y - 30 - hop, 5, 4, "#c98a63"); ctx.fillStyle = "#f2c640"; ctx.beginPath(); ctx.moveTo(cx + 15, y - 31 - hop); ctx.lineTo(cx + 19, y - 30 - hop); ctx.lineTo(cx + 15, y - 29 - hop); ctx.fill(); break; }
+    case "topiary": { shadow(x + w / 2, y + h, 34); // a hedge clipped into a dragon, wings and all, on a stone plinth
+      box(x - 4, y + 4, w + 8, 12, "#c9c2b4"); const G = "#4f8a3a"; ell(x + 26, y - 6, 26, 16, G); ell(x + 52, y - 26, 11, 18, G); ell(x + 58, y - 46, 12, 9, G); ell(x + 2, y - 2, 12, 7, G);
+      ctx.fillStyle = "#3f7a3a"; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + 22, y - 18); ctx.quadraticCurveTo(x + 10 + sd * 4, y - 58, x + 34 + sd * 6, y - 52); ctx.quadraticCurveTo(x + 30, y - 36, x + 34, y - 18); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      for (const sx of [10, 22, 34]) { ctx.beginPath(); ctx.moveTo(x + sx - 5, y - 18); ctx.lineTo(x + sx, y - 28); ctx.lineTo(x + sx + 5, y - 18); ctx.fill(); ctx.stroke(); }
+      ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + 62, y - 48, 2, 0, 7); ctx.fill(); break; }
+    case "fountain": { const cx = x + w / 2, by = y + h / 2; // three tiers of white marble, water falling from each
+      ell(cx, by, w / 2 + 14, h / 2 + 8, "#efeae0"); ell(cx, by - 1, w / 2 + 6, h / 2 + 2, "#9fd0ea");
+      for (const [ty, rw, rh] of [[-26, 24, 7], [-50, 14, 5]]) { box(cx - 5, by + ty, 10, (ty === -26 ? 24 : 22), "#e6e1d6"); ell(cx, by + ty, rw, rh, "#efeae0"); ell(cx, by + ty - 1, rw - 5, rh - 3, "#9fd0ea"); }
+      ctx.fillStyle = "#efeae0"; ctx.beginPath(); ctx.arc(cx, by - 58, 5, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(120,180,220,.9)"; ctx.lineWidth = 2; const sp = 3 * Math.sin(clock * 6);
+      ctx.beginPath(); ctx.moveTo(cx, by - 62); ctx.lineTo(cx, by - 82 - sp); ctx.stroke(); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx, by - 82 - sp); ctx.quadraticCurveTo(cx + s * 10, by - 88, cx + s * 14, by - 52); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + s * 14, by - 50); ctx.quadraticCurveTo(cx + s * 22, by - 40, cx + s * 24, by - 26); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx + s * 24, by - 26); ctx.quadraticCurveTo(cx + s * 32, by - 16, cx + s * 34, by - 2); ctx.stroke(); } break; }
+    case "pond": { const cx = x + w / 2, cy = y + h / 2; ell(cx, cy, w / 2 + 8, h / 2 + 6, "#b9b2a6"); ell(cx, cy, w / 2, h / 2, "#6fa8cc"); ctx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) { const a = clock * 0.7 + i * 1.6; ctx.fillStyle = ["#f08a3a", "#fffdf6", "#e0662a", "#f2c640"][i]; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 34, cy + Math.sin(a) * 12, 7, 3.5, a + Math.PI / 2, 0, 7); ctx.fill(); }
+      ctx.lineWidth = 2; for (const [lx, ly] of [[cx - 36, cy + 8], [cx + 30, cy - 10], [cx - 10, cy - 12]]) { ell(lx, ly, 9, 5, "#5a9a4a"); ctx.fillStyle = "#f6c2d0"; ctx.beginPath(); ctx.arc(lx + 2, ly - 2, 3, 0, 7); ctx.fill(); }
+      // a little red arched bridge across the middle
+      ctx.strokeStyle = "#a0402a"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(cx - 10, cy + h / 2 + 4); ctx.quadraticCurveTo(cx, cy - 4, cx + 10, cy - h / 2 - 4); ctx.stroke(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = "#c0503a"; ctx.lineWidth = 2; for (const o of [-8, 8]) { ctx.beginPath(); ctx.moveTo(cx - 10 + o, cy + h / 2 + 2); ctx.quadraticCurveTo(cx + o, cy - 14, cx + 10 + o, cy - h / 2 - 6); ctx.stroke(); } ctx.strokeStyle = INK; break; }
+    // The estate (Lee): the bought lot, and the grand pieces that go on it
+    case "lot": { ctx.fillStyle = "#8cc06a"; ctx.fillRect(x, y, w, h); ctx.fillStyle = "rgba(255,255,255,.12)"; for (let xx = x; xx < x + w; xx += 40) ctx.fillRect(xx, y, 20, h);
+      ctx.fillStyle = "#e3d8bf"; ctx.fillRect(x + w / 2 - 22, y + 70, 44, h - 70); ctx.beginPath(); ctx.arc(x + w / 2, y + 66, 40, 0, 7); ctx.fill(); ctx.strokeStyle = "rgba(120,100,70,.4)"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.strokeStyle = "#2a2a30"; ctx.lineWidth = 2; const gw = 44; // a black iron fence with gold finials, a gate in the front
+      const fence = (ax, ay, bx, by) => { line(ax, ay - 22, bx, by - 22); line(ax, ay - 4, bx, by - 4); const n = Math.round(Math.hypot(bx - ax, by - ay) / 10); for (let i = 0; i <= n; i++) { const px = ax + (bx - ax) * i / n, py = ay + (by - ay) * i / n; line(px, py, px, py - 28); ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(px, py - 29, 1.8, 0, 7); ctx.fill(); } };
+      fence(x, y, x + w, y); fence(x, y, x, y + h); fence(x + w, y, x + w, y + h); fence(x, y + h, x + w / 2 - gw, y + h); fence(x + w / 2 + gw, y + h, x + w, y + h);
+      for (const px of [x + w / 2 - gw, x + w / 2 + gw]) { ctx.fillStyle = "#e6e1d6"; ctx.strokeStyle = INK; ctx.fillRect(px - 7, y + h - 40, 14, 40); ctx.strokeRect(px - 7, y + h - 40, 14, 40); ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(px, y + h - 44, 5, 0, 7); ctx.fill(); ctx.stroke(); }
+      break; }
+    case "lamps": { shadow(x + 5, y + 8, 10); box(x - 3, y - 4, 16, 12, "#3a3640"); ctx.strokeStyle = "#2a2a30"; ctx.lineWidth = 5; line(x + 5, y - 4, x + 5, y - 86); ctx.strokeStyle = INK; ctx.lineWidth = 1.8;
+      const lit = isNight(); ctx.fillStyle = lit ? "#ffd86a" : `rgba(255,220,140,.8)`; ctx.beginPath(); ctx.moveTo(x - 6, y - 86); ctx.lineTo(x + 16, y - 86); ctx.lineTo(x + 12, y - 106); ctx.lineTo(x - 2, y - 106); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#2a2a30"; ctx.beginPath(); ctx.moveTo(x - 8, y - 106); ctx.lineTo(x + 18, y - 106); ctx.lineTo(x + 5, y - 116); ctx.closePath(); ctx.fill();
+      if (lit) { ctx.fillStyle = "rgba(255,210,110,.25)"; ctx.beginPath(); ctx.arc(x + 5, y - 96, 46, 0, 7); ctx.fill(); } break; }
+    case "arch": { const cx = x + w / 2; ctx.strokeStyle = "#5a7a3a"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y - 50); ctx.arc(cx, y - 50, w / 2, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.stroke(); for (let i = 0; i < 16; i++) { const t = i / 15, a = Math.PI + t * Math.PI, px = t < 0.25 ? x : t > 0.75 ? x + w : cx + Math.cos(a) * w / 2, py = t < 0.25 ? y + h - t * 4 * 60 : t > 0.75 ? y + h - (1 - t) * 4 * 60 : y - 50 + Math.sin(a) * w / 2;
+        ell(px, py, 5, 4, "#4f8a3a"); if (i % 2 === 0) ell(px + 2, py - 1, 3.5, 3.5, i % 4 ? "#e8607a" : "#c0392b"); } break; }
+    case "garden": { // a knot garden of clipped box hedges, roses in the centre, gravel between
+      ctx.fillStyle = "#e3d8bf"; ctx.fillRect(x, y, w, h); const G = "#3f7a3a";
+      const hedge = (hx, hy, hw, hh) => { ctx.fillStyle = G; ctx.beginPath(); ctx.roundRect(hx, hy, hw, hh, 5); ctx.fill(); ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(hx + 2, hy + 2, hw - 4, 3); };
+      hedge(x, y, w, 10); hedge(x, y + h - 10, w, 10); hedge(x, y, 10, h); hedge(x + w - 10, y, 10, h);
+      for (const [qx, qy] of [[x + 18, y + 18], [x + w / 2 + 10, y + 18], [x + 18, y + h / 2 + 6], [x + w / 2 + 10, y + h / 2 + 6]]) { hedge(qx, qy, w / 2 - 28, 8); hedge(qx, qy, 8, h / 2 - 24); }
+      ell(x + w / 2, y + h / 2, 16, 11, G); for (let i = 0; i < 6; i++) { const a = i * 1.05; ell(x + w / 2 + Math.cos(a) * 9, y + h / 2 + Math.sin(a) * 6 - 3, 3.5, 3.5, i % 2 ? "#c0392b" : "#e8607a"); } break; }
+    case "reflect": { const cx = x + w / 2, cy = y + h / 2; box(x, y, w, h, "#efeae0"); ctx.fillStyle = "#6fa8cc"; ctx.fillRect(x + 6, y + 6, w - 12, h - 12);
+      ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.fillRect(x + 12, y + 10, w - 40, 3); ctx.strokeStyle = "rgba(170,210,240,.95)"; ctx.lineWidth = 2;
+      for (const jx of [x + 22, cx, x + w - 22]) { const jh = 22 + 4 * Math.sin(clock * 5 + jx); ctx.beginPath(); ctx.moveTo(jx, cy); ctx.lineTo(jx, cy - jh); ctx.stroke(); for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(jx, cy - jh); ctx.quadraticCurveTo(jx + s * 6, cy - jh - 4, jx + s * 10, cy - 2); ctx.stroke(); } }
+      ctx.strokeStyle = INK; break; }
+    case "gazebo": { const cx = x + w / 2, B = y + h; ell(cx, B - 6, w / 2 + 4, 12, "#efeae0"); // white columns and a domed roof with a gold finial
+      for (const px of [x + 10, x + 38, x + w - 38, x + w - 10]) { box(px - 5, B - 74, 10, 70, "#f6f2ea"); box(px - 7, B - 78, 14, 5, "#e6e1d6"); }
+      ctx.fillStyle = "#f6f2ea"; ctx.fillRect(x - 6, B - 86, w + 12, 10); ctx.strokeRect(x - 6, B - 86, w + 12, 10);
+      ctx.fillStyle = "#6a8a9a"; ctx.beginPath(); ctx.moveTo(x - 10, B - 86); ctx.quadraticCurveTo(cx - w * 0.35, B - 130, cx, B - 140); ctx.quadraticCurveTo(cx + w * 0.35, B - 130, x + w + 10, B - 86); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 1.2; for (const t of [-0.5, -0.2, 0.2, 0.5]) line(cx + t * w, B - 88, cx + t * 12, B - 136); ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(cx, B - 146, 5, 0, 7); ctx.fill(); ctx.stroke(); line(cx, B - 151, cx, B - 160); break; }
+    case "statue": { const cx = x + w / 2, B = y + h, c = cls(); shadow(cx, B, 26); // a golden statue of your hero on a marble plinth
+      box(cx - 24, B - 30, 48, 30, "#efeae0"); box(cx - 28, B - 34, 56, 6, "#e6e1d6"); ctx.fillStyle = "#c9a227"; ctx.font = `9px ${FONT}`; ctx.textAlign = "center"; ctx.fillText(player.name || "Hero", cx, B - 12);
+      const Gd = "#d8b030"; ctx.strokeStyle = Gd; ctx.lineWidth = 5; const top = B - 34; line(cx - 8, top, cx, top - 34); line(cx + 8, top, cx, top - 34); line(cx, top - 34, cx, top - 66); line(cx, top - 58, cx - 14, top - 42); line(cx, top - 58, cx + 14, top - 78);
+      ctx.fillStyle = Gd; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, top - 76, 10, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#e8c040"; ctx.lineWidth = 3; if (c === "hunter") { ctx.beginPath(); ctx.arc(cx + 10, top - 86, 18, -2.2, -0.2); ctx.stroke(); } else if (c === "mage") { line(cx + 14, top - 50, cx + 18, top - 110); ctx.fillStyle = "#c6b6ff"; ctx.beginPath(); ctx.arc(cx + 18, top - 112, 6, 0, 7); ctx.fill(); }
+      else { line(cx + 14, top - 78, cx + 24, top - 116); ctx.lineWidth = 4; line(cx + 8, top - 80, cx + 22, top - 74); }
+      ctx.fillStyle = `rgba(255,240,160,${0.5 + 0.5 * Math.sin(clock * 2)})`; ctx.beginPath(); ctx.arc(cx - 6, top - 80, 2, 0, 7); ctx.fill(); break; }
     // inside
     case "rug": { ctx.fillStyle = "#c0503a"; ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke(); ctx.strokeStyle = "#f2c640"; ctx.lineWidth = 3; ctx.strokeRect(x + 14, y + 14, w - 28, h - 28);
       ctx.fillStyle = "#3b6fb6"; ctx.beginPath(); ctx.moveTo(x + w / 2, y + 30); ctx.lineTo(x + w / 2 + 40, y + h / 2); ctx.lineTo(x + w / 2, y + h - 30); ctx.lineTo(x + w / 2 - 40, y + h / 2); ctx.fill(); break; }
@@ -2619,15 +2684,15 @@ function homePrice(H) { return H.gems ? `<span class="gem">&#9670; ${H.gems} gem
 function showHome(tab) {
   tab = tab || "in"; const Hm = player.home;
   const rows = Object.entries(HOME).filter(([, H]) => H.tab === tab).map(([id, H]) => {
-    const own = Hm.own.includes(id), on = homeOn(id), using = H.roof ? Hm.roof === id : H.look ? Hm.look === id : on, poor = H.gems ? player.gems < H.gems : player.coins < H.coins;
-    const btn = !own ? `<button type="button" data-act="buy" data-arg="${id}" ${poor ? "disabled" : ""}>Buy</button>`
+    const own = Hm.own.includes(id), on = homeOn(id), using = H.roof ? Hm.roof === id : H.look ? Hm.look === id : on, poor = H.gems ? player.gems < H.gems : player.coins < H.coins, noLot = H.lot && !Hm.own.includes("lot");
+    const btn = !own ? `<button type="button" data-act="buy" data-arg="${id}" ${poor || noLot ? "disabled" : ""}>${noLot ? "Lot first" : "Buy"}</button>`
       : `<button type="button" data-act="${using ? "off" : "on"}" data-arg="${id}">${using ? (H.roof || H.look ? "Remove" : "Put away") : "Use"}</button>`;
     return `<div class="item"><div>${H.name}<small>${own ? (using ? "In use" : "Yours") : homePrice(H)}${H.desc ? ` &middot; ${H.desc}` : ""}</small></div>${btn}</div>`; }).join("");
   openPanel(`<h2>Your Home</h2><p class="soft">Make it yours. Furniture costs coins, fancy pieces cost gems. Everything is just for fun. You have ${player.coins} coins and <span class="gem">&#9670; ${player.gems} gems</span>.</p>
     <div class="row tabs">${Object.entries(HOME_TABS).map(([k, n]) => `<button type="button" data-act="tab" data-arg="${k}" ${k === tab ? 'class="on" disabled' : ""}>${n}</button>`).join("")}</div>
     <div class="list">${rows}</div><div class="row"><button data-act="close" type="button">Close</button></div>`,
     { tab: k => showHome(k),
-      buy: id => { const H = HOME[id]; if (Hm.own.includes(id)) return; if (H.gems) { if (player.gems < H.gems) return; player.gems -= H.gems; } else { if (player.coins < H.coins) return; player.coins -= H.coins; }
+      buy: id => { const H = HOME[id]; if (Hm.own.includes(id) || (H.lot && !Hm.own.includes("lot"))) return; if (H.gems) { if (player.gems < H.gems) return; player.gems -= H.gems; } else { if (player.coins < H.coins) return; player.coins -= H.coins; }
         Hm.own.push(id); if (H.roof) Hm.roof = id; if (H.look) Hm.look = id; sfx(H.gems ? "rare" : "coin"); syncHome(); save(); showHome(tab); toast(`${H.name} added to your home`); },
       on: id => { const H = HOME[id]; if (H.roof) Hm.roof = id; else if (H.look) Hm.look = id; else Hm.off = Hm.off.filter(k => k !== id); syncHome(); save(); showHome(tab); },
       off: id => { const H = HOME[id]; if (H.roof) Hm.roof = null; else if (H.look) Hm.look = null; else Hm.off.push(id); syncHome(); save(); showHome(tab); } });
@@ -2658,7 +2723,9 @@ const MAPS = { world: buildWorld(), home: buildHome(), inn: buildInn(), temple: 
       for (const f of W.foes) if (f.spawner === sp) { f.x += dx; f.y += dy; f.hx += dx; f.hy += dy; f.tx += dx; f.ty += dy; } } } }
 { const h = MAPS.world.rects.find(q => q.label === "Home");
   MAPS.world.objs.push({ kind: "object", id: "stars", hd: "tower", hidden: true, x: h.x - 57, y: h.y + 150, label: "Stargaze", name: "Astronomy Tower" },
-    { kind: "object", id: "herbs", hd: "green", hidden: true, x: h.x + 285, y: h.y + 150, label: "Pick herbs", name: "Greenhouse" }); }
+    { kind: "object", id: "herbs", hd: "green", hidden: true, x: h.x + 285, y: h.y + 150, label: "Pick herbs", name: "Greenhouse" },
+    // the lot for sale: tap the sign to buy it; once it's yours the same spot opens the estate list
+    { kind: "object", id: "lotsign", noDraw: true, x: 12310, y: 30000, get label() { return homeOn("lot") ? "Decorate" : "Buy"; }, get name() { return homeOn("lot") ? "Your Estate" : "Lot for sale"; } }); }
 // Named quest bosses out in the world only show up once you've taken their quest (Lee)
 for (const s of MAPS.world.spawners) { const q = !Array.isArray(s.foe) && QUESTS.find(q => q.goal.type === "kill" && q.goal.n === 1 && q.goal.foe === s.foe); if (q) s.quest = q.id; }
 // ---------- Villagers going about their day (Lee): cooks, fishers, card games, drinkers, kids at play and folk out walking ----------
@@ -4603,6 +4670,7 @@ function interact(o) {
   }
   if (o.id === "chest") return showBag();
   if (o.id === "plans") return showHome();
+  if (o.id === "lotsign") return showHome("estate");
   if (o.id === "stars") return showStars();
   if (o.id === "herbs") return pickGreenhouse();
   if (o.id === "piano") return playPiano();
@@ -4957,6 +5025,9 @@ function showStore() {
   const set = key => Object.keys(ITEMS).filter(id => ITEMS[id].premium === key && canWear(id)).map(id => ITEMS[id].name).join(", ");
   const card = (title, body, price, real) => `<div class="store-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:normal">${title}</b><span class="${real ? "coins" : "gem"}">${real ? price : "&#9670; " + price}</span></div><small class="soft">${body}</small></div>`;
   openPanel(`<h2>Store</h2><p class="soft">A preview of the App Store version. You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
+    <p>Featured</p><div class="list">
+      <div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">$4.99</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap">Buy</button></div>
+      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">$4.99 a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap">Subscribe</button></div></div>
     <p>Gem packs</p><div class="list">
       ${card("Handful of gems", "100 gems", "$0.99", true)}${card("Pouch of gems", "550 gems (+10%)", "$4.99", true)}${card("Chest of gems", "1,200 gems (+20%)", "$9.99", true)}
       ${card("Hoard of gems", "2,600 gems (+30%)", "$19.99", true)}${card("Dragon's hoard", "7,000 gems (+40%)", "$49.99", true)}
@@ -4977,7 +5048,7 @@ function showStore() {
       ${player.pouch < 2 ? `<div class="item"><div>${player.pouch ? "Large" : "Bigger"} materials pouch<small>Room for ${[120, 250][player.pouch]} materials instead of ${pouchCap()}. Gems buy room, never materials</small></div><button type="button" data-act="pouch" ${player.gems >= [150, 300][player.pouch] ? "" : "disabled"}>&#9670; ${[150, 300][player.pouch]}</button></div>` : ""}
       ${Object.entries(GLOWS).map(([k, [name, c, gems]]) => { const has = player.gemRec.includes(k); return `<div class="item"><div><span class="swatch" style="background:${c}"></span>${name} recipe<small>Alchemist Fizz brews it into a weapon glow. Looks only</small></div><button type="button" data-act="glowrec" data-arg="${k}" ${!has && player.gems >= gems ? "" : "disabled"}>${has ? "Known" : "&#9670; " + gems}</button></div>`; }).join("")}</div>
     <p>Free</p><div class="list">${card("Bonus coins", "Watch an optional ad for 100 coins, up to 5 a day.", "Free", true)}</div>
-    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(),
+    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: () => toast("Coming at launch. Real purchases go through the App Store"),
       pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; player.gems -= c; player.pouch++; sfx("rare"); toast(`Materials pouch: room for ${pouchCap()}`); save(); showStore(); },
       glowrec: k => { const c = GLOWS[k][2]; if (player.gemRec.includes(k) || player.gems < c) return; player.gems -= c; player.gemRec.push(k); sfx("rare"); toast(`${GLOWS[k][0]} recipe learned. Alchemist Fizz can brew it`); save(); showStore(); },
       relic: dg => { const r = RELICS[dg]; if (!player.relics.includes(dg) || player.gems < r.gems) return; player.gems -= r.gems; addItem(r.id, 1); sfx("coin"); save(); showStore(); } });
@@ -4985,7 +5056,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 104; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 105; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -7270,12 +7341,12 @@ function drawRect(q) {
       else { line(q.x + 4, q.y, q.x + 4, q.y + q.h); line(q.x + 10, q.y, q.x + 10, q.y + q.h); for (let y = q.y; y <= q.y + q.h; y += 40) line(q.x, y, q.x + 14, y); }
       break;
     }
-    case "forsale": {
+    case "forsale": { if (homeOn("lot")) break;
       // an empty plot roped off on stakes, the grass trodden flat, and a sign
       const X = q.x, Y = q.y, W = q.w, H = q.h; ctx.fillStyle = "rgba(170,140,90,.22)"; ctx.fillRect(X, Y, W, H);
       ctx.strokeStyle = "#c0504a"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]); ctx.strokeRect(X, Y, W, H); ctx.setLineDash([]);
       ctx.strokeStyle = "#7a5a34"; ctx.lineWidth = 3; for (const [sx, sy] of [[X, Y], [X + W, Y], [X, Y + H], [X + W, Y + H], [X + W / 2, Y], [X + W / 2, Y + H]]) line(sx, sy + 4, sx, sy - 12);
-      const mx = X + W / 2, my = Y + H - 20; ctx.lineWidth = 4; line(mx, my, mx, my - 56); ctx.fillStyle = "#fffdf6"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(mx - 46, my - 76, 92, 38); ctx.strokeRect(mx - 46, my - 76, 92, 38);
+      const mx = X + W / 2, my = Y + H - 6; ctx.lineWidth = 4; line(mx, my, mx, my - 56); ctx.fillStyle = "#fffdf6"; ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.fillRect(mx - 46, my - 76, 92, 38); ctx.strokeRect(mx - 46, my - 76, 92, 38);
       ctx.fillStyle = "#c0504a"; ctx.font = `15px ${FONT}`; ctx.textAlign = "center"; ctx.font = `17px ${FONT}`; ctx.fillText("Lot for sale", mx, my - 52);
       break;
     }
@@ -8112,7 +8183,7 @@ function drawInkmaw(f) {
   }
 }
 function drawObj(o) {
-  if (o.hidden) return;
+  if (o.hidden || o.noDraw) return;
   if (o.kind === "node") return drawNode(o);
   if (o.kind === "npc") {
     shadow(o.x, o.y, 12);
