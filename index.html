@@ -130,6 +130,12 @@ body.desk #tracker { width: max-content; max-width: 250px; font-size: 17px; }
 body.desk #pad2 { display: none; }
 /* Lee: class skills line up down the right side, under the quest box, one by one as they unlock. Hold one to swap places */
 #skillcol { right: max(10px, env(safe-area-inset-right, 0px)); top: var(--skt, 300px); display: flex; flex-direction: column; gap: 9px; align-items: flex-end; transform-origin: 100% 0; scale: var(--skk, 1); }
+#itemrow { display: none; }
+#itemrow button { position: relative; width: 46px; height: 46px; padding: 0; font-size: 12px; }
+#itemrow .nb .ic { top: 4px; width: 22px; height: 22px; margin-left: -11px; }
+#itemrow .nb .l { font-size: 11px; bottom: 2px; }
+#itemrow .nb:nth-child(even) { rotate: 1.2deg; }
+body.desk #itemrow, body.cine #itemrow, body.mapopen #itemrow, body.charopen #itemrow { display: none !important; }
 #skillcol button { position: relative; width: 52px; height: 52px; padding: 0; font-size: 13px; }
 #skillcol .nb .ic { top: 5px; width: 24px; height: 24px; margin-left: -12px; }
 #skillcol .nb .l { font-size: 12px; bottom: 3px; }
@@ -329,6 +335,9 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
   .ccard canvas { max-width: 92px; } .sheet h2 { font-size: 24px; }
   #skillcol { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1));
     flex-direction: row-reverse; align-items: flex-end; transform-origin: 100% 100%; scale: var(--padk, 1); }
+  /* Lee: every action on screen when sideways. Items sit in a row above the skills, nothing hides behind More */
+  #itemrow { display: flex; right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1)); bottom: calc(18px + env(safe-area-inset-bottom, 0px) + 64px * var(--padk, 1));
+    flex-direction: row-reverse; gap: 8px; align-items: flex-end; transform-origin: 100% 100%; scale: var(--padk, 1); }
   #gearPrompt, #pouchAsk { left: calc(max(10px, env(safe-area-inset-left, 0px)) + 186px); transform: none; top: calc(56px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(300px, 36vw); font-size: 15px; padding: 5px 8px 5px 10px; }
   #gearPrompt small, #pouchAsk small { font-size: 12px; }
   #coach { top: calc(64px + env(safe-area-inset-top, 0px)); }
@@ -381,6 +390,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
 </div>
 <div id="pad2" class="ui"></div>
 <div id="skillcol" class="ui"></div>
+<div id="itemrow" class="ui"></div>
 <div id="abar" class="ui" hidden aria-label="Ability bar. Keys 1 to 9. Drag to rearrange."></div>
 <div id="banner" class="ui"><div class="big" id="bannerBig"></div><div class="small" id="bannerSmall"></div></div>
 <div id="toasts" class="ui"></div>
@@ -5269,7 +5279,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 114; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 115; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6239,6 +6249,19 @@ function pad2Hud() {
   if (Math.abs(k - skK) > 0.01) { skK = k; document.body.style.setProperty("--skk", k.toFixed(3)); }
   for (const b of skillcol.children) if (b.dataset.k) b.classList.toggle("nomana", lowMana(b.dataset.k === "whirl" ? WHIRL() : SKILLS[b.dataset.k]));
   for (const b of skillcol.children) if (b.dataset.k && SKILLS[b.dataset.k]) b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, (p.acd[b.dataset.k] || 0) / SKILLS[b.dataset.k].cd) * 100}%`);
+}
+// Sideways: the items the computer keeps on keys 1-9 (whetstone or arrowheads, greater potions, stew, relics) get their own row
+const itemrow = document.getElementById("itemrow"); let irKey = "";
+function itemRowHud() {
+  if (!sideways()) { if (irKey) { itemrow.innerHTML = ""; irKey = ""; } return; }
+  const ids = [...Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id) && id !== "potion" && !ITEMS[id].mana && !ITEMS[id].edge).map(id => "item:" + id)].slice(0, 7);
+  const key = ids.join();
+  if (key !== irKey) { irKey = key; itemrow.innerHTML = "";
+    for (const a of ids) { const A = abil(a); if (!A) continue; const b = document.createElement("button"); b.type = "button"; b.className = "nb"; b.dataset.a = a;
+      b.innerHTML = `<span class="ic">${NB_ICON(A.icon())}</span><span class="l">${A.label().split(" ")[0].replace(/'s$/, "")}</span><span class="n"></span><i class="cd"></i>`;
+      b.addEventListener("pointerdown", ev => { ev.preventDefault(); ev.stopPropagation(); if (!cine) abil(a)?.fn(); });
+      itemrow.appendChild(b); } }
+  for (const b of itemrow.children) { const A = abil(b.dataset.a); if (!A) continue; b.querySelector(".n").textContent = A.own() > 1 ? A.own() : ""; b.querySelector(".cd").style.setProperty("--p", `${Math.min(1, A.cd(player)) * 100}%`); }
 }
 // tapping anywhere else while moving a skill stops it
 addEventListener("pointerdown", ev => { if (skPick && !skillcol.contains(ev.target)) skEditOff(); }, true);
@@ -9301,7 +9324,7 @@ function drawHud() {
   el("cdDodge").style.setProperty("--p", `${p.dodgeCd / 1.0 * 100}%`);
   el("cdPotion").style.setProperty("--p", `${p.potionCd / 10 * 100}%`);
   el("cdMana").style.setProperty("--p", `${nineCd(p) * 100}%`);
-  if (desk) abarHud(pots); else pad2Hud();
+  if (desk) abarHud(pots); else { pad2Hud(); itemRowHud(); }
 }
 
 // =====================================================================
