@@ -5163,6 +5163,8 @@ const IAP = {
   "lol.founder": { once: true, gems: 600, flag: "founder" },
   "lol.inkpass.monthly": { flag: "inkPass" },
 };
+// Legend's vault ($99.99) stays out of the Store at launch (Lee); switch on with the first expansion, when there's more to spend on
+const VAULT_ON = false;
 const iapOwned = pid => (player.st.iap || []).includes(pid);
 // In the iPhone app the App Store gives the price in the player's own currency; the browser shows US prices
 const iapPrice = (pid, usd) => (window.LOL_IAP && window.LOL_IAP.prices[pid]) || usd;
@@ -5249,11 +5251,11 @@ function showStore() {
     <p>Featured</p><div class="list">
       ${firstOfferOpen() ? `<div class="item"><div><span class="rare">Adventurer's Kit</span> <span class="coins">${iapPrice("lol.firstoffer", "$1.99")}</span><small>One time only, for ${Math.max(1, Math.ceil((player.st.firstOffer + 3 * 864e5 - Date.now()) / 36e5))} more hours: ${FIRST_OFFER_TXT}</small></div><button type="button" data-act="iap" data-arg="lol.firstoffer">Buy</button></div>` : ""}
       ${iapOwned("lol.founder") ? "" : `<div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">${iapPrice("lol.founder", "$4.99")}</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap" data-arg="lol.founder">Buy</button></div>`}
-      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">${iapPrice("lol.inkpass.monthly", "$4.99")} a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap" data-arg="lol.inkpass.monthly" ${player.st.inkPass ? "disabled" : ""}>${player.st.inkPass ? "Active" : "Subscribe"}</button></div></div>
+      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">${iapPrice("lol.inkpass.monthly", "$4.99")} a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings. <a href="https://dasnowyone.github.io/Line-of-legends-play/privacy.html" target="_blank" rel="noopener">Privacy policy</a> &middot; <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener">Terms of use</a></small></div><button type="button" data-act="iap" data-arg="lol.inkpass.monthly" ${player.st.inkPass ? "disabled" : ""}>${player.st.inkPass ? "Active" : "Subscribe"}</button></div></div>
     ${iapLive() ? `<div class="row"><button type="button" data-act="restore">Restore purchases</button>${player.st.inkPass ? '<button type="button" data-act="manage">Manage Ink Pass</button>' : ""}</div>` : ""}
     <p>Gem packs</p><div class="list">
       ${card("Handful of gems", "100 gems", iapPrice("lol.gems.100", "$0.99"), true, "lol.gems.100")}${card("Pouch of gems", "550 gems (+10%)", iapPrice("lol.gems.550", "$4.99"), true, "lol.gems.550")}${card("Chest of gems", "1,200 gems (+20%)", iapPrice("lol.gems.1200", "$9.99"), true, "lol.gems.1200")}
-      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}${card("Legend's vault", "15,000 gems (+50%)", iapPrice("lol.gems.15000", "$99.99"), true, "lol.gems.15000")}
+      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}${VAULT_ON ? card("Legend's vault", "15,000 gems (+50%)", iapPrice("lol.gems.15000", "$99.99"), true, "lol.gems.15000") : ""}
       ${iapOwned("lol.starter") ? "" : card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", iapPrice("lol.starter", "$2.99"), true, "lol.starter")}</div>
     <p>Spend gems</p><div class="list">
       ${card("Ember Armor Pack", `${set("ember")}. Level 5 to 6, equal to iron gear, with a flame look.`, "450")}
@@ -5279,7 +5281,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 115; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 116; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
