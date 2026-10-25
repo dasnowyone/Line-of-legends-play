@@ -292,8 +292,8 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .item .dropq { color: var(--ink-soft); border-color: var(--ink-soft); flex: none; }
 .item .drop { color: var(--blood); border-color: var(--blood); flex: none; }
 .item small { display: block; color: var(--ink-soft); font-size: 15px; }
-#gearPrompt { left: 50%; transform: translateX(-50%); bottom: 34%; z-index: 6; display: flex; gap: 10px; align-items: center; background: var(--card); border: 2.5px solid var(--gold, #c9a227); border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 17px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
-#gearPrompt[hidden] { display: none; }
+#gearPrompt, #pouchAsk { left: 50%; transform: translateX(-50%); bottom: 34%; z-index: 6; display: flex; gap: 10px; align-items: center; background: var(--card); border: 2.5px solid var(--gold, #c9a227); border-radius: 12px; padding: 8px 10px 8px 14px; font-size: 17px; width: min(360px, calc(100vw - 32px)); box-sizing: border-box; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+#gearPrompt[hidden], #pouchAsk[hidden] { display: none; }
 #getUp { left: 50%; transform: translateX(-50%); bottom: 22%; z-index: 6; display: grid; gap: 4px; justify-items: center; text-align: center; }
 #getUp[hidden] { display: none; }
 #getUp button { font-size: 20px; padding: 6px 16px; border-color: var(--gold); box-shadow: 0 3px 10px rgba(0,0,0,.2); }
@@ -304,9 +304,9 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 #coach button { display: block; margin: 6px 0 0 auto; font-size: 14px; padding: 1px 10px; border-width: 1.5px; color: var(--ink-soft); }
 .tut-pulse { animation: tutpulse 1.1s ease-in-out infinite; }
 @keyframes tutpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201,154,23,.9); } 50% { box-shadow: 0 0 0 10px rgba(201,154,23,0); } }
-#gearPrompt > div { flex: 1; min-width: 0; }
-#gearPrompt small { display: block; color: var(--ink-soft); font-size: 14px; }
-#gearPrompt button { flex: none; }
+#gearPrompt > div, #pouchAsk > div { flex: 1; min-width: 0; }
+#gearPrompt small, #pouchAsk small { display: block; color: var(--ink-soft); font-size: 14px; }
+#gearPrompt button, #pouchAsk button { flex: none; }
 .up { color: #2f7d32; font-size: 14px; margin-left: 4px; }
 .slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 6px; text-align: center; font-size: 15px; }
 .slots div { border: 1.5px solid var(--ink); border-radius: 8px; padding: 4px; min-width: 0; }
@@ -329,8 +329,8 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
   .ccard canvas { max-width: 92px; } .sheet h2 { font-size: 24px; }
   #skillcol { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1));
     flex-direction: row-reverse; align-items: flex-end; transform-origin: 100% 100%; scale: var(--padk, 1); }
-  #gearPrompt { left: calc(max(10px, env(safe-area-inset-left, 0px)) + 186px); transform: none; top: calc(56px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(300px, 36vw); font-size: 15px; padding: 5px 8px 5px 10px; }
-  #gearPrompt small { font-size: 12px; }
+  #gearPrompt, #pouchAsk { left: calc(max(10px, env(safe-area-inset-left, 0px)) + 186px); transform: none; top: calc(56px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(300px, 36vw); font-size: 15px; padding: 5px 8px 5px 10px; }
+  #gearPrompt small, #pouchAsk small { font-size: 12px; }
   #coach { top: calc(64px + env(safe-area-inset-top, 0px)); }
 }
 /* Phones held upright get a nudge to turn sideways (Lee) */
@@ -342,7 +342,7 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 #turnTip small { color: var(--ink-soft); font-size: 14px; }
 #turnTip .row { display: flex; gap: 8px; }
 @media (orientation: landscape) { #turnTip { display: none; } }
-body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #pad2, body.cine #abar, body.cine #gearPrompt, body.cine #coach, body.cine #toasts, body.cine #tracker { opacity: 0; pointer-events: none; transition: opacity .4s; }
+body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #pad2, body.cine #abar, body.cine #gearPrompt, body.cine #pouchAsk, body.cine #coach, body.cine #toasts, body.cine #tracker { opacity: 0; pointer-events: none; transition: opacity .4s; }
 .qnew, .qready { color: var(--gold); font-weight: bold; }
 .tdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); margin-left: 5px; vertical-align: middle; }
 .pips { color: var(--gold); letter-spacing: 1px; margin-left: 4px; }
@@ -385,6 +385,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
 <div id="banner" class="ui"><div class="big" id="bannerBig"></div><div class="small" id="bannerSmall"></div></div>
 <div id="toasts" class="ui"></div>
 <div id="coach" class="ui" hidden><span id="coachText"></span><button type="button" id="coachSkip">Skip tips</button></div>
+<div id="pouchAsk" class="ui" hidden><div id="paText"></div><button type="button" id="paBuy">Bigger</button><button type="button" id="paNo" aria-label="Dismiss">&times;</button></div>
 <div id="gearPrompt" class="ui" hidden><div id="gpText"></div><button type="button" id="gpEquip">Equip</button><button type="button" id="gpNo" aria-label="Dismiss">&times;</button></div>
 <div id="getUp" class="ui" hidden></div>
 <div id="turnTip" class="ui" hidden><svg viewBox="0 0 92 70" aria-hidden="true"><g class="ph"><rect x="31" y="8" width="30" height="56" rx="6" fill="#fffdf6" stroke="#1b1b20" stroke-width="2.5"/><line x1="42" y1="57" x2="50" y2="57" stroke="#1b1b20" stroke-width="2.5" stroke-linecap="round"/></g><path d="M74 20 a30 30 0 0 1 4 26" fill="none" stroke="#c99a17" stroke-width="2.5" stroke-linecap="round"/><path d="M73 42 l5 5 l4 -6" fill="none" stroke="#c99a17" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -567,8 +568,8 @@ for (const id of ["inkfang_blade", "warden_helm", "warden_plate", "warden_gauntl
     const w = ITEMS[ref], t = w.tier || Math.min(5, Math.floor(w.lvl / 10) + 1), sl = w.slot, base = { slot: sl, lvl: w.lvl, tier: w.tier, rare: w.rare, premium: w.premium, set: w.set, base: ref };
     const hl = sl === "head" ? { hat: "hood", color: hc } : sl === "body" ? { color: hc, belt: true, long: true, studs: hn === "Studded", trim } : { color: hc };
     const ml = sl === "head" ? { hat: "cone", color: mc } : sl === "body" ? { color: mc, robe: true, belt: true, trim: trim || "#e8e2cf" } : { color: mc };
-    ITEMS["h_" + ref] = { ...base, cls: "hunter", name: `${hn} ${NOUN.hunter[sl]}`, def: Math.round(w.def * 0.65), hp: Math.round((w.hp || 0) * 0.9), spd: 2 + t, look: hl };
-    ITEMS["m_" + ref] = { ...base, cls: "mage", name: `${mn} ${NOUN.mage[sl]}`, def: Math.round(w.def * 0.45), hp: Math.round((w.hp || 0) * 0.85), mp: Math.round(6 + w.lvl * 0.9), pow: 2 + t, look: ml };
+    ITEMS["h_" + ref] = { ...base, cls: "hunter", name: `${hn} ${NOUN.hunter[sl]}`, def: Math.round(w.def * 0.85), hp: Math.round((w.hp || 0) * 0.9), spd: 2 + t, look: hl };
+    ITEMS["m_" + ref] = { ...base, cls: "mage", name: `${mn} ${NOUN.mage[sl]}`, def: Math.round(w.def * 0.7), hp: Math.round((w.hp || 0) * 0.85), mp: Math.round(6 + w.lvl * 0.9), pow: 2 + t, look: ml };
   }
   // Bows and crossbows for Hunters, wands and staves for Mages, at the same levels and attack as the Warrior's weapons
   const W = (cls, id, name, lvl, atk, kind, color, x) => { ITEMS[id] = { name, slot: "weapon", cls, atk, lvl, look: { kind, color, glow: x && x.glow }, ...x }; delete ITEMS[id].glow; };
@@ -830,8 +831,8 @@ mkFoe("rowboat", "Wrecker Rowboat", 16, "boat", { fill: "#7a5a3a", speed: 150, r
 mkFoe("gunboat", "Wrecker Gunboat", 17, "boat", { fill: "#5a4a3a", sail: "#a83a2a", ranged: { range: 380, speed: 340, windup: 0.8, cd: 2.0, kind: "cannon" }, speed: 110, r: 24, tall: 110 });
 mkFoe("bank_gunner", "Wrecker Gunner", 17, "human", { look: HUM("rgba(90,70,50,.94)", "bandana", "#a83a2a", "bow"), ranged: { range: 420, speed: 360, windup: 0.9, cd: 2.4, kind: "cannon" }, speed: 0, r: 16, hpK: 0.7 });
 mkFoe("fen_eel", "Riverfang Eel", 18, "eel", { fill: "#3a6a5a", speed: 220, r: 16, hpK: 0.8 });
-mkFoe("galleon", "The Black Ledger", 18, "galleon", { boss: true, hpK: 0.65, speed: 45, r: 60, tall: 250, ranged: { range: 460, speed: 330, windup: 0.9, cd: 2.2, kind: "cannon", fan: 5 } });
-mkFoe("serpent", "The Kraken Serpent", 19, "serpent", { boss: true, final: true, hpK: 1.5, fill: "#2f6a6a", speed: 90, r: 50, tall: 160, wake: 650, ranged: { range: 480, speed: 300, windup: 0.8, cd: 1.9, kind: "ink", fan: 3 }, ring: true, blink: true, roots: true, rootStyle: "splash", adds: "fen_eel", addsText: "calls the river eels" });
+mkFoe("galleon", "The Black Ledger", 18, "galleon", { boss: true, hpK: 0.6, speed: 45, r: 60, tall: 250, ranged: { range: 460, speed: 330, windup: 1.0, cd: 2.8, kind: "cannon", fan: 4 } });
+mkFoe("serpent", "The Kraken Serpent", 19, "serpent", { boss: true, final: true, hpK: 1.2, fill: "#2f6a6a", speed: 90, r: 50, tall: 160, wake: 650, ranged: { range: 480, speed: 300, windup: 0.95, cd: 2.4, kind: "ink", fan: 3 }, ring: true, blink: true, roots: true, rootStyle: "splash", adds: "fen_eel", addsText: "calls the river eels" });
 // Deepdelve Mine, levels 21 to 24
 mkFoe("cave_bat", "Cave Bat", 21, "bat", { speed: 235, r: 14, hpK: 0.55 });
 mkFoe("mine_goblin", "Tunnel Goblin", 21, "human", { look: HUM("rgba(96,120,64,.94)", "helm", "#8a7a5a", "axe", { ears: true, scale: 0.85 }), speed: 150, r: 15 });
@@ -2085,7 +2086,7 @@ const endObjs = (cx, cy) => [ISO("dchest", cx - 130, cy, { art: "chest", label: 
 // ---------- The Wreck Run: you are the boat. Rapids carry you north to the galleon, then the open bay and the Kraken Serpent ----------
 const WRECK_IN = [1360, 8840], WRECK_OUT = [WRECK[0], WRECK[1] + 300];
 const WROOMS = [
-  { name: "The Old River", lv: "You are the boat now. Steer, and tap Attack to fire your cannon", armor: 60, x: 0, y: 5750, w: 2800, h: 3250 },
+  { name: "The Old River", lv: "You are the boat now. Steer, and tap Attack to fire your cannon. Out of fire, the hull patches itself", armor: 60, x: 0, y: 5750, w: 2800, h: 3250 },
   { name: "Whitewater Bend", lv: "Gunners on both banks", x: 0, y: 3150, w: 2800, h: 2600, check: [960, 5700] },
   { name: "The Narrows", lv: "The Black Ledger blocks the river mouth", x: 0, y: 1960, w: 2800, h: 1190, check: [1260, 3080] },
   { name: "Wreckers' Bay", lv: "Mind the whirlpools. Something huge circles below", armor: 65, x: 0, y: 0, w: 2800, h: 1960, check: [1260, 1800] },
@@ -2455,6 +2456,8 @@ function buffUpdate(dt) {
   }
   if (buffOn("regen") && !player.dead) player.hp = Math.min(stats().maxHp, player.hp + stats().maxHp * 0.01 * dt);
   if (buffOn("seed") && !player.dead) player.hp = Math.min(stats().maxHp, player.hp + stats().maxHp * 0.02 * dt);
+  // The hull patches itself after 4 seconds out of fire
+  if (map.vehicle && !player.dead && clock - (player.lastHurt || 0) > 4) player.hp = Math.min(stats().maxHp, player.hp + stats().maxHp * 0.03 * dt);
 }
 const buffList = () => Object.entries(player.buffs).filter(([, t]) => t > 0).map(([k, t]) => `${buffName(k)} ${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`).join(", ");
 // The temple rises from the lake the first time the hero reaches level 8
@@ -3101,10 +3104,34 @@ const matCount = () => Object.entries(player.bag).reduce((a, [id, n]) => a + (IT
 const hasTool = k => (player.tools || []).includes(k);
 const ORE_RESPAWN = 180000;
 function grantTool(k) { if (!hasTool(k)) player.tools.push(k); sfx("rare"); setTimeout(() => banner(`${TOOLS[k][0]}!`, TOOLS[k][1]), 700); }
+// Pouch full (playtest: the notice fired on every kill). Enemy drops say it once per session, with a button to buy room
+let pouchWarned = false, pouchPend = false, paTimer = 0;
+function pouchFull(tapped) {
+  if (!tapped && pouchWarned) return;
+  pouchWarned = true;
+  if (player.pouch >= 2) return toast("Your materials pouch is full. Craft, sell or salvage to make room");
+  if (fighting()) { pouchPend = true; return; }
+  showPouchAsk();
+}
+function showPouchAsk() {
+  pouchPend = false; if (player.pouch >= 2 || cine) return;
+  const c = [150, 300][player.pouch || 0], el = document.getElementById("pouchAsk");
+  document.getElementById("paText").innerHTML = `Materials pouch full<small>Craft, sell or salvage, or make room for ${[120, 250][player.pouch || 0]}</small>`;
+  document.getElementById("paBuy").innerHTML = `Bigger pouch <span class="gem">&#9670; ${c}</span>`;
+  el.hidden = false; paTimer = 9;
+}
+function buyPouch() {
+  const c = [150, 300][player.pouch || 0]; if (player.pouch >= 2) return;
+  if (player.gems < c) { toast(`You need ${c} gems. The Store has more`); return showStore(); }
+  player.gems -= c; player.pouch = (player.pouch || 0) + 1; sfx("rare"); toast(`Materials pouch: room for ${pouchCap()}`); save();
+}
+document.getElementById("paBuy").onclick = e => { e.stopPropagation(); document.getElementById("pouchAsk").hidden = true; buyPouch(); };
+document.getElementById("paNo").onclick = e => { e.stopPropagation(); document.getElementById("pouchAsk").hidden = true; };
+for (const ev of ["pointerdown", "touchstart"]) document.getElementById("pouchAsk").addEventListener(ev, e => e.stopPropagation());
 // Materials go in the pouch, which has a limit; gems buy more room, never materials
 function addMat(id, n, quiet) {
   n = Math.min(n, pouchCap() - matCount());
-  if (n <= 0) { toast("Your materials pouch is full. Craft, sell or salvage, or get a bigger pouch in the Store"); return 0; }
+  if (n <= 0) { pouchFull(); return 0; }
   player.bag[id] = (player.bag[id] || 0) + n; matGain(id, n);
   if (quiet) toast(`Found: ${ITEMS[id].name}${n > 1 ? ` x${n}` : ""}`, true); else floater(player.x, player.y - 84, `+${n} ${ITEMS[id].name}`, ITEMS[id].color || GOLD, 18);
   matsCheck(); return n;
@@ -3143,7 +3170,7 @@ function gather(o) {
     if (player.level < it.mlvl) return toast(`${it.name} needs level ${it.mlvl} to mine`);
   }
   if (o.node === "fish" && !hasTool("rod")) return toast("You need a fishing rod. Innkeeper Mara knows who makes them");
-  if (matCount() >= pouchCap()) return toast("Your materials pouch is full. Craft, sell or salvage, or get a bigger pouch in the Store");
+  if (matCount() >= pouchCap()) return pouchFull(true);
   if (riding()) { player.mounted = false; syncRide(); }
   player.facing = Math.sign((o.node === "fish" ? o.wx : o.x) - player.x) || player.facing;
   // Wood comes off in one swing (Lee); ore takes three
@@ -3177,7 +3204,7 @@ function gatherTick(dt) {
 }
 function finishGather(o) {
   const k = o.node, r = Math.random();
-  const n = k === "ore" ? (o.loose ? 1 : r < 0.35 ? 2 : 1) : k === "tree" ? 2 + Math.floor(r * 3) : k === "dead" ? 1 + (r < 0.5 ? 1 : 0) : k === "log" ? 2 + (r < 0.4 ? 1 : 0) : k === "herb" ? 1 + (r < 0.3 ? 1 : 0) : 1;
+  const n = k === "ore" ? (o.loose ? 1 : (MATS[o.item] && MATS[o.item][2] >= 3 ? 2 : 1) + (r < 0.35 ? 1 : 0)) : k === "tree" ? 2 + Math.floor(r * 3) : k === "dead" ? 1 + (r < 0.5 ? 1 : 0) : k === "log" ? 2 + (r < 0.4 ? 1 : 0) : k === "herb" ? 1 + (r < 0.3 ? 1 : 0) : 1;
   if (!addMat(o.item, n)) return;
   o.until = Date.now() + (o.practice ? 15000 : ORE_RESPAWN);
   sfx(k === "fish" ? "splash" : "coin"); gainXp(3 + (ITEMS[o.item].tier || 1) * 4);
@@ -3281,7 +3308,7 @@ function tradeOf(id) {
   if (it.slot === "weapon") return it.cls === "hunter" ? ["clegg", "bow"] : it.cls === "mage" ? ["clegg", "staff"] : ["brand", "weapon"];
   return it.cls === "hunter" ? ["carly", "leather"] : it.cls === "mage" ? ["carly", "cloth"] : it.cls === "warrior" || (it.def || 0) >= 4 ? ["brand", "plate"] : ["carly", "cloth"];
 }
-const SIZE = { weapon: 8, body: 10, head: 6, hands: 5, feet: 5 }, TIER_K = [1, 1, 1.5, 2, 2.5, 3];
+const SIZE = { weapon: 8, body: 10, head: 6, hands: 5, feet: 5 }, TIER_K = [1, 1, 1.5, 1.6, 1.8, 2]; // playtest: tier 4 and 5 sets needed 86 and 102 ore, so nobody finished one
 function primaryMat(id) { const t = ITEMS[id].tier || 1, tab = tradeOf(id)[1]; return tab === "leather" ? HIDE_T[t] : tab === "cloth" ? CLOTH_T[t] : tab === "bow" || tab === "staff" ? "wood" : ORE_T[t]; }
 const RECIPES = [];
 for (const [id, it] of Object.entries(ITEMS)) if (it.crafted) {
@@ -3290,7 +3317,7 @@ for (const [id, it] of Object.entries(ITEMS)) if (it.crafted) {
   else if (tab === "leather") { m[HIDE_T[t]] = n; m[ORE_T[t]] = Math.ceil(n / 4); }
   else if (tab === "cloth") { m[CLOTH_T[t]] = n; m[t >= 3 ? "sunpetal" : "inkleaf"] = Math.ceil(n / 4); }
   else { m.wood = n; m[ORE_T[t]] = Math.ceil(n / 2); if (tab === "staff") m[CLOTH_T[t]] = 2; }
-  RECIPES.push({ id, by, tab, mats: m, coins: Math.round(it.price * 0.25 / 5) * 5, pattern: t >= 3 ? t : 0 });
+  RECIPES.push({ id, by, tab, mats: m, coins: Math.round(it.price * (t >= 5 ? 0.08 : t >= 4 ? 0.12 : 0.25) / 5) * 5, pattern: t >= 3 ? t : 0 });
 }
 RECIPES.push(
   { id: "potion", by: "fizz", tab: "potion", mats: { inkleaf: 2 }, coins: 5, qty: 2 },
@@ -3505,7 +3532,9 @@ const RESCUES = [
     R.spot = spot; R.cage = [spot[0] + 70, spot[1] - 10];
     // tracks: four prints from the camp's side of the way toward the hideout
     const sx = cx + (spot[0] - cx) * 0.3, sy = cy + (spot[1] - cy) * 0.3;
-    for (let i = 0; i < 4; i++) { const k = (i + 0.5) / 4, x = sx + (spot[0] - 260 - sx) * k + (rnd() - 0.5) * 120, y = sy + (spot[1] - sy) * k + (rnd() - 0.5) * 120;
+    for (let i = 0; i < 4; i++) { const k = (i + 0.5) / 4; let x = sx + (spot[0] - 260 - sx) * k + (rnd() - 0.5) * 120, y = sy + (spot[1] - sy) * k + (rnd() - 0.5) * 120;
+      // a print that lands in rocks or water steps out to the nearest open ground (one sat inside a rock ring in the Ember Wastes)
+      for (let j = 1; j <= 48 && (blocked(W, x, y, 26) || W.riverGap(x, y) < 40); j++) { const a2 = j * 2.4, d2 = 30 * Math.ceil(j / 6); x += Math.cos(a2) * d2; y += Math.sin(a2) * d2; }
       W.objs.push({ kind: "pickup", thing: "trk_" + R.zone, trail: true, quest: id + "_a", id: id + "_t" + i, x: Math.round(x), y: Math.round(y) }); }
     const [fid, fname, base, sc] = R.captor, b = FOES[base];
     FOES[fid] = { ...b, id: fid, name: fname, base, scale: sc, hp: Math.round(b.hp * 6), atk: Math.round(b.atk * 1.25), xp: b.xp * 6, coins: [b.coins[0] * 4, b.coins[1] * 4], drops: [["greater_potion", 1]], tierDrop: 0.6 };
@@ -4292,13 +4321,17 @@ const resetTemple = () => resetDungeon("temple");
 // =====================================================================
 // Camps and the village are safe (Lee): the whole camp ground you can see, not just its square, and nothing can hurt you there
 function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05)) || (map.SAFE && map.SAFE.some(z => Math.hypot(player.x - z.x, player.y - z.y) < z.r))); }
+// Recommended armor follows your class: leather and cloth are lighter than plate (playtest: Hunters and Mages could never reach one shared number)
+const recArmor = a => a && Math.round(a * ({ hunter: 0.85, mage: 0.7 }[player.cls] || 1));
+// Boats and gryphons have their own hull armor, the same for every class, so the Wreck Run and Skyreach don't hinge on cloth or leather
+const hullArmor = () => map.vehicle && map.rooms ? Math.max(...map.rooms.map(r => r.armor || 0)) : 0;
 function hurtPlayer(raw, lv) {
   if (inSafe()) return;
   if (player.dead || player.dodgeT > 0 || player.dashT > 0 || player.graceT > 0) return;
   const s = stats();
   const gap = Math.max(0, lv - player.level);
   raw = raw * (1 + 0.12 * gap) * (0.85 + Math.random() * 0.3);
-  let dmg = Math.max(1, Math.round(raw * 100 / (100 + s.def * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1) * (1 - 0.03 * tr("iron"))));
+  let dmg = Math.max(1, Math.round(raw * 100 / (100 + Math.max(s.def, hullArmor()) * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1) * (1 - 0.03 * tr("iron"))));
   if (player.barrier > 0) { const soak = Math.min(player.barrier, dmg); player.barrier -= soak; dmg -= soak; if (!dmg) { floater(player.x, player.y - 76, "Absorbed", "#7a5aa6", 18); return; } }
   player.hp = Math.max(0, player.hp - dmg); player.hurtT = 0.2; player.lastHurt = clock; sfx("hurt");
   floater(player.x, player.y - 76, `-${dmg}`, BLOOD, 22);
@@ -5100,14 +5133,14 @@ function showStore() {
       ${Object.entries(GLOWS).map(([k, [name, c, gems]]) => { const has = player.gemRec.includes(k); return `<div class="item"><div><span class="swatch" style="background:${c}"></span>${name} recipe<small>Alchemist Fizz brews it into a weapon glow. Looks only</small></div><button type="button" data-act="glowrec" data-arg="${k}" ${!has && player.gems >= gems ? "" : "disabled"}>${has ? "Known" : "&#9670; " + gems}</button></div>`; }).join("")}</div>
     <p>Free</p><div class="list">${card("Bonus coins", "Watch an optional ad for 100 coins, up to 5 a day.", "Free", true)}</div>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: () => toast("Coming at launch. Real purchases go through the App Store"),
-      pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; player.gems -= c; player.pouch++; sfx("rare"); toast(`Materials pouch: room for ${pouchCap()}`); save(); showStore(); },
+      pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; buyPouch(); showStore(); },
       glowrec: k => { const c = GLOWS[k][2]; if (player.gemRec.includes(k) || player.gems < c) return; player.gems -= c; player.gemRec.push(k); sfx("rare"); toast(`${GLOWS[k][0]} recipe learned. Alchemist Fizz can brew it`); save(); showStore(); },
       relic: dg => { const r = RELICS[dg]; if (!player.relics.includes(dg) || player.gems < r.gems) return; player.gems -= r.gems; addItem(r.id, 1); sfx("coin"); save(); showStore(); } });
 }
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 110; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 111; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5176,7 +5209,7 @@ function showChar(pick) {
   const upFor = k => Object.keys(p.bag).some(id => isUpgrade(id) && ITEMS[id].slot === k);
   const slotHtml = ([k, label]) => { const it = g[k] && ITEMS[g[k]];
     return `<button type="button" class="cs-slot${it ? "" : " empty"}${csPick === k ? " sel" : ""}" data-act="slot" data-arg="${k}"><span>${label}</span>${it ? `<em class="${it.rare ? "rare" : ""}" style="font-style:normal">${it.name}</em><small>${bonus(it)}</small>` : "Empty"}${upFor(k) ? '<b class="up" style="font-weight:normal;display:block">&#9650; Upgrade in bag</b>' : ""}</button>`; };
-  const z = map.id === "world" && map.zoneAt ? map.zoneAt(p.x, p.y) : null, rec = z && z.armor;
+  const z = map.id === "world" && map.zoneAt ? map.zoneAt(p.x, p.y) : null, rec = z && recArmor(z.armor);
   const xpPct = p.level >= MAX_LEVEL ? 100 : Math.round(100 * p.xp / xpToNext(p.level));
   const steed = bestSteed(), pet = p.pet && PETS[p.pet];
   const tal = myTalents().filter(t => tr(t.id)).map(t => `${t.name} ${tr(t.id)}`).join(", ");
@@ -6313,6 +6346,8 @@ function update(dt) {
   clock += dt; shake = Math.max(0, shake - dt * 14);
   if (bannerTimer > 0 && (bannerTimer -= dt) <= 0) document.getElementById("banner").classList.remove("show");
   if (gpTimer > 0 && (gpTimer -= dt) <= 0) document.getElementById("gearPrompt").hidden = true;
+  if (paTimer > 0 && (paTimer -= dt) <= 0) document.getElementById("pouchAsk").hidden = true;
+  if (pouchPend && !fighting()) showPouchAsk();
   if (player.graceT > 0) player.graceT -= dt; // a moment of safety after getting back up
   if (gpWait) { if (fighting()) gpQuiet = 0; else if ((gpQuiet += dt) > 1.5) { const w = gpWait; gpWait = null; promptEquip(w === true || !isUpgrade(w) ? undefined : w); } }
   musicTick(dt); ambienceTick(dt); folkTick(dt); keeperTick(dt); penTick(dt); beastTick(dt); mascotTick(dt); chalTick(dt); gatherTick(dt); lessonTick(dt);
@@ -6356,8 +6391,8 @@ function update(dt) {
   if (z.id !== zoneId) {
     if (map.dungeon && z.check && !p.dead) map.check = z.check;
     if (map.dungeon && z.heal && !p.dead) { p.hp = Math.min(stats().maxHp, p.hp + Math.round(stats().maxHp * 0.3)); setTimeout(() => toast("The fire warms you up. Health restored a little"), 1500); }
-    zoneId = z.id; banner(z.name, z.armor ? `${z.lv}. Recommended armor ${z.armor}` : z.lv); document.getElementById("zoneName").textContent = z.name;
-    if (z.armor && s.def < z.armor) setTimeout(() => toast(`Your armor (${s.def}) is low for ${z.name}. Enemies here will hit hard.`), 1200);
+    zoneId = z.id; banner(z.name, z.armor ? `${z.lv}. Recommended armor ${recArmor(z.armor)}` : z.lv); document.getElementById("zoneName").textContent = z.name;
+    if (z.armor && s.def < recArmor(z.armor)) setTimeout(() => toast(`Your armor (${s.def}) is low for ${z.name}. Enemies here will hit hard.`), 1200);
   }
   if (map.id === "world") {
     const gate = map.gate || (map.gate = map.rects.find(q => q.kind === "northgate"));
@@ -9188,7 +9223,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { hurtPlayer, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { hurtPlayer, addMat, hullArmor, recArmor, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
