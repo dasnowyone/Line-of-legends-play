@@ -5147,7 +5147,7 @@ function showDyes() {
 // Preview of what the App Store version will sell. Nothing here can be bought in the prototype.
 // Real-money purchases: every Buy button calls iapBuy(productId). The iPhone app's purchase plugin (window.lolIAP.buy) answers yes or no, and only a yes calls iapGrant
 const IAP = {
-  "lol.gems.100": { gems: 100 }, "lol.gems.550": { gems: 550 }, "lol.gems.1200": { gems: 1200 }, "lol.gems.2600": { gems: 2600 }, "lol.gems.7000": { gems: 7000 },
+  "lol.gems.100": { gems: 100 }, "lol.gems.550": { gems: 550 }, "lol.gems.1200": { gems: 1200 }, "lol.gems.2600": { gems: 2600 }, "lol.gems.7000": { gems: 7000 }, "lol.gems.15000": { gems: 15000 },
   "lol.firstoffer": { once: true, gems: 250, coins: 2000, dye: "gold", items: { greater_potion: 5 } },
   "lol.starter": { once: true, gems: 300, coins: 3000, items: { ember_blade: 1, potion: 5 } },
   "lol.founder": { once: true, gems: 600, flag: "founder" },
@@ -5243,7 +5243,7 @@ function showStore() {
     ${iapLive() ? `<div class="row"><button type="button" data-act="restore">Restore purchases</button>${player.st.inkPass ? '<button type="button" data-act="manage">Manage Ink Pass</button>' : ""}</div>` : ""}
     <p>Gem packs</p><div class="list">
       ${card("Handful of gems", "100 gems", iapPrice("lol.gems.100", "$0.99"), true, "lol.gems.100")}${card("Pouch of gems", "550 gems (+10%)", iapPrice("lol.gems.550", "$4.99"), true, "lol.gems.550")}${card("Chest of gems", "1,200 gems (+20%)", iapPrice("lol.gems.1200", "$9.99"), true, "lol.gems.1200")}
-      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}
+      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}${card("Legend's vault", "15,000 gems (+50%)", iapPrice("lol.gems.15000", "$99.99"), true, "lol.gems.15000")}
       ${iapOwned("lol.starter") ? "" : card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", iapPrice("lol.starter", "$2.99"), true, "lol.starter")}</div>
     <p>Spend gems</p><div class="list">
       ${card("Ember Armor Pack", `${set("ember")}. Level 5 to 6, equal to iron gear, with a flame look.`, "450")}
@@ -5269,7 +5269,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 113; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 114; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
