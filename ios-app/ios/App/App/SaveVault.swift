@@ -1,5 +1,6 @@
 import Capacitor
 import Security
+import StoreKit
 import UIKit
 
 // Keeps a copy of the game's save in the iPhone keychain. Keychain items stay when the app is deleted and come back
@@ -11,6 +12,8 @@ public class SaveVaultPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "get", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "review", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "env", returnType: CAPPluginReturnPromise),
     ]
     private let service = "com.dasnowyone.lineoflegends.save"
 
@@ -40,6 +43,22 @@ public class SaveVaultPlugin: CAPPlugin, CAPBridgedPlugin {
         var status = SecItemUpdate(q as CFDictionary, attrs as CFDictionary)
         if status == errSecItemNotFound { status = SecItemAdd(q.merging(attrs) { $1 } as CFDictionary, nil) }
         if status == errSecSuccess { call.resolve() } else { call.reject("keychain error \(status)") }
+    }
+
+    // Apple's own "Enjoying the game?" stars. Apple decides whether it shows (at most 3 times a year).
+    @objc func review(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let scene = UIApplication.shared.connectedScenes
+                .first { $0.activationState == .foregroundActive } as? UIWindowScene
+            if let scene { SKStoreReviewController.requestReview(in: scene) }
+            call.resolve()
+        }
+    }
+
+    // TestFlight installs carry a sandbox receipt; App Store installs do not. The game keeps tester tools for TestFlight only.
+    @objc func env(_ call: CAPPluginCall) {
+        let testflight = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        call.resolve(["testflight": testflight])
     }
 }
 

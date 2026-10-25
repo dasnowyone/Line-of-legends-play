@@ -4,6 +4,11 @@
   const cap = window.Capacitor;
   if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
   const V = cap.registerPlugin ? cap.registerPlugin("SaveVault") : cap.Plugins.SaveVault;
+  // App Store installs hide the tester tools; TestFlight keeps them
+  window.LOL_RELEASE = true;
+  V.env().then(r => { window.LOL_RELEASE = !(r && r.testflight); }).catch(() => {});
+  // Apple's rate prompt, which the game asks for once after the first dungeon
+  window.lolReview = () => V.review().catch(() => {});
   const snap = () => { const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("lol")) o[k] = localStorage.getItem(k); } return o; };
   const hasHero = o => Object.keys(o).some(k => k.startsWith("lol-world"));
   let last = "";

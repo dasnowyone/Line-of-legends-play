@@ -336,6 +336,10 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
   #tracker, #tracker.fold { grid-column: 1; grid-row: 1 / span 2; align-self: start; margin-top: 44px; max-width: min(30vw, 210px); }
   body #toasts { top: calc(56px + env(safe-area-inset-top, 0px)); }
   .ccard canvas { max-width: 92px; } .sheet h2 { font-size: 24px; }
+  /* Lee: all three class cards fit on a sideways phone without scrolling */
+  .sheet:has(.cpick) { padding-top: 8px; padding-bottom: 8px; } .sheet:has(.cpick) h2 { margin: 0 0 2px; font-size: 22px; } .sheet:has(.cpick) > p.soft { margin: 0 0 6px; font-size: 14px; }
+  .ccard { row-gap: 2px; padding: 4px 6px 6px; } .ccard canvas { max-width: 64px; } .ccard b { font-size: 19px; }
+  .ccard small, .ccard span { font-size: 12.5px; line-height: 1.2; } .ccard em { font-size: 12px; } .ccard .perk { font-size: 12px; line-height: 1.2; padding: 3px 5px; }
   #skillcol { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1));
     flex-direction: row-reverse; align-items: flex-end; transform-origin: 100% 100%; scale: var(--padk, 1); }
   /* Lee: every action on screen when sideways. Items sit in a row above the skills, nothing hides behind More */
@@ -2462,6 +2466,14 @@ function grantRelic(dg) {
   const S = STONES.find(S => S.dg === dg);
   if (S) setTimeout(() => { sfx("level"); const n = stoneCount(); stoneFlash = 3;
     banner(`The ${S.name}!`, n >= STONES.length ? "All seven stones! The gate of the Inkstone Keep is open" : `${n} of ${STONES.length} stones. Each one you find is set in the gate of the Inkstone Keep`); }, 9000);
+  askRating();
+}
+// iPhone app only: Apple's rate prompt, asked once after the first dungeon clear, when the banners are done and no fight is on
+function askRating() {
+  if (player.st.rated || !window.lolReview) return;
+  player.st.rated = true; save();
+  const tryAsk = (n = 0) => (fighting() || cine || !panel.hidden) && n < 20 ? setTimeout(() => tryAsk(n + 1), 3000) : window.lolReview();
+  setTimeout(tryAsk, 14000);
 }
 function useRelic(id) {
   const dg = ITEMS[id].relic, r = RELICS[dg]; if (!r.buff || !player.bag[id]) return;
@@ -5054,6 +5066,15 @@ function dropItem(id, n) {
   const k = Math.min(n, player.bag[id]); takeItem(id, k); matsCheck(); save();
   toast(`Dropped ${itName(id)}${k > 1 ? " x" + k : ""}`); showBag();
 }
+// Credits and help, from the Bag
+function showCredits() {
+  openPanel(`<h2>Line of Legends</h2>
+    <p class="soft">Version ${GAME_VER}</p>
+    <p>Made by <b>SnowyOne</b>.</p>
+    <p>Stuck, lost a hero, or a purchase didn't arrive? Write to <a href="mailto:lineoflegends.help@gmail.com">lineoflegends.help@gmail.com</a> or visit the <a href="https://dasnowyone.github.io/Line-of-legends-play/support.html" target="_blank" rel="noopener">help page</a>.</p>
+    <p class="soft"><a href="https://dasnowyone.github.io/Line-of-legends-play/privacy.html" target="_blank" rel="noopener">Privacy policy</a> &middot; Thanks for playing!</p>
+    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag() });
+}
 function showBag(confirmReset, tab) {
   if (tab) bagTab = tab;
   const s = stats(), g = player.gear, mats = bagTab === "mats";
@@ -5073,7 +5094,7 @@ function showBag(confirmReset, tab) {
       ${ITEMS[id].buff ? `<button type="button" data-act="eat" data-arg="${id}">${BUFFS[ITEMS[id].buff] && /Stew|Pie|Skewers|Chowder|Feast/.test(ITEMS[id].name) ? "Eat" : "Drink"}</button>` : ""}
       ${dropAsk === id ? `<button type="button" class="drop" data-act="drop1" data-arg="${id}">Drop 1</button>${n > 1 ? `<button type="button" class="drop" data-act="dropall" data-arg="${id}">Drop all</button>` : ""}<button type="button" data-act="keep">Keep</button>`
         : `${ITEMS[id].slot ? `<button type="button" data-act="equip" data-arg="${id}" ${ITEMS[id].lvl > player.level ? "disabled" : ""}>${ITEMS[id].lvl > player.level ? "Lv " + ITEMS[id].lvl : "Equip"}</button>` : ""}${questKeeps(id) ? "" : `<button type="button" class="dropq" data-act="drop" data-arg="${id}">Drop</button>`}`}</div>`).join("") : `<p class="soft">${mats ? "No materials yet." : "Nothing in your bag yet."}</p>`}</div>
-    <div class="row">${Object.keys(player.bag).some(isUpgrade) ? '<button type="button" data-act="best">Equip best</button>' : ""}<button type="button" data-act="talents">Talents${talentPoints() > 0 ? ` (${talentPoints()})` : ""}</button><button type="button" data-act="pets">Pets${desk ? " (P)" : ""}</button><button type="button" data-act="ach">Achievements${desk ? " (Y)" : ""}</button><button type="button" data-act="dyes">Dyes</button><button type="button" data-act="store">Store</button><button type="button" data-act="savenow">Save</button><button type="button" data-act="heroes">Heroes</button><button type="button" data-act="reset">${confirmReset ? "Tap again to erase your hero" : "Start over"}</button><button data-act="close" type="button">Close</button></div>`,
+    <div class="row">${Object.keys(player.bag).some(isUpgrade) ? '<button type="button" data-act="best">Equip best</button>' : ""}<button type="button" data-act="talents">Talents${talentPoints() > 0 ? ` (${talentPoints()})` : ""}</button><button type="button" data-act="pets">Pets${desk ? " (P)" : ""}</button><button type="button" data-act="ach">Achievements${desk ? " (Y)" : ""}</button><button type="button" data-act="dyes">Dyes</button><button type="button" data-act="store">Store</button><button type="button" data-act="savenow">Save</button><button type="button" data-act="about">About</button><button type="button" data-act="heroes">Heroes</button><button type="button" data-act="reset">${confirmReset ? "Tap again to erase your hero" : "Start over"}</button><button data-act="close" type="button">Close</button></div>`,
     {
       use: id => { useRelic(id); showBag(); }, btab: t => { dropAsk = null; showBag(false, t); }, eat: id => { eatBuff(id); showBag(); },
       mana: id => { drinkMana(id); showBag(); },
@@ -5085,6 +5106,7 @@ function showBag(confirmReset, tab) {
       talents: () => showTalents(),
       store: () => showStore(),
       savenow: () => { save(); toast("Game saved. It also saves itself every few seconds"); },
+      about: () => showCredits(),
       heroes: () => showHeroes(),
       drop: id => { dropAsk = id; showBag(); }, keep: () => { dropAsk = null; showBag(); },
       drop1: id => dropItem(id, 1), dropall: id => dropItem(id, player.bag[id] || 0),
@@ -5284,7 +5306,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 117; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 118; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6396,7 +6418,7 @@ dialEl.addEventListener("click", () => {
 let testTaps = [];
 document.getElementById("hud").addEventListener("click", () => {
   testTaps = [...testTaps.filter(t => clock - t < 3), clock];
-  if (testTaps.length < 5 || !panel.hidden || cine) return;
+  if (testTaps.length < 5 || !panel.hidden || cine || window.LOL_RELEASE) return; // the App Store build has no tester tools (free gems)
   testTaps = [];
   openPanel(`<h2>Tester tools</h2><p class="soft">For testing the game. This changes your hero.</p>
     <div class="list"><div class="item"><div>Jump to level 7<small>One kill away from level 8, to see the Drowned Temple rise</small></div><button type="button" data-act="lv7">Go</button></div>
@@ -9419,7 +9441,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { iapBuy, iapGrant, showWares, showStore, showFirstOffer, weekNo, tryDye, tryPetOutfit, QUESTS, npcById, hurtPlayer, addMat, hullArmor, recArmor, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { grantRelic, showCredits, iapBuy, iapGrant, showWares, showStore, showFirstOffer, weekNo, tryDye, tryPetOutfit, QUESTS, npcById, hurtPlayer, addMat, hullArmor, recArmor, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
