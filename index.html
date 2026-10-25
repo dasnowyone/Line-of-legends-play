@@ -700,8 +700,10 @@ for (const it of Object.values(ITEMS)) if (it.slot && !it.premium) {
 // Premium dyes come with the App Store version.
 const DYE_GEMS = 50;
 const DYES = { crimson: ["Crimson", "#a8262a"], forest: ["Forest", "#3d6b3a"], sky: ["Sky", "#4f8ccf"], charcoal: ["Charcoal", "#3a3a42"], sand: ["Sand", "#d8bf8a"], plum: ["Plum", "#6b3a6e"],
-  gold: ["Royal Gold", "#d4a92a", true], ice: ["Glacier", "#bfe8f7", true], void: ["Void", "#141018", true], ember: ["Ember", "#e0662a", true] };
-for (const [k, [name, c, prem]] of Object.entries(DYES)) if (!prem) ITEMS["dye_" + k] = { name: `${name} Dye`, dye: k, price: 0, gems: DYE_GEMS, desc: "Unlocks this color for any armor piece" };
+  gold: ["Royal Gold", "#d4a92a", true], ice: ["Glacier", "#bfe8f7", true], void: ["Void", "#141018", true], ember: ["Ember", "#e0662a", true],
+  // coin-only colors from Trader Juniper's weekly wares
+  rose: ["Rose", "#d77a9a", false, "coin"], teal: ["Teal", "#2f8f8a", false, "coin"], amber: ["Amber", "#d9902a", false, "coin"], ivory: ["Ivory", "#efe8d6", false, "coin"] };
+for (const [k, [name, c, prem, coin]] of Object.entries(DYES)) if (!prem && !coin) ITEMS["dye_" + k] = { name: `${name} Dye`, dye: k, price: 0, gems: DYE_GEMS, desc: "Unlocks this color for any armor piece" };
 for (const id of Object.keys(ITEMS)) if (ITEMS[id].rare) {
   const it = ITEMS[id];
   ITEMS["bp_" + id] = { name: `Blueprint: ${it.name}`, bp: id, price: 1500, rare: true, desc: `Smith Brand can forge this for ${it.price} coins` };
@@ -892,6 +894,11 @@ mkFoe("cultist", "Ink Cultist", 43, "human", { look: HUM("rgba(42,42,52,.94)", "
 mkFoe("horror", "Blot Horror", 44, "shade", { scale: 1.5, speed: 85, r: 26, hpK: 1.8 });
 mkFoe("elite_knight", "Sir Smudge", 44, "human", { base: "cultist", elite: true, look: HUM("rgba(30,30,36,.95)", "bucket", "#2a2a30", "sword", { scale: 1.3 }), speed: 130, r: 22 });
 mkFoe("tyrant", "The Blot Tyrant", 45, "shade", { boss: true, scale: 2.6, speed: 90, r: 44, throws: BOSSTHROW("ink", 7, 320) });
+// Weekly world bosses (Lee: something to come back for at level 50). Commander Rhea names one each week
+mkFoe("wk_rime", "Rimefang the Winter Titan", 50, "golem", { boss: true, hpK: 3, scale: 2.8, fill: "#d8ecf6", speed: 80, r: 46, throws: BOSSTHROW("ice", 7, 380) });
+mkFoe("wk_cinder", "Cinderwing the Ash Drake", 50, "drake", { boss: true, hpK: 3, scale: 2.8, fill: "#5a1e14", speed: 125, r: 46, throws: BOSSTHROW("fireball", 7, 360) });
+mkFoe("wk_prism", "The Prism Colossus", 50, "golem", { boss: true, hpK: 3, scale: 2.9, fill: "#c8a8f0", speed: 72, r: 48, throws: BOSSTHROW("shard", 9, 380) });
+mkFoe("wk_blot", "The Great Blot", 50, "shade", { boss: true, hpK: 3, scale: 3, speed: 95, r: 48, throws: BOSSTHROW("ink", 9, 340) });
 // Eraser's Reach, levels 45 to 50
 mkFoe("eraser_grunt", "Eraser Grunt", 46, "eraser", { fill: "#e7a3b0", speed: 125, r: 20, hpK: 1.2 });
 mkFoe("smudge", "Smudge", 47, "shade", { fill: "#8a8a94", ranged: CAST("ink", 320, 3), speed: 120, r: 18, hpK: 0.8 });
@@ -1384,7 +1391,7 @@ function buildWorld() {
     { ...npc("carly", "Tailor Carly", ...at(3560, 9300), "#3d6b3a", "Cloth, leather and color. A hero should look the part. Mages, I stitch your robes too.",
       ["cloth_cap", "red_bandana", "straw_hat", "patched_tunic", "travel_robe", "gambeson", "cloth_wraps", "fingerless", "work_gloves", "sandals", "soft_shoes", "clogs",
        "leather_hood", "horned_cap", "leather_vest", "leather_gloves", "studded_gloves", "leather_boots", "hobnail_boots", "m_iron_helm", "m_chain_shirt", "m_iron_gauntlets", "m_iron_greaves", "m_steel_helm", "m_steel_plate", "m_steel_gauntlets", "m_steel_sabatons",
-       ...Object.keys(DYES).filter(k => !DYES[k][2]).map(k => "dye_" + k)]), classShop: false },
+       ...Object.keys(DYES).filter(k => !DYES[k][2] && !DYES[k][3]).map(k => "dye_" + k)]), classShop: false },
     { ...npc("ash", "Fletcher Ash", ...at(3380, 9165), "#5a7a3a", "Bows, crossbows and good leather. Hunters, keep your distance and let the string do the work.",
       ["h_practice_bow", "h_hunting_bow", "h_shortbow", "h_yew_longbow", "h_iron_crossbow", "h_iron_helm", "h_chain_shirt", "h_iron_gauntlets", "h_iron_greaves", "h_steel_helm", "h_steel_plate", "h_steel_gauntlets", "h_steel_sabatons", "keen_arrows", "barbed_arrows"]), classShop: false },
     { ...npc("fizz", "Alchemist Fizz", ...at(4296, 9452), "#7a5aa6", "Potions! Freshly bottled, mostly safe. And wands, for the sparky types.", ["potion", "greater_potion", "mana_potion", "greater_mana", "m_apprentice_wand", "m_oak_staff", "m_bone_wand", "m_quartz_staff", "m_runed_wand"]), classShop: false },
@@ -2535,6 +2542,28 @@ QUESTS.push({ id: "rq_keep", where: "Inkstone Keep, through the gate on its sout
   text: "The Keep's gate has opened. He knows you're coming. Fight through his guard, past the Twins, and up to the Blank Throne. Erase the Eraser King, and the map is ours again.",
   done: "You did it. Listen: no more scrubbing sounds. Just pens scratching, everywhere, drawing the world back in. Legend.",
   goal: { type: "kill", foe: "eraserking", n: 1 }, reward: { xp: FOES.eraserking.xp, coins: Math.round(foeCoin(50) * 60), item: "greater_potion", qty: 5 } });
+// Weekly world boss: one of four each week (weeks start Monday), beaten once a week. Rhea's quest resets when the week turns
+function weekNo() { return Math.floor((Date.now() - Date.UTC(2026, 0, 5)) / 6048e5); }
+const WEEKLY = [["wk_rime", "Frost on the Margin", "Something huge walked down from the Frostpeaks overnight. The hills around camp are white with rime. Rimefang has come, and he's hungry."],
+  ["wk_cinder", "Ash on the Wind", "Ash is falling on Final Margin, and it's still warm. Cinderwing has flown in from the Ember Wastes. Ground her before she burns the camp."],
+  ["wk_prism", "Light That Cuts", "Every rock out there is growing crystals. The Prism Colossus is close. Shatter it before the whole margin turns to glass."],
+  ["wk_blot", "The Spreading Blot", "The ink the Tyrant drank didn't dry. It gathered into one Great Blot, and it's creeping toward camp. Mop it up, for good this time."]];
+WEEKLY.forEach(([foe, title, text], i) => QUESTS.push({ id: "wk_" + i, weekly: true, giver: "rhea", title: "Weekly boss: " + title, needs: ["rq_keep"], req: () => !!player.st.kingFell && weekNo() % 4 === i,
+  where: "Near Final Margin, follow the marker", text, done: "That's the week's worst, beaten. Come back next week, something else always crawls out of the margin.",
+  goal: { type: "kill", foe, n: 1 }, reward: { xp: FOES[foe].xp, coins: Math.round(foeCoin(50) * 40), item: "greater_potion", qty: 3, gems: 10 },
+  onAccept() { wkSpawn(this); }, onDone() { quests[this.id].at = Date.now(); } }));
+// a finished weekly boss opens again once its week is over
+function wkReset(q) { const st = quests[q.id]; if (st && st.state === "done" && Math.floor((st.at - Date.UTC(2026, 0, 5)) / 6048e5) !== weekNo()) delete quests[q.id]; }
+function wkSpawn(q) {
+  const W = MAPS.world, st = quests[q.id]; if (!st || W.spawners.some(s => s.questOnly === q.id)) return;
+  if (!st.spot) { const r = npcById("rhea"), cx = r ? r.x : 20000, cy = r ? r.y : 17100;
+    for (let t = 0; t < 400 && !st.spot; t++) { const a = Math.random() * 6.28, d = 1000 + Math.random() * 700, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+      if (!blocked(W, x, y, 60) && !inCamp(W, x, y, 2.1) && W.riverGap(x, y) > 120) st.spot = [Math.round(x), Math.round(y)]; }
+    if (!st.spot) st.spot = [cx + 1200, cy]; }
+  q.mark = st.spot;
+  const s = { foe: q.goal.foe, x: st.spot[0], y: st.spot[1], r: 0, n: 1, fixed: true, questOnly: q.id, timer: 0, live: 0, back: [] };
+  W.spawners.push(s); spawnFoe(W, s, true);
+}
 // ---------- Home upgrades (Lee): furniture for coins, fancy pieces, house looks and additions for gems. All just for looks or small conveniences ----------
 const HOME = {
   rug: { name: "Woven Rug", tab: "in", coins: 300 }, fern: { name: "Potted Fern", tab: "in", coins: 250 }, lamp: { name: "Standing Lamp", tab: "in", coins: 400 },
@@ -2930,12 +2959,15 @@ buildFolk();
 // ---------- Crafting in the world (Lee): Miner Sange, Carpenter Clegg, ore veins, herbs, fallen logs and fishing spots ----------
 // spots in town are measured from where the old village fence stood
 const VZ = MAPS.world.ZONES.find(z => z.id === "village"), VAT = (dx, dy) => [11400 + dx, 30090 + dy];
-const CRAFT_SPOTS = { sange: [12900, 30450], clegg: [11150, 30780], vein: VAT(1330, 372), dig: P(4620, 8330) };
+const JUNIPER_AT = [11560, 30475]; // on the street under the bunting
+const CRAFT_SPOTS = { sange: [12900, 30450], clegg: [11150, 30780], juniper: JUNIPER_AT, vein: VAT(1330, 372), dig: P(4620, 8330) };
 (function craftWorld() {
   const W = MAPS.world, rnd = folkRng(9091);
   const sange = npc("sange", "Miner Sange", ...CRAFT_SPOTS.sange, "#c9a227", "Ore's in the hills, if you've the arms for it. Copper and iron first, then the deep stuff.");
   const clegg = npc("clegg", "Carpenter Clegg", ...CRAFT_SPOTS.clegg, "#7a5a34", "Wood remembers how it grew. Treat it right and it'll hold for you.");
-  W.objs.push(sange, clegg);
+  const juniper = npc("juniper", "Trader Juniper", ...CRAFT_SPOTS.juniper, "#8a4a7a", "New wares every Monday, paid in coins. Looks you won't find in any other shop.");
+  juniper.wares = true;
+  W.objs.push(sange, clegg, juniper);
   const [cx, cy] = CRAFT_SPOTS.clegg, [sx, sy] = CRAFT_SPOTS.sange;
   W.props.push({ kind: "workbench", x: cx + 70, y: cy + 18 }, { kind: "sawhorse", x: cx - 66, y: cy + 22 }, { kind: "woodpile", x: cx + 150, y: cy + 4 }, { kind: "orecart", x: sx - 60, y: sy - 52 });
   // roads, camps and other things to keep clear of
@@ -4031,7 +4063,7 @@ function chase(f, dx, dy, r, dt) {
 // Enemies
 // =====================================================================
 for (const m of Object.values(MAPS)) for (const s of m.spawners) { s.timer = 0; s.live = 0; s.back = []; for (let i = 0; i < s.n; i++) spawnFoe(m, s); }
-for (const q of QUESTS) if (quests[q.id]?.state === "active") questGroups(q);
+for (const q of QUESTS) if (quests[q.id]?.state === "active") { questGroups(q); if (q.weekly) wkSpawn(q); }
 // Hunt quests (Lee): taking one brings fresh groups of its enemy to the quest marker. They leave once the hunt is done
 function questGroups(q) {
   const g = q.goal, W = MAPS.world; if (g.type !== "kill" || g.n < 2 || !q.mark || !FOES[g.foe] || W.spawners.some(s => s.questOnly === q.id)) return 0;
@@ -4341,22 +4373,25 @@ function hurtPlayer(raw, lv) {
   }
   if (player.hp === 0) {
     const lost = Math.floor(player.coins * 0.1);
-    player.coins -= lost; player.dead = player.gems >= GETUP_GEMS ? 5 : 2.5; player.lostCoins = lost; bump("deaths"); if (!panel.hidden) closePanel(); showGetUp();
+    player.coins -= lost; player.dead = canGetUp() ? 5 : 2.5; player.lostCoins = lost; bump("deaths"); if (!panel.hidden) closePanel(); showGetUp();
     const where = map.dungeon ? (map.check ? (map.id === "hollow" ? "at the last lantern you lit" : "at your last safe spot") : map.id === "temple" ? map.deathText : "at the entrance") : "at the nearest waystone";
     banner("You were erased", lost ? `You dropped ${lost} coins. Redrawing you ${where}...` : `Redrawing you ${where}...`);
   }
 }
 // Get back up (Lee): for a few gems you stand up right where you fell, keep your coins, and carry on
 const GETUP_GEMS = 5;
+// the first one is free (Lee), so everyone learns the button is there
+const canGetUp = () => !player.st.freeUp || player.gems >= GETUP_GEMS;
 function showGetUp() {
   const el = document.getElementById("getUp"); if (!el) return;
-  if (!player.dead || player.gems < GETUP_GEMS) { el.hidden = true; return; }
-  el.hidden = false; el.innerHTML = `<button type="button" id="getUpBtn">Get back up here <span class="gem">&#9670; ${GETUP_GEMS}</span></button><small>You have ${player.gems} gems${player.lostCoins ? `. Keeps your ${player.lostCoins} coins` : ""}</small>`;
+  if (!player.dead || !canGetUp()) { el.hidden = true; return; }
+  el.hidden = false; el.innerHTML = `<button type="button" id="getUpBtn">Get back up here ${player.st.freeUp ? `<span class="gem">&#9670; ${GETUP_GEMS}</span>` : "<b>free this once</b>"}</button><small>${player.st.freeUp ? `You have ${player.gems} gems` : `After this, ${GETUP_GEMS} gems`}${player.lostCoins ? `. Keeps your ${player.lostCoins} coins` : ""}</small>`;
   document.getElementById("getUpBtn").onclick = e => { e.stopPropagation(); getUp(); };
 }
 function getUp() {
-  if (!player.dead || player.gems < GETUP_GEMS) return;
-  player.gems -= GETUP_GEMS; player.coins += player.lostCoins || 0; player.lostCoins = 0;
+  if (!player.dead || !canGetUp()) return;
+  if (player.st.freeUp) player.gems -= GETUP_GEMS; else player.st.freeUp = 1;
+  player.coins += player.lostCoins || 0; player.lostCoins = 0;
   player.dead = 0; player.hp = Math.round(stats().maxHp * 0.6); player.graceT = 1.5; player.hurtT = 0; player.dodgeT = 0;
   // Lee: stand still after getting up, not keep walking the way you were going when you fell
   joy.active = false; keys.clear(); player.vx = player.vy = 0; player.lastDir = null; player.moving = false;
@@ -4498,7 +4533,7 @@ function gainXp(n) {
   if (player.level >= MAX_LEVEL) { player.xp = 0; return; }
   n = Math.round(n * (buffOn("core") ? 1.3 : 1) * (buffOn("feast") ? 1.15 : 1)); player.xp += n;
   while (player.xp >= xpToNext(player.level)) {
-    player.xp -= xpToNext(player.level); player.level++; if (player.level % 5 === 0) setTimeout(() => addGems(25, `Level ${player.level}`), 1800);
+    player.xp -= xpToNext(player.level); player.level++; if (player.level % 5 === 0) setTimeout(() => addGems(player.level >= 20 ? 25 : 10, `Level ${player.level}`), 1800); // fewer early, so the first gem purchase means more
     player.hp = stats().maxHp; setTimeout(() => promptEquip(), 1500); sfx("level");
     const newSk = Object.values(SKILLS).find(k => k.lv === player.level);
     banner(`Level ${player.level}!`, newSk ? `New ability: ${newSk.name}` : player.level === 3 ? `${WHIRL().name} unlocked. Your lines grow bolder.` : player.level === 5 ? "Your head fills in with ink." : "Your lines grow bolder.");
@@ -4710,7 +4745,7 @@ function goTo(mapId, x, y, instant) {
 // =====================================================================
 // Quests and talking
 // =====================================================================
-function questAvailable(q) { return !quests[q.id] && (!q.req || q.req()) && q.needs.every(n => quests[n]?.state === "done"); }
+function questAvailable(q) { if (q.weekly) wkReset(q); return !quests[q.id] && (!q.req || q.req()) && q.needs.every(n => quests[n]?.state === "done"); }
 function questEvent(type, what) {
   for (const q of QUESTS) {
     const st = quests[q.id];
@@ -4790,10 +4825,10 @@ function talk(n) {
   if (offerL[0]) return showOffer(n, offerL[0]);
   const active = activeL[0];
   const body = active ? `<p>${wolfTxt(active.text)}</p><p class="soft">${progressText(active)}</p>` : `<p>${n.line}</p>`;
-  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${n.tierShop ? '<button data-act="looks" type="button">Looks</button>' : ""}${n.pets ? '<button data-act="pets" type="button">Pets</button>' : ""}${n.chal ? '<button data-act="chal" type="button">Challenge</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), pets: () => showPets(), looks: () => showLooks(n), chal: () => showChal(n) });
+  openPanel(`<h2>${n.name}</h2>${body}<div class="row">${craftOpen(n.id) ? '<button data-act="craft" type="button">Craft</button>' : ""}${n.shop ? '<button data-act="shop" type="button">Shop</button>' : ""}${n.tierShop ? '<button data-act="looks" type="button">Looks</button>' : ""}${n.pets ? '<button data-act="pets" type="button">Pets</button>' : ""}${n.chal ? '<button data-act="chal" type="button">Challenge</button>' : ""}${n.wares ? '<button data-act="wares" type="button">This week</button>' : ""}${trainerBtn(n)}<button data-act="close" type="button">Goodbye</button></div>`, { wares: () => showWares(n), shop: () => showShop(n), craft: () => showCraft(n), becls: () => classChange(n), pets: () => showPets(), looks: () => showLooks(n), chal: () => showChal(n) });
 }
 function rewardText(r) {
-  return [r.tool && TOOLS[r.tool][0], r.pet && `${PETS[r.pet].name} (${r.pet === "pup" ? "your first pet" : "a new pet"})`, r.item && ITEMS[r.item].name + (r.qty > 1 ? ` x${r.qty}` : ""), r.coins && `${r.coins} coins`, r.xp && `${r.xp} XP`].filter(Boolean).join(", ");
+  return [r.tool && TOOLS[r.tool][0], r.pet && `${PETS[r.pet].name} (${r.pet === "pup" ? "your first pet" : "a new pet"})`, r.item && ITEMS[r.item].name + (r.qty > 1 ? ` x${r.qty}` : ""), r.coins && `${r.coins} coins`, r.gems && `${r.gems} gems`, r.xp && `${r.xp} XP`].filter(Boolean).join(", ");
 }
 function showQuestList(n, readyL, offerL, activeL) {
   const row = (q, tag, cls, act) => `<div class="item"><div><span class="${cls}">${tag}</span> ${q.title}<small>${act ? (cls === "qready" ? "Ready to turn in" : q.where) : progressText(q)}</small></div>${act ? `<button type="button" data-act="${act}" data-arg="${q.id}">${act === "turnin" ? "Turn in" : "View"}</button>` : ""}</div>`;
@@ -4817,7 +4852,7 @@ function showTurnIn(n, q) {
     { complete: () => {
       if (q.take && !haveAll(q.take)) return closePanel();
       quests[q.id].state = "done"; closePanel(); if (q.take) for (const [id, k] of Object.entries(q.take)) takeItem(id, k);
-      sfx("quest"); const r = q.reward; if (r.tool) grantTool(r.tool); if (r.coins) player.coins += r.coins; if (r.item) addItem(forCls(r.item), r.qty || 1); if (r.xp) gainXp(r.xp);
+      sfx("quest"); const r = q.reward; if (r.tool) grantTool(r.tool); if (r.coins) player.coins += r.coins; if (r.item) addItem(forCls(r.item), r.qty || 1); if (r.xp) gainXp(r.xp); if (r.gems) addGems(r.gems, q.title);
       if (r.pet) { if (!player.pets.includes(r.pet)) player.pets.push(r.pet); player.pet = r.pet; pet.map = ""; if (!player.petNames[r.pet]) player.petNames[r.pet] = r.petName || "Inky"; sfx("rare");
         setTimeout(() => banner(`${player.petNames[r.pet]} joined you!`, r.pet !== "pup" ? (desk ? "A new pet. Press P to pick who follows you" : "A new pet. Pick who follows you in Bag > Pets") : desk ? "Pets unlocked. Press P to see them" : "Pets unlocked. Find them in your Bag"), 600); }
       if (q.onDone) q.onDone();
@@ -5092,6 +5127,11 @@ function showTalents() {
       back: () => showBag(),
     });
 }
+// Try before you buy (Lee): a dye colors all your armor for a minute
+function tryDye(d) {
+  if (!ARMOR_SLOTS.some(k => player.gear[k])) return toast("Wear some armor to try a dye on");
+  player.dyeTry = { d, t: clock + 60 }; closePanel(); toast(`Trying ${DYES[d][0]} for a minute. Come back to buy it`);
+}
 function showDyes() {
   const g = player.gear, names = { head: "Head", body: "Body", hands: "Hands", feet: "Feet" };
   const worn = ARMOR_SLOTS.filter(k => g[k]);
@@ -5105,21 +5145,110 @@ function showDyes() {
     { look: k => { player.lookOn = k || null; save(); showDyes(); }, glow: k => { player.glow = k || null; save(); showDyes(); }, dye: a => { const [k, d] = a.split(":"); if (d) player.dye[k] = d; else delete player.dye[k]; save(); showDyes(); }, back: () => showBag() });
 }
 // Preview of what the App Store version will sell. Nothing here can be bought in the prototype.
+// Real-money purchases: every Buy button calls iapBuy(productId). The iPhone app's purchase plugin (window.lolIAP.buy) answers yes or no, and only a yes calls iapGrant
+const IAP = {
+  "lol.gems.100": { gems: 100 }, "lol.gems.550": { gems: 550 }, "lol.gems.1200": { gems: 1200 }, "lol.gems.2600": { gems: 2600 }, "lol.gems.7000": { gems: 7000 }, "lol.gems.15000": { gems: 15000 },
+  "lol.firstoffer": { once: true, gems: 250, coins: 2000, dye: "gold", items: { greater_potion: 5 } },
+  "lol.starter": { once: true, gems: 300, coins: 3000, items: { ember_blade: 1, potion: 5 } },
+  "lol.founder": { once: true, gems: 600, flag: "founder" },
+  "lol.inkpass.monthly": { flag: "inkPass" },
+};
+const iapOwned = pid => (player.st.iap || []).includes(pid);
+// In the iPhone app the App Store gives the price in the player's own currency; the browser shows US prices
+const iapPrice = (pid, usd) => (window.LOL_IAP && window.LOL_IAP.prices[pid]) || usd;
+const iapLive = () => !!(window.LOL_IAP && window.LOL_IAP.available);
+// Gems from a one-time pack are given once per phone, even when Restore Purchases fills in a new hero's looks
+const iapGemsGot = () => { try { return JSON.parse(localStorage.getItem("lol-iap-gems")) || []; } catch { return []; } };
+const iapGemsMark = pid => { try { const g = iapGemsGot(); if (!g.includes(pid)) { g.push(pid); localStorage.setItem("lol-iap-gems", JSON.stringify(g)); } } catch {} };
+function iapRestore() {
+  if (!iapLive()) return toast("Restore works in the iPhone app");
+  toast("Checking your App Store purchases...");
+  window.LOL_IAP.restore().then(r => {
+    if (!r.ok) return toast("Couldn't reach the App Store. Try again in a moment");
+    let n = 0; for (const pid of r.owned) if (IAP[pid] && IAP[pid].once && !iapOwned(pid)) { iapGrant(pid, true); n++; }
+    iapSubs(r.subs); toast(n || player.st.inkPass ? "Purchases restored" : "No purchases to restore on this Apple account");
+    if (!panel.hidden && sheet.querySelector('[data-act="iap"]')) showStore();
+  });
+}
+// The Ink Pass is on while Apple says the subscription is active; 30 gems the first time you play each day, and one new dye each month
+function iapSubs(subs) { const on = (subs || []).includes("lol.inkpass.monthly"); if (!!player.st.inkPass !== on) { player.st.inkPass = on; save(); } inkPassDaily(); }
+function inkPassDaily() {
+  const st = player.st; if (!st.inkPass || !window.__started) return;
+  if (st.inkDay !== today()) { st.inkDay = today(); addGems(30, "Ink Pass daily gems"); }
+  const mon = new Date().toISOString().slice(0, 7);
+  if (st.inkMonth !== mon) { st.inkMonth = mon; const d = Object.keys(DYES).find(k => DYES[k][2] && !player.dyes.includes(k)) || Object.keys(DYES).find(k => !player.dyes.includes(k));
+    if (d) { player.dyes.push(d); toast(`Ink Pass: the ${DYES[d][0]} dye is yours this month`); } save(); }
+}
+setInterval(() => { if (iapLive() && window.__started && player.cls) iapSubs(window.LOL_IAP.subs); }, 60000);
+addEventListener("lol-iap", e => { if (window.__started && player.cls) iapSubs(e.detail.subs); });
+// the bridge from the iPhone app: buy answers true only once Apple and RevenueCat confirm
+if (window.LOL_IAP && window.LOL_IAP.buy && !window.lolIAP) window.lolIAP = { buy: pid => window.LOL_IAP.ready.then(() => window.LOL_IAP.buy(pid)).then(r => { if (!r.ok && r.error) toast(r.error); return r.ok; }) };
+function iapBuy(pid) {
+  if (!IAP[pid] || (IAP[pid].once && iapOwned(pid))) return;
+  if (window.lolIAP && window.lolIAP.buy) return Promise.resolve(window.lolIAP.buy(pid)).then(ok => { if (ok) { iapGrant(pid); if (!panel.hidden && sheet.querySelector('[data-act="iap"]')) showStore(); } }).catch(() => toast("The purchase didn't go through. You weren't charged"));
+  toast("Coming at launch. Real purchases go through the App Store");
+}
+function iapGrant(pid, restoring) {
+  const P = IAP[pid]; if (!P) return; const st = player.st, got = st.iap || (st.iap = []);
+  if (P.once && got.includes(pid)) return; if (!got.includes(pid)) got.push(pid);
+  // a restore brings back looks and items; the gems only if this phone never got them
+  const gems = P.gems && !(restoring && iapGemsGot().includes(pid)); if (P.once && P.gems) iapGemsMark(pid);
+  if (P.coins && !restoring) player.coins += P.coins; if (P.dye && !player.dyes.includes(P.dye)) player.dyes.push(P.dye);
+  if (!restoring) for (const [id, k] of Object.entries(P.items || {})) addItem(forCls(id), k);
+  if (P.flag) st[P.flag] = true;
+  if (P.flag === "founder" && !player.petOutfits.includes("founder")) player.petOutfits.push("founder");
+  if (P.flag === "founder") { player.title = "Founder"; toast("Founder's Cape, Founder's Laurel and the Founder title are yours"); }
+  if (P.flag === "inkPass") inkPassDaily();
+  sfx("rare"); if (gems) addGems(P.gems, "thank you!"); else save();
+}
+// One-time offer (Lee, approved 2026-10-25): pops up once between levels 5 and 8, away from fights, then stays in the Store for 3 days
+const firstOfferOpen = () => player.st.firstOffer && !iapOwned("lol.firstoffer") && Date.now() - player.st.firstOffer < 3 * 864e5;
+const FIRST_OFFER_TXT = `<span class="gem">&#9670; 250 gems</span>, the <span class="swatch" style="background:${DYES.gold[1]}"></span>Royal Gold dye, 5 Greater Potions and 2,000 coins`;
+function showFirstOffer() {
+  if (player.st.firstOffer || iapOwned("lol.firstoffer")) return; player.st.firstOffer = Date.now(); save();
+  openPanel(`<h2>Adventurer's Kit</h2><p class="soft">A one-time offer for new heroes. It stays in the Store for 3 days.</p>
+    <div class="list"><div class="item"><div>${FIRST_OFFER_TXT}<small>Once per player</small></div></div></div>
+    <div class="row"><button data-act="close" type="button">Not now</button><button data-act="buy" type="button">Buy ${iapPrice("lol.firstoffer", "$1.99")}</button></div>`, { buy: () => { iapBuy("lol.firstoffer"); closePanel(); } });
+}
+// Weekly wares (Lee: a coin cosmetic shop for level 50): three coin-only looks that change every Monday, all eight come round every few weeks
+const WARES = [["dye", "rose", 150000], ["pet", "scarf", 150000], ["dye", "teal", 200000], ["pet", "antlers", 250000], ["dye", "amber", 250000], ["pet", "pirate", 300000], ["dye", "ivory", 350000], ["pet", "leaves", 400000]];
+const weeklyWares = () => [0, 1, 2].map(i => WARES[(weekNo() * 3 + i) % WARES.length]);
+function showWares(n) {
+  const has = ([t, k]) => t === "dye" ? player.dyes.includes(k) : player.petOutfits.includes(k), days = 7 - ((Math.floor((Date.now() - Date.UTC(2026, 0, 5)) / 864e5) % 7 + 7) % 7);
+  openPanel(`<h2>${n.name}</h2><p class="soft">This week's wares, coins only. New ones in ${days} day${days > 1 ? "s" : ""}. You have ${player.coins.toLocaleString()} coins.</p>
+    <div class="list">${weeklyWares().map(w => { const [t, k, price] = w, mine = has(w), name = t === "dye" ? `${DYES[k][0]} Dye` : PET_OUTFITS[k].name;
+      return `<div class="item">${t === "pet" ? `<canvas class="pthumb wthumb" width="96" height="96" data-o="${k}"></canvas>` : ""}<div>${t === "dye" ? `<span class="swatch" style="background:${DYES[k][1]}"></span>` : ""}${name}<small>${t === "dye" ? "A color for any armor piece, yours for good" : "A pet outfit any of your pets can wear"}</small></div>
+        ${mine ? '<button type="button" disabled>Owned</button>' : `<button type="button" data-act="try" data-arg="${t}:${k}">Try</button><button type="button" data-act="buy" data-arg="${t}:${k}" ${player.coins < price ? "disabled" : ""}>${price.toLocaleString()} coins</button>`}</div>`; }).join("")}</div>
+    <div class="row"><button data-act="close" type="button">Goodbye</button></div>`,
+    { try: a => { const [t, k] = a.split(":"); if (t === "dye") return tryDye(k); if (!player.pet) return toast("You need a pet to try this on"); tryPetOutfit(player.pet, k); },
+      buy: a => { const [t, k] = a.split(":"), w = weeklyWares().find(x => x[0] === t && x[1] === k); if (!w || has(w) || player.coins < w[2]) return;
+        player.coins -= w[2]; if (t === "dye") player.dyes.push(k); else player.petOutfits.push(k); sfx("rare"); bump("wares");
+        toast(t === "dye" ? `${DYES[k][0]} Dye is yours. Apply it from Bag > Dyes` : `${PET_OUTFITS[k].name} is yours. Dress a pet in Bag > Pets`); save(); showWares(n); } });
+  const P = player.pet && PETS[player.pet];
+  if (P) for (const cv of sheet.querySelectorAll("canvas.wthumb")) {
+    const g = cv.getContext("2d"), old = ctx, keep = { ...PET_POS }, pw = player.petWear[player.pet], ptry = player.petTry; ctx = g; player.petTry = null;
+    try { g.setTransform(1.2, 0, 0, 1.2, 0, 0); Object.assign(PET_POS, { x: 40, y: P.shape === "bird" || P.shape === "owl" || P.shape === "wisp" ? 77 : 62, face: 1, moving: false }); player.petWear[player.pet] = cv.dataset.o; const nmk = player.petNames[player.pet]; delete player.petNames[player.pet]; drawPet(); if (nmk) player.petNames[player.pet] = nmk; }
+    catch (e) {} finally { ctx = old; player.petTry = ptry; Object.assign(PET_POS, keep); if (pw) player.petWear[player.pet] = pw; else delete player.petWear[player.pet]; }
+  }
+}
 function showStore() {
   const set = key => Object.keys(ITEMS).filter(id => ITEMS[id].premium === key && canWear(id)).map(id => ITEMS[id].name).join(", ");
-  const card = (title, body, price, real) => `<div class="store-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:normal">${title}</b><span class="${real ? "coins" : "gem"}">${real ? price : "&#9670; " + price}</span></div><small class="soft">${body}</small></div>`;
-  openPanel(`<h2>Store</h2><p class="soft">A preview of the App Store version. You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
+  // a real-money card is a row with its own Buy button
+  const card = (title, body, price, real, pid) => pid ? `<div class="item"><div>${title} <span class="coins">${price}</span><small>${body}</small></div><button type="button" data-act="iap" data-arg="${pid}">Buy</button></div>` : `<div class="store-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:normal">${title}</b><span class="${real ? "coins" : "gem"}">${real ? price : "&#9670; " + price}</span></div><small class="soft">${body}</small></div>`;
+  openPanel(`<h2>Store</h2><p class="soft">${iapLive() ? "" : "A preview of the App Store version. "}You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
     <p>Featured</p><div class="list">
-      <div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">$4.99</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap">Buy</button></div>
-      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">$4.99 a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap">Subscribe</button></div></div>
+      ${firstOfferOpen() ? `<div class="item"><div><span class="rare">Adventurer's Kit</span> <span class="coins">${iapPrice("lol.firstoffer", "$1.99")}</span><small>One time only, for ${Math.max(1, Math.ceil((player.st.firstOffer + 3 * 864e5 - Date.now()) / 36e5))} more hours: ${FIRST_OFFER_TXT}</small></div><button type="button" data-act="iap" data-arg="lol.firstoffer">Buy</button></div>` : ""}
+      ${iapOwned("lol.founder") ? "" : `<div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">${iapPrice("lol.founder", "$4.99")}</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap" data-arg="lol.founder">Buy</button></div>`}
+      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">${iapPrice("lol.inkpass.monthly", "$4.99")} a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap" data-arg="lol.inkpass.monthly" ${player.st.inkPass ? "disabled" : ""}>${player.st.inkPass ? "Active" : "Subscribe"}</button></div></div>
+    ${iapLive() ? `<div class="row"><button type="button" data-act="restore">Restore purchases</button>${player.st.inkPass ? '<button type="button" data-act="manage">Manage Ink Pass</button>' : ""}</div>` : ""}
     <p>Gem packs</p><div class="list">
-      ${card("Handful of gems", "100 gems", "$0.99", true)}${card("Pouch of gems", "550 gems (+10%)", "$4.99", true)}${card("Chest of gems", "1,200 gems (+20%)", "$9.99", true)}
-      ${card("Hoard of gems", "2,600 gems (+30%)", "$19.99", true)}${card("Dragon's hoard", "7,000 gems (+40%)", "$49.99", true)}
-      ${card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", "$2.99", true)}</div>
+      ${card("Handful of gems", "100 gems", iapPrice("lol.gems.100", "$0.99"), true, "lol.gems.100")}${card("Pouch of gems", "550 gems (+10%)", iapPrice("lol.gems.550", "$4.99"), true, "lol.gems.550")}${card("Chest of gems", "1,200 gems (+20%)", iapPrice("lol.gems.1200", "$9.99"), true, "lol.gems.1200")}
+      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}${card("Legend's vault", "15,000 gems (+50%)", iapPrice("lol.gems.15000", "$99.99"), true, "lol.gems.15000")}
+      ${iapOwned("lol.starter") ? "" : card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", iapPrice("lol.starter", "$2.99"), true, "lol.starter")}</div>
     <p>Spend gems</p><div class="list">
       ${card("Ember Armor Pack", `${set("ember")}. Level 5 to 6, equal to iron gear, with a flame look.`, "450")}
       ${card("Frostbound Armor Pack", `${set("frost")}. Level 8 to 9, equal to steel gear, with an ice look.`, "900")}
-      ${card("Dyes", `Smith Brand sells ${Object.values(DYES).filter(d => !d[2]).length} colors for ${DYE_GEMS} gems each, about a week of free gems.`, String(DYE_GEMS))}
+      ${card("Dyes", `Smith Brand sells ${Object.values(DYES).filter(d => !d[2] && !d[3]).length} colors for ${DYE_GEMS} gems each, about a week of free gems.`, String(DYE_GEMS))}
       ${card("Premium Dye", Object.values(DYES).filter(d => d[2]).map(d => d[0]).join(", ") + ". Cosmetic only. 450 for all four.", "150")}
       ${card("Pouch of coins", "1,000 coins", "80")}${card("Chest of coins", "6,000 coins", "400")}${card("Vault of coins", "15,000 coins", "900")}
       ${card("Steed coats", "Midnight, Snowmane, Ember, Gilded and Ghostly coats. Buy them from Stablemaster Brindle.", "150+")}
@@ -5132,7 +5261,7 @@ function showStore() {
       ${player.pouch < 2 ? `<div class="item"><div>${player.pouch ? "Large" : "Bigger"} materials pouch<small>Room for ${[120, 250][player.pouch]} materials instead of ${pouchCap()}. Gems buy room, never materials</small></div><button type="button" data-act="pouch" ${player.gems >= [150, 300][player.pouch] ? "" : "disabled"}>&#9670; ${[150, 300][player.pouch]}</button></div>` : ""}
       ${Object.entries(GLOWS).map(([k, [name, c, gems]]) => { const has = player.gemRec.includes(k); return `<div class="item"><div><span class="swatch" style="background:${c}"></span>${name} recipe<small>Alchemist Fizz brews it into a weapon glow. Looks only</small></div><button type="button" data-act="glowrec" data-arg="${k}" ${!has && player.gems >= gems ? "" : "disabled"}>${has ? "Known" : "&#9670; " + gems}</button></div>`; }).join("")}</div>
     <p>Free</p><div class="list">${card("Bonus coins", "Watch an optional ad for 100 coins, up to 5 a day.", "Free", true)}</div>
-    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: () => toast("Coming at launch. Real purchases go through the App Store"),
+    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: pid => iapBuy(pid), restore: () => iapRestore(), manage: () => window.LOL_IAP && window.LOL_IAP.manage(),
       pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; buyPouch(); showStore(); },
       glowrec: k => { const c = GLOWS[k][2]; if (player.gemRec.includes(k) || player.gems < c) return; player.gems -= c; player.gemRec.push(k); sfx("rare"); toast(`${GLOWS[k][0]} recipe learned. Alchemist Fizz can brew it`); save(); showStore(); },
       relic: dg => { const r = RELICS[dg]; if (!player.relics.includes(dg) || player.gems < r.gems) return; player.gems -= r.gems; addItem(r.id, 1); sfx("coin"); save(); showStore(); } });
@@ -5140,7 +5269,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 111; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 114; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5170,7 +5299,7 @@ function showShop(n, tab) {
       BLUEPRINTS.filter(bp => canWear(ITEMS[bp].bp) || player.bag[bp] > 0).map(bp => { const id = ITEMS[bp].bp, it = ITEMS[id], have = player.bag[bp] > 0;
         return `<div class="item"><div>${nm(id)}${have ? "" : ' <span class="soft">(need blueprint)</span>'}<small>${descOf(id)}</small></div><button type="button" data-act="forge" data-arg="${bp}" ${have && player.coins >= it.price ? "" : "disabled"}>${it.price.toLocaleString()} coins</button></div>`; }).join("");
   } else body = (tab === "dye" ? `<p class="soft">Dyes unlock a color for good. Apply them from your Bag. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>` : "") + n.shop.filter(id => shopCat(id) === tab).sort((a, b) => (ITEMS[a].lvl || 0) - (ITEMS[b].lvl || 0) || ITEMS[a].price - ITEMS[b].price).map(id => `<div class="item">${thumbTag(id)}<div>${ITEMS[id].dye ? `<span class="swatch" style="background:${DYES[ITEMS[id].dye][1]}"></span>` : ""}${nm(id)}${owned(id) && (ITEMS[id].slot || ITEMS[id].dye) ? " (owned)" : ""}<small>${descOf(id)}</small></div>
-      <button type="button" data-act="buy" data-arg="${id}" ${(ITEMS[id].gems ? player.gems < ITEMS[id].gems : player.coins < ITEMS[id].price) || ((ITEMS[id].dye || ITEMS[id].mount || ITEMS[id].scroll) && owned(id)) ? "disabled" : ""}>${(ITEMS[id].mount || ITEMS[id].scroll || ITEMS[id].dye) && owned(id) ? (ITEMS[id].dye ? "Owned" : "Known") : ITEMS[id].gems ? `<span class="gem">&#9670; ${ITEMS[id].gems}</span> gems` : ITEMS[id].price.toLocaleString() + " coins"}</button></div>`).join("");
+      ${ITEMS[id].dye && !owned(id) ? `<button type="button" data-act="trydye" data-arg="${ITEMS[id].dye}">Try</button>` : ""}<button type="button" data-act="buy" data-arg="${id}" ${(ITEMS[id].gems ? player.gems < ITEMS[id].gems : player.coins < ITEMS[id].price) || ((ITEMS[id].dye || ITEMS[id].mount || ITEMS[id].scroll) && owned(id)) ? "disabled" : ""}>${(ITEMS[id].mount || ITEMS[id].scroll || ITEMS[id].dye) && owned(id) ? (ITEMS[id].dye ? "Owned" : "Known") : ITEMS[id].gems ? `<span class="gem">&#9670; ${ITEMS[id].gems}</span> gems` : ITEMS[id].price.toLocaleString() + " coins"}</button></div>`).join("");
   const prevList = !panel.hidden && sheet.dataset.shop === n.id + ":" + tab && sheet.querySelector(".shoplist"), keepScroll = prevList ? prevList.scrollTop : 0;
   openPanel(`<h2>${n.name}</h2><p class="soft">You have ${player.coins} coins and ${stats().def} armor.</p>
     <div class="tabs" role="tablist">${tabs.map(([t, label]) => `<button type="button" role="tab" aria-selected="${t === tab}" data-act="tab" data-arg="${t}">${label}</button>`).join("")}</div>
@@ -5178,6 +5307,7 @@ function showShop(n, tab) {
     <div class="row"><button data-act="close" type="button">Leave</button></div>`,
     {
       tab: t => showShop(n, t),
+      trydye: d => tryDye(d),
       wear: k => { player.coat = k || null; save(); showShop(n, "coat"); },
       buy: id => {
         if (ITEMS[id].coat) { const it = ITEMS[id]; if (player.gems < it.gems) return; player.gems -= it.gems; player.coats.push(it.coat); player.coat = it.coat; sfx("rare"); toast(`${it.name} unlocked and on your steed`); save(); syncRide(); return showShop(n, "coat"); }
@@ -5476,7 +5606,7 @@ function achUpdate(dt) {
 }
 function showAch() {
   const done = ACH.filter(a => player.ach.includes(a.id)).length;
-  const titles = ACH.filter(a => a.title && player.ach.includes(a.id));
+  const titles = [...(player.st.founder ? [{ title: "Founder" }] : []), ...ACH.filter(a => a.title && player.ach.includes(a.id))];
   openPanel(`<h2>Achievements</h2><p class="soft">${done} of ${ACH.length} done. Titles show over your head.</p>
     ${titles.length ? `<div class="dyerow"><button type="button" data-act="title" data-arg="" aria-pressed="${!player.title}">No title</button>${titles.map(a => `<button type="button" data-act="title" data-arg="${a.title}" aria-pressed="${player.title === a.title}">${a.title}</button>`).join("")}</div>` : ""}
     <div class="list">${ACH.map(a => { const got = player.ach.includes(a.id), pr = !got && a.prog ? a.prog() : null;
@@ -5611,13 +5741,16 @@ function drawPet() {
     ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.arc(x - 5, y - 13, 3, 0, 7); ctx.fill();
     ctx.beginPath(); for (const s of [-1, 1]) for (const ly of [-12, -7, -2]) { ctx.moveTo(x + s * 12, y + ly); ctx.lineTo(x + s * 18, y + ly + 3 + (pet.moving ? Math.sin(clock * 20 + ly) * 2 : 0)); } ctx.stroke();
   }
-  const ow = player.petWear && player.petWear[player.pet]; if (ow) { const [hx, hy] = petHead(P, x, y, f); drawPetOutfit(ow, hx, hy); }
+  const ow = (player.petTry && clock < player.petTry.t && player.petTry.o) || (player.petWear && player.petWear[player.pet]); if (ow) { const [hx, hy] = petHead(P, x, y, f); drawPetOutfit(ow, hx, hy); }
 }
 // Pet outfits (Lee): little hats bought once with gems, about a week of free gems each, and worn by any pet
 const PET_OUTFIT_GEMS = 50;
 const PET_OUTFITS = {
   party: { name: "Party Hat", color: "#e0662a" }, crown: { name: "Tiny Crown", color: "#d4a92a" }, wizard: { name: "Wizard Hat", color: "#3b6fb6" },
   bow: { name: "Big Bow", color: "#d04a7a" }, tophat: { name: "Top Hat", color: "#1b1b20" }, flower: { name: "Flower", color: "#f2c12e" },
+  // coin-only outfits from Trader Juniper's weekly wares
+  founder: { name: "Founder's Laurel", color: "#d4a92a", coin: true }, // Founder's Pack only
+  scarf: { name: "Cozy Scarf", color: "#c0392b", coin: true }, antlers: { name: "Antlers", color: "#8a6a44", coin: true }, pirate: { name: "Pirate Hat", color: "#26222a", coin: true }, leaves: { name: "Leaf Crown", color: "#4f8a3a", coin: true },
 };
 function petHead(P, x, y, f) {
   const fy = y - 30 + Math.sin(clock * 3) * 4;
@@ -5634,25 +5767,36 @@ function drawPetOutfit(o, hx, hy) {
   else if (o === "wizard") { ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.lineTo(2, -5); ctx.lineTo(-1, -17); ctx.lineTo(-4, -4); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2c12e"; ctx.beginPath(); ctx.arc(-1, -8, 1.4, 0, 7); ctx.fill(); }
   else if (o === "bow") { ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(-7, -8); ctx.lineTo(-7, 2); ctx.closePath(); ctx.moveTo(0, -3); ctx.lineTo(7, -8); ctx.lineTo(7, 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, -3, 2.2, 0, 7); ctx.fill(); ctx.stroke(); }
   else if (o === "tophat") { ctx.fillRect(-7, -2, 14, 2.5); ctx.strokeRect(-7, -2, 14, 2.5); ctx.fillRect(-4.5, -12, 9, 10); ctx.strokeRect(-4.5, -12, 9, 10); ctx.fillStyle = "#c0261e"; ctx.fillRect(-4.5, -5, 9, 2); }
+  else if (o === "scarf") { ctx.beginPath(); ctx.ellipse(0, 9, 7, 3, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(2, 9, 3.5, 8); ctx.strokeRect(2, 9, 3.5, 8); }
+  else if (o === "antlers") { ctx.strokeStyle = O.color; ctx.lineWidth = 2.4; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s * 3, 0); ctx.lineTo(s * 7, -10); ctx.moveTo(s * 5.4, -6); ctx.lineTo(s * 10, -8); ctx.moveTo(s * 6.6, -9); ctx.lineTo(s * 5, -14); } ctx.stroke(); }
+  else if (o === "pirate") { ctx.beginPath(); ctx.moveTo(-9, 0); ctx.quadraticCurveTo(0, -4, 9, 0); ctx.lineTo(6, -7); ctx.quadraticCurveTo(0, -12, -6, -7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2efe6"; ctx.beginPath(); ctx.arc(0, -5, 1.8, 0, 7); ctx.fill(); }
+  else if (o === "founder") { for (let i = -2; i <= 2; i++) { ctx.save(); ctx.rotate(i * 0.45); ctx.beginPath(); ctx.ellipse(0, -6, 2.2, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); } ctx.fillStyle = "#fff4c2"; ctx.beginPath(); ctx.arc(0, -11, 1.6, 0, 7); ctx.fill(); }
+  else if (o === "leaves") { for (let i = -2; i <= 2; i++) { ctx.save(); ctx.rotate(i * 0.45); ctx.beginPath(); ctx.ellipse(0, -6, 2.4, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); } }
   else if (o === "flower") { for (let i = 0; i < 5; i++) { const a = i * 1.257; ctx.beginPath(); ctx.arc(Math.cos(a) * 3.5, -4 + Math.sin(a) * 3.5, 2.6, 0, 7); ctx.fill(); ctx.stroke(); } ctx.fillStyle = "#e0662a"; ctx.beginPath(); ctx.arc(0, -4, 2, 0, 7); ctx.fill(); }
   ctx.restore();
+}
+// Try before you buy (Lee): your pet wears the outfit for a minute
+function tryPetOutfit(k, o) {
+  if (!player.pets.includes(k)) return; player.pet = k; pet.map = ""; player.petTry = { o, t: clock + 60 }; closePanel();
+  toast(`${player.petNames[k] || PETS[k].name} is trying the ${PET_OUTFITS[o].name} for a minute`);
 }
 function showPetOutfits(k) {
   const P = PETS[k], wear = player.petWear[k], nm = player.petNames[k] || P.name;
   openPanel(`<h2>Outfits for ${esc(nm)}</h2><p class="soft">Buy an outfit once and any of your pets can wear it. ${PET_OUTFIT_GEMS} gems each. You have <span class="gem">&#9670; ${player.gems} gems</span>.</p>
     <div class="list"><div class="item"><div>No outfit</div><button type="button" data-act="wear" data-arg="" ${wear ? "" : "disabled"}>${wear ? "Wear" : "Wearing"}</button></div>
     ${Object.entries(PET_OUTFITS).map(([o, O]) => { const own = player.petOutfits.includes(o), on = wear === o;
+      if (O.coin && !own) return "";
       return `<div class="item"><canvas class="pthumb" width="96" height="96" data-o="${o}"></canvas><div>${O.name}<small>${own ? (on ? "Wearing" : "Yours") : `<span class="gem">&#9670; ${PET_OUTFIT_GEMS} gems</span>`}</small></div>
-        ${own ? `<button type="button" data-act="wear" data-arg="${o}" ${on ? "disabled" : ""}>${on ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${o}" ${player.gems < PET_OUTFIT_GEMS ? "disabled" : ""}>Buy</button>`}</div>`; }).join("")}</div>
+        ${own ? `<button type="button" data-act="wear" data-arg="${o}" ${on ? "disabled" : ""}>${on ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="try" data-arg="${o}">Try</button><button type="button" data-act="buy" data-arg="${o}" ${player.gems < PET_OUTFIT_GEMS ? "disabled" : ""}>Buy</button>`}</div>`; }).join("")}</div>
     <div class="row"><button type="button" data-act="back">Back to pets</button><button data-act="close" type="button">Close</button></div>`,
-    { wear: o => { if (o) player.petWear[k] = o; else delete player.petWear[k]; save(); showPetOutfits(k); },
-      buy: o => { if (player.gems < PET_OUTFIT_GEMS || player.petOutfits.includes(o)) return; player.gems -= PET_OUTFIT_GEMS; player.petOutfits.push(o); player.petWear[k] = o; sfx("rare"); save(); showPetOutfits(k); toast(`${PET_OUTFITS[o].name} unlocked`); },
+    { wear: o => { if (o) player.petWear[k] = o; else delete player.petWear[k]; save(); showPetOutfits(k); }, try: o => tryPetOutfit(k, o),
+      buy: o => { if (player.gems < PET_OUTFIT_GEMS || player.petOutfits.includes(o) || PET_OUTFITS[o].coin) return; player.gems -= PET_OUTFIT_GEMS; player.petOutfits.push(o); player.petWear[k] = o; sfx("rare"); save(); showPetOutfits(k); toast(`${PET_OUTFITS[o].name} unlocked`); },
       back: () => showPets() });
   // a picture of this pet wearing each outfit
   for (const cv of sheet.querySelectorAll("canvas.pthumb")) {
-    const g = cv.getContext("2d"), old = ctx, keep = { ...PET_POS }, pk = player.pet, pw = player.petWear[k]; ctx = g;
+    const g = cv.getContext("2d"), old = ctx, keep = { ...PET_POS }, pk = player.pet, pw = player.petWear[k], ptry = player.petTry; ctx = g; player.petTry = null;
     try { g.setTransform(1.2, 0, 0, 1.2, 0, 0); Object.assign(PET_POS, { x: 40, y: P.shape === "bird" || P.shape === "owl" || P.shape === "wisp" ? 77 : 62, face: 1, moving: false }); player.pet = k; player.petWear[k] = cv.dataset.o; const nmk = player.petNames[k]; delete player.petNames[k]; drawPet(); if (nmk) player.petNames[k] = nmk; }
-    catch (e) {} finally { ctx = old; Object.assign(PET_POS, keep); player.pet = pk; if (pw) player.petWear[k] = pw; else delete player.petWear[k]; }
+    catch (e) {} finally { ctx = old; player.petTry = ptry; Object.assign(PET_POS, keep); player.pet = pk; if (pw) player.petWear[k] = pw; else delete player.petWear[k]; }
   }
 }
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -6348,6 +6492,7 @@ function update(dt) {
   if (gpTimer > 0 && (gpTimer -= dt) <= 0) document.getElementById("gearPrompt").hidden = true;
   if (paTimer > 0 && (paTimer -= dt) <= 0) document.getElementById("pouchAsk").hidden = true;
   if (pouchPend && !fighting()) showPouchAsk();
+  if (player.level >= 5 && player.level <= 8 && !player.st.firstOffer && clock > 20 && !fighting() && panel.hidden && !player.dead && !cine && !transition && map.id === "world") showFirstOffer();
   if (player.graceT > 0) player.graceT -= dt; // a moment of safety after getting back up
   if (gpWait) { if (fighting()) gpQuiet = 0; else if ((gpQuiet += dt) > 1.5) { const w = gpWait; gpWait = null; promptEquip(w === true || !isUpgrade(w) ? undefined : w); } }
   musicTick(dt); ambienceTick(dt); folkTick(dt); keeperTick(dt); penTick(dt); beastTick(dt); mascotTick(dt); chalTick(dt); gatherTick(dt); lessonTick(dt);
@@ -7981,12 +8126,13 @@ function drawArmoredNpc(o, fc) {
   finally { Object.assign(p, keep); }
 }
 function heroLook(gearOverride) {
-  const p = player, LK = !gearOverride && p.lookOn ? lookSet(p.lookOn) : null, g = LK ? LK.gear : gearOverride || p.gear, dye = LK ? LK.dye : gearOverride ? {} : (p.dye || {});
+  const p = player, LK = !gearOverride && p.lookOn ? lookSet(p.lookOn) : null, g = LK ? LK.gear : gearOverride || p.gear, dye = !gearOverride && p.dyeTry && clock < p.dyeTry.t ? { head: p.dyeTry.d, body: p.dyeTry.d, hands: p.dyeTry.d, feet: p.dyeTry.d } : LK ? LK.dye : gearOverride ? {} : (p.dye || {});
   const look = { w: Math.min(1.5 + (p.level - 1) * 0.35, 5), facing: p.facing, walk: p.walk, moving: p.moving, swing: p.attackT > 0 ? (cls() === "warrior" ? p.attackT / 0.22 : 0.55) : 0,
     ink: p.hurtT > 0 ? BLOOD : INK, filledHead: p.level >= 5 };
   const L = k => g[k] && ITEMS[g[k]] && ITEMS[g[k]].look;
   const col = (k, base) => dye[k] && DYES[dye[k]] ? DYES[dye[k]][1] : base;
   if (L("body")) { look.body = { ...L("body"), color: col("body", L("body").color) }; if (L("body").cape) look.cape = L("body").cape; }
+  if (!gearOverride && p.st && p.st.founder && !p.st.capeOff) look.cape = "#d4a92a"; // Founder's Cape
   if (L("hands")) look.hands = col("hands", L("hands").color);
   if (L("feet")) look.feet = col("feet", L("feet").color);
   const hl = L("head");
@@ -9223,7 +9369,7 @@ for (const ev of ["pointerdown", "touchstart"]) document.getElementById("coach")
 resize(); renderTracker();
 if (!QUESTS.some(q => quests[q.id])) setTimeout(() => banner("Line of Legends", "Talk to Elder Quill by the village well"), 3000);
 setInterval(save, 10000);
-window.__game = { hurtPlayer, addMat, hullArmor, recArmor, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
+window.__game = { iapBuy, iapGrant, showWares, showStore, showFirstOffer, weekNo, tryDye, tryPetOutfit, QUESTS, npcById, hurtPlayer, addMat, hullArmor, recArmor, showLooks, useEdge, showWolfName, get wolf() { return wolf; }, stats, showChal, get chal() { return chal; }, setNight: v => { nightForce = v; }, W_MASCOTS, talk, RESCUES, questGroups, openCage, craft: { gather, gatherTap, finishGather, nearTree, matCount, pouchCap, RECIPES, CRAFTERS, showCraft, CRAFT_SPOTS, startLesson, matDrop, upItem, get lesson() { return lesson; } }, STONES, stoneCount, showClassPick, CLASSES, get cls() { return cls(); }, showMap, showChar, sfx, useSkill, get players() { return players; }, hitFoe, keepOpen, ROWS, addItem, toast, pickTrack, get curTrack() { return curTrack; }, RELICS, useRelic, get tip() { return tip; }, get bannerTimer() { return bannerTimer; }, get zoneId() { return zoneId; }, dodge, startRide, DG, DGL, startReveal, setDg, hollow, startHollow, HOLLOW, HOLLOW_IN, resetDungeon, riding, player, quests, MAPS, get map() { return map; }, stats, attack, talk, interact, closePanel, goTo, found, xpToNext, gainXp, ITEMS, temple, get cine() { return cine; }, startRise, resetTemple, showTalents, talentPoints, FOES, P, LAKE, MAINLAND, ROOMS, TEMPLE_IN, QUESTS, northOpen, spawnAt,
   // Draws the hero in a given outfit (used to render the item gallery)
   drawHero(x, y, gear, level, scale) { const g0 = player.gear, l0 = player.level; player.gear = gear; player.level = level;
     const o = heroLook(); o.scale = scale; o.moving = false; o.swing = 0; o.ink = INK; stickFigure(x, y, o); player.gear = g0; player.level = l0; } };
