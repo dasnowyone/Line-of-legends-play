@@ -4516,10 +4516,13 @@ function skill() {
   const s = stats();
   for (const f of [...map.foes]) if (Math.hypot(f.x - player.x, f.y - player.y) < 100 + f.d.r && seeFoe(f)) hitFoe(f, Math.round(s.atk * 1.4 * (1 + 0.1 * tr("whirl"))), true);
 }
+const bestOf = (ids, k) => ids.filter(p => player.bag[p] && (ITEMS[p].lvl || 0) <= player.level).sort((a, b) => ITEMS[b][k] - ITEMS[a][k])[0];
 function drinkPotion(pick) {
   if (player.dead || paused || cine || player.potionCd > 0) return;
-  const id = pick ? (player.bag[pick] ? pick : null) : POTIONS.find(p => player.bag[p]);
-  if (!id) { toast(pick ? `No ${ITEMS[pick].name} left` : "No potions. Smith Brand and the inn sell them."); return; }
+  // Lee: one Potion button drinks the strongest health item you can use first, then the next strongest
+  const id = pick ? (player.bag[pick] ? pick : null) : bestOf(POTIONS, "heal");
+  const locked = !pick && POTIONS.find(p => player.bag[p]);
+  if (!id) { toast(pick ? `No ${ITEMS[pick].name} left` : locked ? `${ITEMS[locked].name} needs level ${ITEMS[locked].lvl}` : "No potions. Smith Brand and the inn sell them."); return; }
   const m = stats().maxHp; if (player.hp >= m) { toast("Already at full health"); return; }
   player.bag[id]--; if (!player.bag[id]) delete player.bag[id];
   const heal = Math.ceil(m * ITEMS[id].heal);
@@ -4530,7 +4533,7 @@ function drinkPotion(pick) {
 function drinkMana(pick) {
   if (player.dead || paused || cine || (player.manaCd || 0) > 0) return;
   if (cls() !== "mage") return toast("Only mages use mana");
-  const id = pick ? (player.bag[pick] ? pick : null) : ["mana_potion", "greater_mana"].find(p => player.bag[p] && (ITEMS[p].lvl || 0) <= player.level);
+  const id = pick ? (player.bag[pick] ? pick : null) : bestOf(["mana_potion", "greater_mana"], "mana");
   if (!id) return toast("No mana potions. Alchemist Fizz and the camp traders sell Mana Ink");
   const mx = maxMana(); if ((player.mp ?? mx) >= mx) return toast("Already at full mana");
   player.bag[id]--; if (!player.bag[id]) delete player.bag[id];
@@ -5306,7 +5309,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 119; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 120; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6213,7 +6216,10 @@ try { const b = JSON.parse(localStorage.getItem(BAR_KEY)); if (Array.isArray(b) 
 try { if (localStorage.getItem("lol-bar-v") !== "2") { for (const k in SKILLS) if (!abar.slots.includes(k)) { const i = abar.slots.indexOf(null); if (i >= 0) abar.slots[i] = k; } localStorage.setItem("lol-bar-v", "2"); localStorage.setItem(BAR_KEY, JSON.stringify(abar.slots)); } } catch {}
 function useSlot(i) { const a = abil(abar.slots[i]); if (a && !cine) a.fn(); }
 function saveBar() { try { localStorage.setItem(BAR_KEY, JSON.stringify(abar.slots)); } catch {} }
+// Lee: one key per potion type. A health item becomes the Potion key and a mana item the Mana key, never one key each
+const slotOf = a => typeof a === "string" && a.startsWith("item:") ? (POTIONS.includes(a.slice(5)) ? "potion" : ITEMS[a.slice(5)]?.mana ? "mana" : a) : a;
 function buildBar() {
+  abar.slots = abar.slots.map(slotOf); abar.slots = abar.slots.map((a, i) => a && abar.slots.indexOf(a) < i ? null : a); saveBar();
   // Mages get Mana on key 9 if it's free; other classes don't keep it
   // warriors and hunters get their whetstone or arrowheads there instead
   const mi = abar.slots.indexOf("mana"); if (cls() === "mage" && mi < 0 && abar.slots[8] === null) abar.slots[8] = "mana"; else if (cls() !== "mage" && mi >= 0) abar.slots[mi] = null;
@@ -6236,8 +6242,8 @@ function buildBar() {
       const data = ev.dataTransfer.getData("text/plain");
       if (data.startsWith("item:")) {
         // from the bag: the same item moves here if it was on another key
-        const old = abar.slots.indexOf(data); if (old >= 0) abar.slots[old] = null;
-        abar.slots[i] = data;
+        const a = slotOf(data), old = abar.slots.indexOf(a); if (old >= 0) abar.slots[old] = null;
+        abar.slots[i] = a;
       } else {
         const from = +data; if (isNaN(from) || from === i) return;
         [abar.slots[from], abar.slots[i]] = [abar.slots[i], abar.slots[from]];
@@ -6305,7 +6311,7 @@ function pad2Hud() {
 const itemrow = document.getElementById("itemrow"); let irKey = "";
 function itemRowHud() {
   if (!sideways()) { if (irKey) { itemrow.innerHTML = ""; irKey = ""; } return; }
-  const ids = [...Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id) && id !== "potion" && !ITEMS[id].mana && !ITEMS[id].edge).map(id => "item:" + id)].slice(0, 7);
+  const ids = [...Object.keys(player.bag).filter(id => player.bag[id] > 0 && barItem(id) && !POTIONS.includes(id) && !ITEMS[id].mana && !ITEMS[id].edge).map(id => "item:" + id)].slice(0, 7);
   const key = ids.join();
   if (key !== irKey) { irKey = key; itemrow.innerHTML = "";
     for (const a of ids) { const A = abil(a); if (!A) continue; const b = document.createElement("button"); b.type = "button"; b.className = "nb"; b.dataset.a = a;
