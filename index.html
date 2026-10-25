@@ -5154,18 +5154,52 @@ const IAP = {
   "lol.inkpass.monthly": { flag: "inkPass" },
 };
 const iapOwned = pid => (player.st.iap || []).includes(pid);
+// In the iPhone app the App Store gives the price in the player's own currency; the browser shows US prices
+const iapPrice = (pid, usd) => (window.LOL_IAP && window.LOL_IAP.prices[pid]) || usd;
+const iapLive = () => !!(window.LOL_IAP && window.LOL_IAP.available);
+// Gems from a one-time pack are given once per phone, even when Restore Purchases fills in a new hero's looks
+const iapGemsGot = () => { try { return JSON.parse(localStorage.getItem("lol-iap-gems")) || []; } catch { return []; } };
+const iapGemsMark = pid => { try { const g = iapGemsGot(); if (!g.includes(pid)) { g.push(pid); localStorage.setItem("lol-iap-gems", JSON.stringify(g)); } } catch {} };
+function iapRestore() {
+  if (!iapLive()) return toast("Restore works in the iPhone app");
+  toast("Checking your App Store purchases...");
+  window.LOL_IAP.restore().then(r => {
+    if (!r.ok) return toast("Couldn't reach the App Store. Try again in a moment");
+    let n = 0; for (const pid of r.owned) if (IAP[pid] && IAP[pid].once && !iapOwned(pid)) { iapGrant(pid, true); n++; }
+    iapSubs(r.subs); toast(n || player.st.inkPass ? "Purchases restored" : "No purchases to restore on this Apple account");
+    if (!panel.hidden && sheet.querySelector('[data-act="iap"]')) showStore();
+  });
+}
+// The Ink Pass is on while Apple says the subscription is active; 30 gems the first time you play each day, and one new dye each month
+function iapSubs(subs) { const on = (subs || []).includes("lol.inkpass.monthly"); if (!!player.st.inkPass !== on) { player.st.inkPass = on; save(); } inkPassDaily(); }
+function inkPassDaily() {
+  const st = player.st; if (!st.inkPass || !window.__started) return;
+  if (st.inkDay !== today()) { st.inkDay = today(); addGems(30, "Ink Pass daily gems"); }
+  const mon = new Date().toISOString().slice(0, 7);
+  if (st.inkMonth !== mon) { st.inkMonth = mon; const d = Object.keys(DYES).find(k => DYES[k][2] && !player.dyes.includes(k)) || Object.keys(DYES).find(k => !player.dyes.includes(k));
+    if (d) { player.dyes.push(d); toast(`Ink Pass: the ${DYES[d][0]} dye is yours this month`); } save(); }
+}
+setInterval(() => { if (iapLive() && window.__started && player.cls) iapSubs(window.LOL_IAP.subs); }, 60000);
+addEventListener("lol-iap", e => { if (window.__started && player.cls) iapSubs(e.detail.subs); });
+// the bridge from the iPhone app: buy answers true only once Apple and RevenueCat confirm
+if (window.LOL_IAP && window.LOL_IAP.buy && !window.lolIAP) window.lolIAP = { buy: pid => window.LOL_IAP.ready.then(() => window.LOL_IAP.buy(pid)).then(r => { if (!r.ok && r.error) toast(r.error); return r.ok; }) };
 function iapBuy(pid) {
   if (!IAP[pid] || (IAP[pid].once && iapOwned(pid))) return;
   if (window.lolIAP && window.lolIAP.buy) return Promise.resolve(window.lolIAP.buy(pid)).then(ok => { if (ok) { iapGrant(pid); if (!panel.hidden && sheet.querySelector('[data-act="iap"]')) showStore(); } }).catch(() => toast("The purchase didn't go through. You weren't charged"));
   toast("Coming at launch. Real purchases go through the App Store");
 }
-function iapGrant(pid) {
+function iapGrant(pid, restoring) {
   const P = IAP[pid]; if (!P) return; const st = player.st, got = st.iap || (st.iap = []);
   if (P.once && got.includes(pid)) return; if (!got.includes(pid)) got.push(pid);
-  if (P.coins) player.coins += P.coins; if (P.dye && !player.dyes.includes(P.dye)) player.dyes.push(P.dye);
-  for (const [id, k] of Object.entries(P.items || {})) addItem(forCls(id), k);
+  // a restore brings back looks and items; the gems only if this phone never got them
+  const gems = P.gems && !(restoring && iapGemsGot().includes(pid)); if (P.once && P.gems) iapGemsMark(pid);
+  if (P.coins && !restoring) player.coins += P.coins; if (P.dye && !player.dyes.includes(P.dye)) player.dyes.push(P.dye);
+  if (!restoring) for (const [id, k] of Object.entries(P.items || {})) addItem(forCls(id), k);
   if (P.flag) st[P.flag] = true;
-  sfx("rare"); if (P.gems) addGems(P.gems, "thank you!"); else save();
+  if (P.flag === "founder" && !player.petOutfits.includes("founder")) player.petOutfits.push("founder");
+  if (P.flag === "founder") { player.title = "Founder"; toast("Founder's Cape, Founder's Laurel and the Founder title are yours"); }
+  if (P.flag === "inkPass") inkPassDaily();
+  sfx("rare"); if (gems) addGems(P.gems, "thank you!"); else save();
 }
 // One-time offer (Lee, approved 2026-10-25): pops up once between levels 5 and 8, away from fights, then stays in the Store for 3 days
 const firstOfferOpen = () => player.st.firstOffer && !iapOwned("lol.firstoffer") && Date.now() - player.st.firstOffer < 3 * 864e5;
@@ -5174,7 +5208,7 @@ function showFirstOffer() {
   if (player.st.firstOffer || iapOwned("lol.firstoffer")) return; player.st.firstOffer = Date.now(); save();
   openPanel(`<h2>Adventurer's Kit</h2><p class="soft">A one-time offer for new heroes. It stays in the Store for 3 days.</p>
     <div class="list"><div class="item"><div>${FIRST_OFFER_TXT}<small>Once per player</small></div></div></div>
-    <div class="row"><button data-act="close" type="button">Not now</button><button data-act="buy" type="button">Buy $1.99</button></div>`, { buy: () => { iapBuy("lol.firstoffer"); closePanel(); } });
+    <div class="row"><button data-act="close" type="button">Not now</button><button data-act="buy" type="button">Buy ${iapPrice("lol.firstoffer", "$1.99")}</button></div>`, { buy: () => { iapBuy("lol.firstoffer"); closePanel(); } });
 }
 // Weekly wares (Lee: a coin cosmetic shop for level 50): three coin-only looks that change every Monday, all eight come round every few weeks
 const WARES = [["dye", "rose", 150000], ["pet", "scarf", 150000], ["dye", "teal", 200000], ["pet", "antlers", 250000], ["dye", "amber", 250000], ["pet", "pirate", 300000], ["dye", "ivory", 350000], ["pet", "leaves", 400000]];
@@ -5201,15 +5235,16 @@ function showStore() {
   const set = key => Object.keys(ITEMS).filter(id => ITEMS[id].premium === key && canWear(id)).map(id => ITEMS[id].name).join(", ");
   // a real-money card is a row with its own Buy button
   const card = (title, body, price, real, pid) => pid ? `<div class="item"><div>${title} <span class="coins">${price}</span><small>${body}</small></div><button type="button" data-act="iap" data-arg="${pid}">Buy</button></div>` : `<div class="store-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:normal">${title}</b><span class="${real ? "coins" : "gem"}">${real ? price : "&#9670; " + price}</span></div><small class="soft">${body}</small></div>`;
-  openPanel(`<h2>Store</h2><p class="soft">A preview of the App Store version. You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
+  openPanel(`<h2>Store</h2><p class="soft">${iapLive() ? "" : "A preview of the App Store version. "}You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
     <p>Featured</p><div class="list">
-      ${firstOfferOpen() ? `<div class="item"><div><span class="rare">Adventurer's Kit</span> <span class="coins">$1.99</span><small>One time only, for ${Math.max(1, Math.ceil((player.st.firstOffer + 3 * 864e5 - Date.now()) / 36e5))} more hours: ${FIRST_OFFER_TXT}</small></div><button type="button" data-act="iap" data-arg="lol.firstoffer">Buy</button></div>` : ""}
-      ${iapOwned("lol.founder") ? "" : `<div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">$4.99</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap" data-arg="lol.founder">Buy</button></div>`}
-      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">$4.99 a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap" data-arg="lol.inkpass.monthly" ${player.st.inkPass ? "disabled" : ""}>${player.st.inkPass ? "Active" : "Subscribe"}</button></div></div>
+      ${firstOfferOpen() ? `<div class="item"><div><span class="rare">Adventurer's Kit</span> <span class="coins">${iapPrice("lol.firstoffer", "$1.99")}</span><small>One time only, for ${Math.max(1, Math.ceil((player.st.firstOffer + 3 * 864e5 - Date.now()) / 36e5))} more hours: ${FIRST_OFFER_TXT}</small></div><button type="button" data-act="iap" data-arg="lol.firstoffer">Buy</button></div>` : ""}
+      ${iapOwned("lol.founder") ? "" : `<div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">${iapPrice("lol.founder", "$4.99")}</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap" data-arg="lol.founder">Buy</button></div>`}
+      <div class="item"><div><span class="rare">Ink Pass</span> <span class="coins">${iapPrice("lol.inkpass.monthly", "$4.99")} a month</span><small>30 gems every day you log in (up to 900 a month, the $4.99 pouch gives 550) and one new cosmetic each month. Renews monthly until you cancel in your Apple account settings</small></div><button type="button" data-act="iap" data-arg="lol.inkpass.monthly" ${player.st.inkPass ? "disabled" : ""}>${player.st.inkPass ? "Active" : "Subscribe"}</button></div></div>
+    ${iapLive() ? `<div class="row"><button type="button" data-act="restore">Restore purchases</button>${player.st.inkPass ? '<button type="button" data-act="manage">Manage Ink Pass</button>' : ""}</div>` : ""}
     <p>Gem packs</p><div class="list">
-      ${card("Handful of gems", "100 gems", "$0.99", true, "lol.gems.100")}${card("Pouch of gems", "550 gems (+10%)", "$4.99", true, "lol.gems.550")}${card("Chest of gems", "1,200 gems (+20%)", "$9.99", true, "lol.gems.1200")}
-      ${card("Hoard of gems", "2,600 gems (+30%)", "$19.99", true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", "$49.99", true, "lol.gems.7000")}
-      ${iapOwned("lol.starter") ? "" : card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", "$2.99", true, "lol.starter")}</div>
+      ${card("Handful of gems", "100 gems", iapPrice("lol.gems.100", "$0.99"), true, "lol.gems.100")}${card("Pouch of gems", "550 gems (+10%)", iapPrice("lol.gems.550", "$4.99"), true, "lol.gems.550")}${card("Chest of gems", "1,200 gems (+20%)", iapPrice("lol.gems.1200", "$9.99"), true, "lol.gems.1200")}
+      ${card("Hoard of gems", "2,600 gems (+30%)", iapPrice("lol.gems.2600", "$19.99"), true, "lol.gems.2600")}${card("Dragon's hoard", "7,000 gems (+40%)", iapPrice("lol.gems.7000", "$49.99"), true, "lol.gems.7000")}
+      ${iapOwned("lol.starter") ? "" : card("Starter Bundle", "One time, first week: Ember Blade, 300 gems, 3,000 coins, 5 potions", iapPrice("lol.starter", "$2.99"), true, "lol.starter")}</div>
     <p>Spend gems</p><div class="list">
       ${card("Ember Armor Pack", `${set("ember")}. Level 5 to 6, equal to iron gear, with a flame look.`, "450")}
       ${card("Frostbound Armor Pack", `${set("frost")}. Level 8 to 9, equal to steel gear, with an ice look.`, "900")}
@@ -5226,7 +5261,7 @@ function showStore() {
       ${player.pouch < 2 ? `<div class="item"><div>${player.pouch ? "Large" : "Bigger"} materials pouch<small>Room for ${[120, 250][player.pouch]} materials instead of ${pouchCap()}. Gems buy room, never materials</small></div><button type="button" data-act="pouch" ${player.gems >= [150, 300][player.pouch] ? "" : "disabled"}>&#9670; ${[150, 300][player.pouch]}</button></div>` : ""}
       ${Object.entries(GLOWS).map(([k, [name, c, gems]]) => { const has = player.gemRec.includes(k); return `<div class="item"><div><span class="swatch" style="background:${c}"></span>${name} recipe<small>Alchemist Fizz brews it into a weapon glow. Looks only</small></div><button type="button" data-act="glowrec" data-arg="${k}" ${!has && player.gems >= gems ? "" : "disabled"}>${has ? "Known" : "&#9670; " + gems}</button></div>`; }).join("")}</div>
     <p>Free</p><div class="list">${card("Bonus coins", "Watch an optional ad for 100 coins, up to 5 a day.", "Free", true)}</div>
-    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: pid => iapBuy(pid),
+    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: pid => iapBuy(pid), restore: () => iapRestore(), manage: () => window.LOL_IAP && window.LOL_IAP.manage(),
       pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; buyPouch(); showStore(); },
       glowrec: k => { const c = GLOWS[k][2]; if (player.gemRec.includes(k) || player.gems < c) return; player.gems -= c; player.gemRec.push(k); sfx("rare"); toast(`${GLOWS[k][0]} recipe learned. Alchemist Fizz can brew it`); save(); showStore(); },
       relic: dg => { const r = RELICS[dg]; if (!player.relics.includes(dg) || player.gems < r.gems) return; player.gems -= r.gems; addItem(r.id, 1); sfx("coin"); save(); showStore(); } });
@@ -5234,7 +5269,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 112; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 113; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5571,7 +5606,7 @@ function achUpdate(dt) {
 }
 function showAch() {
   const done = ACH.filter(a => player.ach.includes(a.id)).length;
-  const titles = ACH.filter(a => a.title && player.ach.includes(a.id));
+  const titles = [...(player.st.founder ? [{ title: "Founder" }] : []), ...ACH.filter(a => a.title && player.ach.includes(a.id))];
   openPanel(`<h2>Achievements</h2><p class="soft">${done} of ${ACH.length} done. Titles show over your head.</p>
     ${titles.length ? `<div class="dyerow"><button type="button" data-act="title" data-arg="" aria-pressed="${!player.title}">No title</button>${titles.map(a => `<button type="button" data-act="title" data-arg="${a.title}" aria-pressed="${player.title === a.title}">${a.title}</button>`).join("")}</div>` : ""}
     <div class="list">${ACH.map(a => { const got = player.ach.includes(a.id), pr = !got && a.prog ? a.prog() : null;
@@ -5714,6 +5749,7 @@ const PET_OUTFITS = {
   party: { name: "Party Hat", color: "#e0662a" }, crown: { name: "Tiny Crown", color: "#d4a92a" }, wizard: { name: "Wizard Hat", color: "#3b6fb6" },
   bow: { name: "Big Bow", color: "#d04a7a" }, tophat: { name: "Top Hat", color: "#1b1b20" }, flower: { name: "Flower", color: "#f2c12e" },
   // coin-only outfits from Trader Juniper's weekly wares
+  founder: { name: "Founder's Laurel", color: "#d4a92a", coin: true }, // Founder's Pack only
   scarf: { name: "Cozy Scarf", color: "#c0392b", coin: true }, antlers: { name: "Antlers", color: "#8a6a44", coin: true }, pirate: { name: "Pirate Hat", color: "#26222a", coin: true }, leaves: { name: "Leaf Crown", color: "#4f8a3a", coin: true },
 };
 function petHead(P, x, y, f) {
@@ -5734,6 +5770,7 @@ function drawPetOutfit(o, hx, hy) {
   else if (o === "scarf") { ctx.beginPath(); ctx.ellipse(0, 9, 7, 3, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillRect(2, 9, 3.5, 8); ctx.strokeRect(2, 9, 3.5, 8); }
   else if (o === "antlers") { ctx.strokeStyle = O.color; ctx.lineWidth = 2.4; ctx.beginPath(); for (const s of [-1, 1]) { ctx.moveTo(s * 3, 0); ctx.lineTo(s * 7, -10); ctx.moveTo(s * 5.4, -6); ctx.lineTo(s * 10, -8); ctx.moveTo(s * 6.6, -9); ctx.lineTo(s * 5, -14); } ctx.stroke(); }
   else if (o === "pirate") { ctx.beginPath(); ctx.moveTo(-9, 0); ctx.quadraticCurveTo(0, -4, 9, 0); ctx.lineTo(6, -7); ctx.quadraticCurveTo(0, -12, -6, -7); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#f2efe6"; ctx.beginPath(); ctx.arc(0, -5, 1.8, 0, 7); ctx.fill(); }
+  else if (o === "founder") { for (let i = -2; i <= 2; i++) { ctx.save(); ctx.rotate(i * 0.45); ctx.beginPath(); ctx.ellipse(0, -6, 2.2, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); } ctx.fillStyle = "#fff4c2"; ctx.beginPath(); ctx.arc(0, -11, 1.6, 0, 7); ctx.fill(); }
   else if (o === "leaves") { for (let i = -2; i <= 2; i++) { ctx.save(); ctx.rotate(i * 0.45); ctx.beginPath(); ctx.ellipse(0, -6, 2.4, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore(); } }
   else if (o === "flower") { for (let i = 0; i < 5; i++) { const a = i * 1.257; ctx.beginPath(); ctx.arc(Math.cos(a) * 3.5, -4 + Math.sin(a) * 3.5, 2.6, 0, 7); ctx.fill(); ctx.stroke(); } ctx.fillStyle = "#e0662a"; ctx.beginPath(); ctx.arc(0, -4, 2, 0, 7); ctx.fill(); }
   ctx.restore();
@@ -8095,6 +8132,7 @@ function heroLook(gearOverride) {
   const L = k => g[k] && ITEMS[g[k]] && ITEMS[g[k]].look;
   const col = (k, base) => dye[k] && DYES[dye[k]] ? DYES[dye[k]][1] : base;
   if (L("body")) { look.body = { ...L("body"), color: col("body", L("body").color) }; if (L("body").cape) look.cape = L("body").cape; }
+  if (!gearOverride && p.st && p.st.founder && !p.st.capeOff) look.cape = "#d4a92a"; // Founder's Cape
   if (L("hands")) look.hands = col("hands", L("hands").color);
   if (L("feet")) look.feet = col("feet", L("feet").color);
   const hl = L("head");
