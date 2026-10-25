@@ -3948,6 +3948,8 @@ function save() {
   } catch {}
 }
 const CLASSES_OK = k => ["warrior", "hunter", "mage"].includes(k) ? k : null;
+// The bounty board is declared further down, so load() parks it here (assigning bounty itself threw and skipped the map, waking players in the wrong place)
+var savedBounty = null;
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
@@ -3963,7 +3965,7 @@ function load() {
     player.steeds = s.steeds || (s.steed ? ["steed"] : []); player.coats = s.coats || []; player.coat = s.coat || null; player.mounted = s.mounted !== false;
     for (const [k, id] of Object.entries(player.gear)) if (id && (!ITEMS[id] || ITEMS[id].lvl > player.level)) { player.gear[k] = null; if (ITEMS[id]) player.bag[id] = (player.bag[id] || 0) + 1; }
     player.gearConv = s.gearConv || null; if (player.cls && player.gearConv !== player.cls) convertGear();
-    Object.assign(quests, s.quests || {}); taken = s.taken || []; found = s.found || found; if (s.bounty && s.bounty.boards) bounty = s.bounty;
+    Object.assign(quests, s.quests || {}); taken = s.taken || []; found = s.found || found; savedBounty = s.bounty || null;
     map = MAPS[player.map] || MAPS.world;
     // The grotto starts fresh each visit, so a save made inside it wakes up back at the pond
     if (map.id === "pond") { map = MAPS.world; player.map = "world"; [player.x, player.y] = MAPS.pond.OUT; }
@@ -4879,7 +4881,7 @@ function showDaily() {
 // pops up once a day, the first time you're out in the world with nothing open
 setInterval(() => { if (window.__started && player.cls && panel.hidden && !cine && !classPicking && !player.dead && !transition && dailyNext() && (player.tut.includes("move") || player.tut.includes("all"))) showDaily(); }, 2500);
 const BOUNTY_FOES = ["dash", "squiggle", "triangle", "spider", "wolf", "goblin", "goblin_archer", "goblin_shaman", "goblin_runner", "bandit", "bandit_archer", "bandit_warder", "golem", ...MAINLAND.flatMap(z => z.foes)];
-let bounty = { day: "", boards: {}, gems: false };
+let bounty = savedBounty && savedBounty.boards ? savedBounty : { day: "", boards: {}, gems: false };
 // Each board hunts the creatures of the zone it stands in
 const boardZone = o => o.zone || (o.zone = (MAPS.world.ZONES.find(z => !z.camp && !z.safe && o.x >= z.x && o.x < z.x + z.w && o.y >= z.y && o.y < z.y + z.h) || MAPS.world.ZONES[1]).id);
 const BOARD_FOES = {};
@@ -5106,7 +5108,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 108; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 109; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
