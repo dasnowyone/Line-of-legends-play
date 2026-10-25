@@ -5306,7 +5306,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 118; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 119; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5572,23 +5572,27 @@ const toasts = document.getElementById("toasts");
 let toastHold = 0, toastTimer = 0, toastFlush = 0, toastCur = "", toastQ = [];
 // Lee: notices stay up long enough to read. Each one stays at least 3 seconds before the next replaces it (5 for items),
 // long ones stay longer, and the same notice twice in a row doesn't restart
+let toastN = 1;
 function toast(msg, item) {
   const now = performance.now();
-  if (msg === toastCur || toastQ.some(q => q[0] === msg)) return;
+  // the same find twice in a row shows once with a count ("Found: Sandals x2") instead of two notices
+  if (msg === toastCur) { if (item && toasts.firstChild) toasts.firstChild.textContent = `${msg} x${++toastN}`; return; }
+  const dup = toastQ.find(q => q[0] === msg); if (dup) { if (item) dup[2] = (dup[2] || 1) + 1; return; }
   if (toastCur && now < toastHold) { toastQ.push([msg, item]); if (toastQ.length > 3) toastQ.shift();
-    clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length) { const [m, it] = toastQ.shift(); showToast(m, it); } }, toastHold - now + 20); return; }
+    clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length) { const [m, it, n] = toastQ.shift(); showToast(m, it, n); } }, toastHold - now + 20); return; }
   showToast(msg, item);
 }
-function showToast(msg, item) {
-  const now = performance.now(); toasts.textContent = "";
-  const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; toasts.appendChild(el); if (item) el.classList.add("item");
+function showToast(msg, item, n = 1) {
+  const now = performance.now(); toasts.textContent = ""; toastN = n;
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = n > 1 ? `${msg} x${n}` : msg; toasts.appendChild(el); if (item) el.classList.add("item");
   const ms = item ? 5000 : Math.max(5400, msg.length * 70);
   toastCur = msg; toastHold = now + (item ? 5000 : 3000);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.remove(); toastCur = ""; if (toastQ.length) { const [m, it] = toastQ.shift(); showToast(m, it); } }, ms);
-  if (toastQ.length) { clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length && performance.now() >= toastHold) { const [m, it] = toastQ.shift(); showToast(m, it); } }, toastHold - now + 20); }
+  toastTimer = setTimeout(() => { el.remove(); toastCur = ""; if (toastQ.length) { const [m, it, n] = toastQ.shift(); showToast(m, it, n); } }, ms);
+  if (toastQ.length) { clearTimeout(toastFlush); toastFlush = setTimeout(() => { if (toastQ.length && performance.now() >= toastHold) { const [m, it, n] = toastQ.shift(); showToast(m, it, n); } }, toastHold - now + 20); }
 }
 let bannerTimer = 0;
+const armorWarned = new Set();
 function banner(big, small) {
   document.getElementById("bannerBig").textContent = big; document.getElementById("bannerSmall").textContent = small || "";
   document.getElementById("banner").classList.add("show"); bannerTimer = 2.8;
@@ -6607,7 +6611,9 @@ function update(dt) {
     if (map.dungeon && z.check && !p.dead) map.check = z.check;
     if (map.dungeon && z.heal && !p.dead) { p.hp = Math.min(stats().maxHp, p.hp + Math.round(stats().maxHp * 0.3)); setTimeout(() => toast("The fire warms you up. Health restored a little"), 1500); }
     zoneId = z.id; banner(z.name, z.armor ? `${z.lv}. Recommended armor ${recArmor(z.armor)}` : z.lv); document.getElementById("zoneName").textContent = z.name;
-    if (z.armor && s.def < recArmor(z.armor)) setTimeout(() => toast(`Your armor (${s.def}) is low for ${z.name}. Enemies here will hit hard.`), 1200);
+    // once per zone per visit to the game, and new players are told where armor is sold
+    if (z.armor && s.def < recArmor(z.armor) && !armorWarned.has(z.id)) { armorWarned.add(z.id);
+      setTimeout(() => toast(`Your armor (${s.def}) is low for ${z.name}. Enemies here will hit hard.${player.level < 10 ? " Smith Brand and Tailor Carly in Inkwell Village sell armor" : ""}`), 1200); }
   }
   if (map.id === "world") {
     const gate = map.gate || (map.gate = map.rects.find(q => q.kind === "northgate"));
