@@ -206,7 +206,9 @@ body.desk #btnDodge, body.desk #btnSkill, body.desk #btnPotion, body.desk #btnMa
 #panel.full { padding: 0; }
 .sheet.mapfull { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; border: 0; border-radius: 0; padding: 0; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden; background: #1b1b20; }
 .mapwrap { position: relative; height: min(100vh, calc(100vw * 4 / 3)); height: min(100dvh, calc(100vw * 4 / 3)); aspect-ratio: 3 / 4; }
-.mapwrap canvas { width: 100%; height: 100%; display: block; background: var(--card); touch-action: manipulation; cursor: pointer; }
+.mapwrap canvas { width: 100%; height: 100%; display: block; background: var(--card); touch-action: none; cursor: pointer; transform-origin: 0 0; }
+.mapzoom { position: absolute; inset: 0; overflow: hidden; }
+.mapzoombtns { display: flex; gap: 6px; } .mapzoombtns button { min-width: 38px; }
 .mapbar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
 .mapbar > * { pointer-events: auto; background: rgba(255,253,246,.92); border: 1.5px solid var(--ink); border-radius: 10px; padding: 5px 10px; font-size: 15px; }
 .mapbar button { font: inherit; color: var(--ink); cursor: pointer; }
@@ -330,7 +332,8 @@ body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
   #menu, body #menu { top: calc(8px + env(safe-area-inset-top, 0px)); left: calc(max(10px, env(safe-area-inset-left, 0px)) + min(40vw, 150px) + 22px); flex-wrap: nowrap; align-items: center;
     max-width: calc(100vw - min(40vw, 150px) - 140px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
   #menu #stoneDial, body.desk #menu #stoneDial { position: static; width: 34px; height: 34px; flex: none; margin-left: 2px; }
-  #tracker, #tracker.fold { grid-column: 1; grid-row: 1 / span 2; align-self: end; max-width: min(30vw, 210px); }
+  /* Lee: the quest box sits just under the top row of buttons */
+  #tracker, #tracker.fold { grid-column: 1; grid-row: 1 / span 2; align-self: start; margin-top: 44px; max-width: min(30vw, 210px); }
   body #toasts { top: calc(56px + env(safe-area-inset-top, 0px)); }
   .ccard canvas { max-width: 92px; } .sheet h2 { font-size: 24px; }
   #skillcol { top: auto; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); right: calc(max(14px, env(safe-area-inset-right, 0px)) + 196px * var(--padk, 1));
@@ -5281,7 +5284,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 116; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 117; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5490,13 +5493,33 @@ function drawBigMap() {
 let bigMapTimer = 0;
 function showMap(from) {
   mapSel = null; mapTravel = from && from.kind === "waystone" ? from : null;
-  openPanel(`<div class="mapwrap"><canvas id="bigmap" width="960" height="1280"></canvas>
-    <div class="mapbar"><span id="mapYou" class="coins"></span><button data-act="close" type="button">&#10005; Close${desk ? " (M)" : ""}</button></div>
+  openPanel(`<div class="mapwrap"><div class="mapzoom"><canvas id="bigmap" width="960" height="1280"></canvas></div>
+    <div class="mapbar"><span id="mapYou" class="coins"></span><span class="mapzoombtns" style="padding:0;border:0;background:none"><button type="button" id="mapOut" aria-label="Zoom out">&minus;</button><button type="button" id="mapIn" aria-label="Zoom in">+</button></span><button data-act="close" type="button">&#10005; Close${desk ? " (M)" : ""}</button></div>
     <div class="maptip" id="mapTip" hidden></div></div>`);
   sheet.classList.add("mapfull"); panel.classList.add("full"); document.body.classList.add("mapopen");
   drawBigMap();
-  const c = document.getElementById("bigmap"), tip = document.getElementById("mapTip");
+  const c = document.getElementById("bigmap"), tip = document.getElementById("mapTip"), box = c.parentNode;
+  // Lee: pinch or tap +/- to zoom the map, drag to move around it once zoomed in. It opens zoomed in on you
+  const z = { k: 1, x: 0, y: 0 }, pts = new Map(); let pinch = null, drag = null, dragged = false;
+  const apply = () => { const W = box.clientWidth, H = box.clientHeight; z.k = Math.max(1, Math.min(6, z.k)); z.x = Math.min(0, Math.max(W - W * z.k, z.x)); z.y = Math.min(0, Math.max(H - H * z.k, z.y));
+    c.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.k})`; tip.hidden = true; };
+  const zoomAt = (k, px, py) => { const k0 = z.k; z.k = Math.max(1, Math.min(6, k)); z.x = px - (px - z.x) * z.k / k0; z.y = py - (py - z.y) * z.k / k0; apply(); };
+  const local = e => { const b = box.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+  { const W = box.clientWidth, H = box.clientHeight, M = MAPS.world, m = map.id === "world" ? player : null;
+    if (m) { z.k = 2.5; z.x = W / 2 - m.x / M.w * W * z.k; z.y = H / 2 - m.y / M.w * W * z.k; apply(); } }
+  document.getElementById("mapIn").onclick = e => { e.stopPropagation(); zoomAt(z.k * 1.6, box.clientWidth / 2, box.clientHeight / 2); };
+  document.getElementById("mapOut").onclick = e => { e.stopPropagation(); zoomAt(z.k / 1.6, box.clientWidth / 2, box.clientHeight / 2); };
+  c.addEventListener("wheel", e => { e.preventDefault(); const [px, py] = local(e); zoomAt(z.k * Math.exp(-e.deltaY * 0.0015), px, py); }, { passive: false });
+  c.addEventListener("pointerdown", e => { c.setPointerCapture(e.pointerId); pts.set(e.pointerId, local(e)); dragged = false;
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, k: z.k }; drag = null; }
+    else { drag = { p: local(e), x: z.x, y: z.y }; } });
+  c.addEventListener("pointermove", e => { if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, local(e));
+    if (pinch && pts.size >= 2) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); zoomAt(pinch.k * d / pinch.d, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2); dragged = true; }
+    else if (drag) { const [px, py] = local(e), dx = px - drag.p[0], dy = py - drag.p[1]; if (Math.hypot(dx, dy) > 6) dragged = true; if (dragged) { z.x = drag.x + dx; z.y = drag.y + dy; apply(); } } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) drag = null; else { const p0 = [...pts.values()][0]; drag = { p: p0, x: z.x, y: z.y }; } };
+  c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
   c.addEventListener("click", e => {
+    if (dragged) { dragged = false; return; }
     const r = c.getBoundingClientRect(), sc = c.width / r.width, x = (e.clientX - r.left) * sc, y = (e.clientY - r.top) * sc;
     let best = null, bd = 26 * sc; // a finger-sized reach
     for (const h of mapHits) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h; } }
@@ -5509,8 +5532,8 @@ function showMap(from) {
     const go = mapTravel && best && best.stone, dest = go && MAPS.world.objs.find(o => o.id === best.stone), fee = go ? travelFee(mapTravel, dest) : 0, poor = player.coins < fee;
     tip.innerHTML = `${text}<small>${sub}</small>${go ? `<button type="button" id="mapGo"${poor ? " disabled" : ""}>Travel &middot; ${fee} coins</button>` : ""}`; tip.hidden = false; tip.classList.toggle("go", !!go);
     if (go) document.getElementById("mapGo").onclick = ev => { ev.stopPropagation(); if (player.coins < fee) return toast(`You need ${fee} coins to travel there`); player.coins -= fee; closePanel(); goTo("world", dest.x, dest.y + 50); };
-    const tx = mapSel.x / sc, ty = mapSel.y / sc, w = tip.offsetWidth, hgt = tip.offsetHeight;
-    tip.style.left = `${Math.max(6, Math.min(r.width - w - 6, tx - w / 2))}px`;
+    const bx = box.getBoundingClientRect(), tx = mapSel.x / sc + r.left - bx.left, ty = mapSel.y / sc + r.top - bx.top, w = tip.offsetWidth, hgt = tip.offsetHeight;
+    tip.style.left = `${Math.max(6, Math.min(bx.width - w - 6, tx - w / 2))}px`;
     tip.style.top = `${ty - hgt - 26 < 50 ? ty + 26 : ty - hgt - 26}px`;
     drawBigMap();
   });
@@ -6627,7 +6650,7 @@ function resize() {
   canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
   view = Math.min(cssW / 440, cssH / 740);
 }
-addEventListener("resize", resize);
+addEventListener("resize", resize); addEventListener("orientationchange", () => setTimeout(() => dispatchEvent(new Event("resize")), 120));
 
 function line(x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 function shadow(x, y, r) { ctx.fillStyle = "rgba(27,27,32,.13)"; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.38, 0, 0, Math.PI * 2); ctx.fill(); }
@@ -9334,6 +9357,8 @@ function drawHud() {
 // =====================================================================
 let last = performance.now();
 function frame(now) {
+  // The iPhone app doesn't always send a resize when the phone turns (Lee saw a stretched, zoomed picture): catch it here
+  if (innerWidth !== cssW || innerHeight !== cssH) dispatchEvent(new Event("resize"));
   const dt = Math.max(0, Math.min((now - last) / 1000, 0.05)); last = now;
   update(dt); if (!paused && !cine) buffUpdate(dt); tutUpdate(); turnTick(); draw(); drawMini(); drawDial(); drawHud();
   requestAnimationFrame(frame);
