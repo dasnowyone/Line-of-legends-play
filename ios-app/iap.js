@@ -2,7 +2,7 @@
 // The game never grants anything on its own: it calls LOL_IAP.buy(id) and gives gems or items only when the answer is ok.
 // The browser game has no LOL_IAP.available, so its Buy buttons stay disabled.
 (() => {
-  const PRODUCTS = ["lol.gems.100", "lol.gems.550", "lol.gems.1200", "lol.gems.2600", "lol.gems.7000",
+  const PRODUCTS = ["lol.gems.100", "lol.gems.550", "lol.gems.1200", "lol.gems.2600", "lol.gems.7000", "lol.gems.15000",
     "lol.firstoffer", "lol.starter", "lol.founder", "lol.inkpass.monthly"];
   const SUBS = ["lol.inkpass.monthly"];
   const cap = window.Capacitor, key = window.LOL_RC_KEY;
