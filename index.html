@@ -3081,7 +3081,7 @@ QUESTS.push(
     done: "Fits like it grew there. That's your pick now. Come on, I'll show you how to swing it." },
   { id: "craft_e", giver: "sange", title: "First Swing", needs: ["craft_d"], where: "The copper vein by the mining shop", goal: { type: "collect", thing: "mine", n: 3 }, onAccept: () => startLesson(),
     text: "Follow me to the copper vein down the street. Watch how I swing, then mine 3 ore yourself.", reward: { xp: 400, coins: 150 }, mark: CRAFT_SPOTS.vein,
-    done: "Not bad at all! Veins come back about three minutes after you mine them. Copper and iron need level 5, mithril 10, tidesteel 20, drakestone 30 and inkstone 40. Ore can't be bought. You mine it; enemies only rarely carry any. Brand, Carly, Clegg and Fizz can all craft for you now." },
+    done: "Not bad at all! Veins come back about three minutes after you mine them. Copper and iron need level 5, mithril 10, tidesteel 20, drakestone 30 and inkstone 40. Ore can't be bought, only mined or won from enemies. Brand, Carly, Clegg and Fizz can all craft for you now." },
   { id: "fish_a", giver: "mara", title: "Catch of the Day", needs: ["craft_c"], where: "Angler Tobin's pond, western Margin Woods", goal: { type: "talk", npc: "tobin" },
     text: "My stew pot's empty and my fisherman ran off to the mainland. Old Tobin fishes the big pond out in the Margin Woods. Ask him how a body gets a fishing rod round here.", reward: { xp: 100 }, mark: TOBIN.at,
     done: "Mara sent you? Ha! I'd lend you a rod gladly, if I still had one. Sit down a moment and I'll tell you what happened." },
@@ -3190,13 +3190,12 @@ function matDrop(f) {
   const d = f.d, key = (f.type + " " + (d.id || "") + " " + d.name).toLowerCase(), t = Math.max(1, Math.min(5, Math.floor(d.lv / 10) + 1));
   const ore = t === 1 && Math.random() < 0.5 ? "copper_ore" : ORE_T[t];
   const skin = HIDE_FOE.test(key) ? HIDE_T[t] : CLOTH_T[t];
-  // Lee: ore comes mainly from mining. Enemies drop it at 5% of the old rate (hides and cloth have no node, so they stay)
-  if (d.boss) { addMat(skin, 2 + Math.floor(Math.random() * 3), true); if (Math.random() < 0.1) addMat(ore, 1, true);
+  if (d.boss) { addMat(skin, 2 + Math.floor(Math.random() * 3), true); addMat(ore, 1 + Math.floor(Math.random() * 3), true);
     if (t >= 3 && Math.random() < 0.03) for (let p = t; p >= 3; p--) if (!player.recipes.includes("pattern_" + p)) { learnPattern(p); break; }
     return; }
-  if (ORE_FOE.test(key)) { if (Math.random() < 0.0125) addMat(ore, 1, true); }
+  if (ORE_FOE.test(key)) { if (Math.random() < 0.25) addMat(ore, 1, true); }
   else if (Math.random() < 0.2) addMat(skin, 1, true);
-  if (Math.random() < 0.002) addMat(ore, 1, true);
+  if (Math.random() < 0.04) addMat(ore, 1, true);
 }
 function learnPattern(t) {
   if (!player.recipes.includes("pattern_" + t)) player.recipes.push("pattern_" + t);
@@ -5108,7 +5107,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 109; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 110; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
