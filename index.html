@@ -4418,6 +4418,8 @@ function getUp() {
   if (player.st.freeUp) player.gems -= GETUP_GEMS; else player.st.freeUp = 1;
   player.coins += player.lostCoins || 0; player.lostCoins = 0;
   player.dead = 0; player.hp = Math.round(stats().maxHp * 0.6); player.graceT = 1.5; player.hurtT = 0; player.dodgeT = 0;
+  // enemies close by are stunned for 3 seconds, so paying to get up never means dying again on the spot (playtest: 15 deaths in a row to one spider)
+  for (const f of map.foes || []) if (f.hp > 0 && Math.hypot(f.x - player.x, f.y - player.y) < 320) { if (f.d.boss) f.slowT = 3; else f.stunT = 3; }
   // Lee: stand still after getting up, not keep walking the way you were going when you fell
   joy.active = false; keys.clear(); player.vx = player.vy = 0; player.lastDir = null; player.moving = false;
   document.getElementById("getUp").hidden = true; bannerTimer = 0; document.getElementById("banner").classList.remove("show");
@@ -5275,7 +5277,7 @@ function showStore() {
   const set = key => Object.keys(ITEMS).filter(id => ITEMS[id].premium === key && canWear(id)).map(id => ITEMS[id].name).join(", ");
   // a real-money card is a row with its own Buy button
   const card = (title, body, price, real, pid) => pid ? `<div class="item"><div>${title} <span class="coins">${price}</span><small>${body}</small></div><button type="button" data-act="iap" data-arg="${pid}">Buy</button></div>` : `<div class="store-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:normal">${title}</b><span class="${real ? "coins" : "gem"}">${real ? price : "&#9670; " + price}</span></div><small class="soft">${body}</small></div>`;
-  openPanel(`<h2>Store</h2><p class="soft">${iapLive() ? "" : "A preview of the App Store version. "}You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. In this test build you can spend gems on dungeon relics and steed coats.</p>
+  openPanel(`<h2>Store</h2><p class="soft">${iapLive() ? "" : "A preview of the App Store version. "}You have <span class="gem">&#9670; ${player.gems} gems</span>, earned from bounty chests, first kills of rare elites and every 5 levels. Spend them on dyes, outfits, steed coats, dungeon relics and more.</p>
     <p>Featured</p><div class="list">
       ${firstOfferOpen() ? `<div class="item"><div><span class="rare">Adventurer's Kit</span> <span class="coins">${iapPrice("lol.firstoffer", "$1.99")}</span><small>One time only, for ${Math.max(1, Math.ceil((player.st.firstOffer + 3 * 864e5 - Date.now()) / 36e5))} more hours: ${FIRST_OFFER_TXT}</small></div><button type="button" data-act="iap" data-arg="lol.firstoffer">Buy</button></div>` : ""}
       ${iapOwned("lol.founder") ? "" : `<div class="item"><div><span class="rare">Founder's Pack</span> <span class="coins">${iapPrice("lol.founder", "$4.99")}</span><small>One purchase only, and only in launch season: 600 gems, the Founder's Cape, a gold pet outfit and the "Founder" title. Nobody can get these looks after launch season</small></div><button type="button" data-act="iap" data-arg="lol.founder">Buy</button></div>`}
@@ -5309,7 +5311,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 120; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 121; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6075,7 +6077,7 @@ function showClassPick() {
   const keys = Object.keys(CLASSES);
   openPanel(`<h2>Choose your path</h2><p class="soft">${player.level > 1 ? "Heroes now walk one of three paths. You keep your level, coins and quests." : "Every legend starts with a choice."} Tap a hero to begin.</p>
     <div class="cpick">${keys.map(k => { const C = CLASSES[k]; return `<button type="button" class="ccard" data-act="pick" data-arg="${k}" style="--cc:${C.color}"><canvas width="240" height="260" data-k="${k}"></canvas><b>${C.name}</b><small>${C.role}</small><em>${C.diff}</em><span>${C.pitch}</span><strong class="perk">&#9733; ${C.perk}</strong></button>`; }).join("")}</div>`,
-    { pick: k => { if (!CLASSES[k]) return; player.cls = k; convertGear(); player.mp = maxMana(); if (k === "mage" && !player.bag.mana_potion) player.bag.mana_potion = 3; applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; classPicking = false; paused = false; clearInterval(cpTimer); closePanel(); save();
+    { pick: k => { if (!CLASSES[k]) return; player.cls = k; convertGear(); player.mp = maxMana(); player.hp = stats().maxHp; if (k === "mage" && !player.bag.mana_potion) player.bag.mana_potion = 3; applyClass(); pad2Lv = -1; if (desk) buildBar(); hudKey = ""; classPicking = false; paused = false; clearInterval(cpTimer); closePanel(); save();
       banner(CLASSES[k].name, player.level >= 3 ? `Your abilities: ${WHIRL().name}${Object.values(SKILLS).filter(S => player.level >= S.lv).map(S => ", " + S.name).join("")}` : "Your path is chosen"); sfx("level"); } });
   document.activeElement && document.activeElement.blur(); // no card looks preselected
   const t0 = performance.now();
