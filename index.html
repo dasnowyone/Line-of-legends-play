@@ -735,8 +735,10 @@ const STEEDS = {
 };
 for (const [id, st] of Object.entries(STEEDS)) ITEMS[id] = { ...st, mount: true, desc: st.desc + ". Steeds wait outside buildings and dungeons" };
 // Steed coats: cosmetic, bought with gems, work on any steed
-const COATS = { midnight: ["Midnight", "#23232e", 150], snow: ["Snowmane", "#f4f6f8", 150], ember: ["Ember", "#d0542a", 250], gilded: ["Gilded", "#d4a92a", 400], ghost: ["Ghostly", "rgba(170,230,225,.8)", 400] };
-for (const [k, [name, , gems]] of Object.entries(COATS)) ITEMS["coat_" + k] = { name: `${name} Coat`, coat: k, gems, price: 0, desc: "A steed coat. Cosmetic only, works on any steed you ride" };
+const COATS = { midnight: ["Midnight", "#23232e", 150], snow: ["Snowmane", "#f4f6f8", 150], ember: ["Ember", "#d0542a", 250], gilded: ["Gilded", "#d4a92a", 400], ghost: ["Ghostly", "rgba(170,230,225,.8)", 400],
+  // Lee: a coin sink for heroes past level 40, who otherwise end with millions and nothing to buy (playtest: 4-10 million at the end)
+  obsidian: ["Obsidian", "#17141c", 0, 500000, 40], violet: ["Royal Violet", "#5b3a8c", 0, 1500000, 45], starlight: ["Starlight", "#cfdcff", 0, 4000000, 50] };
+for (const [k, [name, , gems, coins, lvl]] of Object.entries(COATS)) ITEMS["coat_" + k] = { name: `${name} Coat`, coat: k, gems, price: coins || 0, lvl, desc: coins ? `A legend's steed coat, bought with coins. Cosmetic only, works on any steed you ride` : "A steed coat. Cosmetic only, works on any steed you ride" };
 const bestSteed = () => (player.steeds || []).reduce((b, id) => (!b || STEEDS[id].spd > STEEDS[b].spd ? id : b), null);
 const BP_CHANCE = 0.001, BP_BOSS_CHANCE = 0.05, BP_ELITE_CHANCE = 0.04;
 const ARMOR_SLOTS = ["head", "body", "hands", "feet"];
@@ -4380,7 +4382,7 @@ const resetTemple = () => resetDungeon("temple");
 function inSafe() { return !!(map.zoneAt(player.x, player.y).safe || (map.CAMPS && inCamp(map, player.x, player.y, 1.05)) || (map.SAFE && map.SAFE.some(z => Math.hypot(player.x - z.x, player.y - z.y) < z.r))); }
 // Recommended armor follows your class: leather and cloth are lighter than plate (playtest: Hunters and Mages could never reach one shared number)
 const recArmor = a => a && Math.round(a * ({ hunter: 0.85, mage: 0.7 }[player.cls] || 1));
-// Boats and gryphons have their own hull armor, the same for every class, so the Wreck Run and Skyreach don't hinge on cloth or leather
+// Boats and gryphons have their own hull armor, the same for every class, so the Wreck Run and Skyreach don't hinge on cloth or leather. Mages, with the least health, also take 20% less there (playtest: 3-4 Kraken deaths)
 const hullArmor = () => map.vehicle && map.rooms ? Math.max(...map.rooms.map(r => r.armor || 0)) : 0;
 function hurtPlayer(raw, lv) {
   if (inSafe()) return;
@@ -4388,7 +4390,7 @@ function hurtPlayer(raw, lv) {
   const s = stats();
   const gap = Math.max(0, lv - player.level);
   raw = raw * (1 + 0.12 * gap) * (0.85 + Math.random() * 0.3);
-  let dmg = Math.max(1, Math.round(raw * 100 / (100 + Math.max(s.def, hullArmor()) * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1) * (1 - 0.03 * tr("iron"))));
+  let dmg = Math.max(1, Math.round(raw * 100 / (100 + Math.max(s.def, hullArmor()) * 12) * (buffOn("page") ? 0.75 : 1) * (buffOn("chowder") ? 0.9 : 1) * (player.shieldT > 0 ? 0.4 : 1) * (cls() === "warrior" ? 0.9 : 1) * (map.vehicle && cls() === "mage" ? 0.8 : 1) * (1 - 0.03 * tr("iron"))));
   if (player.barrier > 0) { const soak = Math.min(player.barrier, dmg); player.barrier -= soak; dmg -= soak; if (!dmg) { floater(player.x, player.y - 76, "Absorbed", "#7a5aa6", 18); return; } }
   player.hp = Math.max(0, player.hp - dmg); player.hurtT = 0.2; player.lastHurt = clock; sfx("hurt");
   floater(player.x, player.y - 76, `-${dmg}`, BLOOD, 22);
@@ -5311,7 +5313,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 121; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 122; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5330,9 +5332,9 @@ function showShop(n, tab) {
   let body;
   if (tab === "mount") body = '<p class="soft">Your fastest steed carries you outdoors. Tap Ride on the top bar to get on or off.</p>' + n.shop.filter(id => ITEMS[id].mount).map(id => { const it = ITEMS[id], mine = owned(id), low = it.lvl > player.level;
     return `<div class="item"><div>${nm(id)}<small>${descOf(id)}</small></div><button type="button" data-act="buy" data-arg="${id}" ${mine || low || player.coins < it.price ? "disabled" : ""}>${mine ? "Yours" : low ? `Level ${it.lvl}` : it.price.toLocaleString() + " coins"}</button></div>`; }).join("");
-  else if (tab === "coat") body = `<p class="soft">Coats change how your steed looks. You have ${player.gems} gems.</p>` + `<div class="item"><div>Natural coat<small>Each steed's own color</small></div><button type="button" data-act="wear" data-arg="" ${player.coat ? "" : "disabled"}>${player.coat ? "Wear" : "Wearing"}</button></div>` +
+  else if (tab === "coat") body = `<p class="soft">Coats change how your steed looks. You have ${player.gems} gems and ${player.coins.toLocaleString()} coins.</p>` + `<div class="item"><div>Natural coat<small>Each steed's own color</small></div><button type="button" data-act="wear" data-arg="" ${player.coat ? "" : "disabled"}>${player.coat ? "Wear" : "Wearing"}</button></div>` +
     n.shop.filter(id => ITEMS[id].coat).map(id => { const it = ITEMS[id], k = it.coat, mine = owned(id);
-      return `<div class="item"><div><span class="swatch" style="background:${COATS[k][1]}"></span>${nm(id)}<small>${descOf(id)}</small></div>${mine ? `<button type="button" data-act="wear" data-arg="${k}" ${player.coat === k ? "disabled" : ""}>${player.coat === k ? "Wearing" : "Wear"}</button>` : `<button type="button" data-act="buy" data-arg="${id}" ${player.gems < it.gems ? "disabled" : ""}>${it.gems} gems</button>`}</div>`; }).join("");
+      return `<div class="item"><div><span class="swatch" style="background:${COATS[k][1]}"></span>${nm(id)}<small>${descOf(id)}</small></div>${mine ? `<button type="button" data-act="wear" data-arg="${k}" ${player.coat === k ? "disabled" : ""}>${player.coat === k ? "Wearing" : "Wear"}</button>` : (it.gems ? `<button type="button" data-act="buy" data-arg="${id}" ${player.gems < it.gems ? "disabled" : ""}>${it.gems} gems</button>` : `<button type="button" data-act="buy" data-arg="${id}" ${player.level < it.lvl || player.coins < it.price ? "disabled" : ""}>${player.level < it.lvl ? `Level ${it.lvl}` : it.price.toLocaleString() + " coins"}</button>`)}</div>`; }).join("");
   else if (tab === "sell") { const gear = sellGear(), worth = gear.reduce((t, [id, c]) => t + Math.floor(ITEMS[id].price / 4) * c, 0), cnt = gear.reduce((t, [, c]) => t + c, 0);
     body = (cnt ? `<div class="item"><div>All gear in your bag<small>${cnt} piece${cnt > 1 ? "s" : ""}. Keeps what you wear, materials and blueprints</small></div><button type="button" data-act="sellall">${sellAllAsk ? `Tap again: ${worth.toLocaleString()} coins` : `Sell all ${worth.toLocaleString()}`}</button></div>` : "") +
       sellable.map(([id, c]) => `<div class="item"><div>${nm(id)}${c > 1 ? ` x${c}` : ""}<small>${descOf(id)}</small></div>${c > 1 ? `<button type="button" data-act="sellstack" data-arg="${id}">All ${(Math.floor(ITEMS[id].price / 4) * c).toLocaleString()}</button>` : ""}<button type="button" data-act="sell" data-arg="${id}">Sell ${Math.floor(ITEMS[id].price / 4)}</button></div>`).join(""); }
@@ -5352,7 +5354,8 @@ function showShop(n, tab) {
       trydye: d => tryDye(d),
       wear: k => { player.coat = k || null; save(); showShop(n, "coat"); },
       buy: id => {
-        if (ITEMS[id].coat) { const it = ITEMS[id]; if (player.gems < it.gems) return; player.gems -= it.gems; player.coats.push(it.coat); player.coat = it.coat; sfx("rare"); toast(`${it.name} unlocked and on your steed`); save(); syncRide(); return showShop(n, "coat"); }
+        if (ITEMS[id].coat) { const it = ITEMS[id];
+          if (it.gems) { if (player.gems < it.gems) return; player.gems -= it.gems; } else { if (player.coins < it.price || player.level < it.lvl) return; player.coins -= it.price; } player.coats.push(it.coat); player.coat = it.coat; sfx("rare"); toast(`${it.name} unlocked and on your steed`); save(); syncRide(); return showShop(n, "coat"); }
         if (ITEMS[id].dye && ITEMS[id].gems) { const it = ITEMS[id]; if (player.gems < it.gems || owned(id)) return; player.gems -= it.gems; player.dyes.push(it.dye); sfx("rare"); toast(`Unlocked ${it.name}. Apply it from Bag > Dyes`); save(); return showShop(n); }
         if (player.coins < ITEMS[id].price || (ITEMS[id].lvl || 0) > player.level || (ITEMS[id].scroll && owned(id))) return; player.coins -= ITEMS[id].price; sfx("coin");
         if (ITEMS[id].mount) { player.steeds.push(id); syncRide();
