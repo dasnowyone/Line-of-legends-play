@@ -112,9 +112,9 @@ body.desk #tracker { width: max-content; max-width: 250px; font-size: 17px; }
 /* Lee: phone controls take less room. Locked skills stay hidden, and small phones shrink the whole cluster */
 #pad, #pad2 { transform-origin: 100% 100%; scale: var(--padk, 1); }
 #btnSkill[hidden] { display: none; }
-#btnMore { display: none; }
+/* Lee: Store sits in the top row on every screen, sideways too. Phones keep the sound switch in Bag > About */
+body:not(.desk) #btnSound { display: none; }
 @media (max-width: 699px) {
-  #btnSound { display: none; } #btnMore { display: inline-block; }
   #minimap { width: 104px; height: 128px; } #zoneTag { width: 104px; font-size: 14px; }
   #menu { max-width: calc(100vw - 132px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); }
 }
@@ -209,7 +209,7 @@ body.desk #btnDodge, body.desk #btnSkill, body.desk #btnPotion, body.desk #btnMa
 .mapwrap canvas { width: 100%; height: 100%; display: block; background: var(--card); touch-action: none; cursor: pointer; transform-origin: 0 0; }
 .mapzoom { position: absolute; inset: 0; overflow: hidden; }
 .mapzoombtns { display: flex; gap: 6px; } .mapzoombtns button { min-width: 38px; }
-.mapbar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+.mapbar { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: flex-end; align-items: flex-start; gap: 8px; pointer-events: none; }
 .mapbar > * { pointer-events: auto; background: rgba(255,253,246,.92); border: 1.5px solid var(--ink); border-radius: 10px; padding: 5px 10px; font-size: 15px; }
 .mapbar button { font: inherit; color: var(--ink); cursor: pointer; }
 .maptip { position: absolute; max-width: 230px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px; padding: 7px 10px; font-size: 15px; line-height: 1.3; box-shadow: 0 3px 10px rgba(0,0,0,.25); pointer-events: none; }
@@ -224,6 +224,8 @@ body.mapopen #abar, body.mapopen #pad2, body.mapopen #pad { display: none; }
 .sheet.charsheet { width: min(100%, 620px); max-height: 92vh; max-height: 92dvh; }
 body.charopen #abar, body.charopen #pad2, body.charopen #pad { display: none; }
 .cs-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.xclose { position: sticky; top: 0; justify-self: end; z-index: 2; margin-bottom: -46px; width: 42px; height: 42px; padding: 0; font-size: 22px; line-height: 1; border-radius: 50%; background: var(--card); }
+.cs-top { padding-right: 50px; }
 .cs-top .title { color: var(--gold); font-size: 17px; }
 .cs-xp { height: 8px; border: 1.5px solid var(--ink); border-radius: 5px; overflow: hidden; background: #eee8da; }
 .cs-xp i { display: block; height: 100%; background: var(--xp); }
@@ -5315,7 +5317,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 124; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 125; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -5393,7 +5395,7 @@ function showChar(pick) {
   const stat = (label, val, cls) => `<div class="cs-stat ${cls || ""}"><b>${val}</b>${label}</div>`;
   const score = ["weapon", ...ARMOR_SLOTS].reduce((a, k) => a + Math.max(0, gearScore(g[k])), 0);
   if (pick === undefined && !(sheet.classList.contains("charsheet") && !panel.hidden)) csPick = null;
-  openPanel(`<div class="cs-top"><h2>${p.name ? esc(p.name) : "Hero"}${p.title ? ` <span class="title">${p.title}</span>` : ""}</h2><span class="coins">Level ${p.level}${p.level >= MAX_LEVEL ? " (max)" : ` &middot; ${p.xp.toLocaleString()} / ${xpToNext(p.level).toLocaleString()} XP`}</span></div>
+  openPanel(`<button type="button" class="xclose" data-act="close" aria-label="Close">&#10005;</button><div class="cs-top"><h2>${p.name ? esc(p.name) : "Hero"}${p.title ? ` <span class="title">${p.title}</span>` : ""}</h2><span class="coins">Level ${p.level}${p.level >= MAX_LEVEL ? " (max)" : ` &middot; ${p.xp.toLocaleString()} / ${xpToNext(p.level).toLocaleString()} XP`}</span></div>
     <div class="cs-xp"><i style="width:${xpPct}%"></i></div>
     <div class="cs-mid">
       <div class="cs-col">${SLOTS.slice(0, 3).map(slotHtml).join("")}</div>
@@ -5520,13 +5522,12 @@ function drawBigMap() {
   hit(px * k, py * k, "You are here", `${gref(px, py)}${player.map !== "world" ? ` &middot; inside ${map.name}` : ""}`);
   if (mapSel) { m.strokeStyle = BLOOD; m.lineWidth = 3; m.beginPath(); m.arc(mapSel.x, mapSel.y, 20 + Math.sin(performance.now() / 150) * 3, 0, 7); m.stroke(); }
   m.font = `bold 44px ${FONT}`; m.lineWidth = 6; m.strokeStyle = PAPER; m.fillStyle = BLOOD; m.strokeText("N", c.width / 2, 58); m.fillText("N", c.width / 2, 58);
-  const yo = document.getElementById("mapYou"); if (yo) yo.textContent = mapTravel ? `Waystone travel · ${desk ? "Click" : "Tap"} a glowing stone` : `You: ${gref(px, py)} · ${desk ? "Click" : "Tap"} anything to see what it is`;
 }
 let bigMapTimer = 0;
 function showMap(from) {
   mapSel = null; mapTravel = from && from.kind === "waystone" ? from : null;
   openPanel(`<div class="mapwrap"><div class="mapzoom"><canvas id="bigmap" width="960" height="1280"></canvas></div>
-    <div class="mapbar"><span id="mapYou" class="coins"></span><span class="mapzoombtns" style="padding:0;border:0;background:none"><button type="button" id="mapOut" aria-label="Zoom out">&minus;</button><button type="button" id="mapIn" aria-label="Zoom in">+</button></span><button data-act="close" type="button">&#10005; Close${desk ? " (M)" : ""}</button></div>
+    <div class="mapbar"><span class="mapzoombtns" style="padding:0;border:0;background:none"><button type="button" id="mapOut" aria-label="Zoom out">&minus;</button><button type="button" id="mapIn" aria-label="Zoom in">+</button></span><button data-act="close" type="button">&#10005; Close${desk ? " (M)" : ""}</button></div>
     <div class="maptip" id="mapTip" hidden></div></div>`);
   sheet.classList.add("mapfull"); panel.classList.add("full"); document.body.classList.add("mapopen");
   drawBigMap();
@@ -6383,7 +6384,10 @@ const press = (id, fn) => document.getElementById(id).addEventListener("pointerd
 document.getElementById("btnQuests").addEventListener("click", showQuestLog);
 const btnSound = document.getElementById("btnSound");
 function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off"); btnSound.style.textDecoration = soundOn ? "none" : "line-through"; }
-document.getElementById("btnMore").addEventListener("click", () => showStore());
+// Lee: on the iPhone app Store and the stones picture did nothing. Both now answer the touch itself; click is the fallback
+const tapOn = (el, fn) => { let at = 0; const go = ev => { if (performance.now() - at < 600) return; at = performance.now(); ev.preventDefault(); ev.stopPropagation(); fn(); };
+  el.addEventListener("pointerup", ev => { if (ev.pointerType !== "mouse") go(ev); }); el.addEventListener("touchend", go, { passive: false }); el.addEventListener("click", go); };
+tapOn(document.getElementById("btnMore"), () => showStore());
 btnSound.addEventListener("click", () => { soundOn = !soundOn; try { localStorage.setItem("lol-sound", soundOn ? "on" : "off"); } catch {} audioCtx(); syncSoundBtn(); });
 syncSoundBtn();
 document.getElementById("btnBag").addEventListener("click", () => { dropAsk = null; showBag(); });
@@ -6428,13 +6432,12 @@ function paintDial(g, cx, cy, R, r0, big) {
 // Lee: on the iPhone app the stones picture didn't open sideways. It now opens on the tap itself, not only on the click iPhones can drop
 let dialAt = 0;
 const openStones = () => { if (performance.now() - dialAt < 600) return; dialAt = performance.now();
-  openPanel(`<h2>The Seven Stones</h2><canvas id="bigDial" width="760" height="560" style="display:block;width:100%;max-width:min(600px, calc((100dvh - 190px) * 1.357));margin:4px auto 0;border:none;background:none;box-shadow:none" aria-label="The Seven Stones wheel"></canvas>
+  openPanel(`<h2>The Seven Stones</h2><canvas id="bigDial" width="760" height="560" style="display:block;width:100%;max-width:min(600px, calc((100dvh - 240px) * 1.357));margin:4px auto 0;border:none;background:none;box-shadow:none" aria-label="The Seven Stones wheel"></canvas>
   <p class="soft" style="text-align:center">Each dungeon holds a stone, won on your first clear. Set all seven in the gate of the Inkstone Keep and it opens.</p>
   <div class="row"><button data-act="close" type="button">Close</button></div>`);
   const bc = document.getElementById("bigDial"); if (bc) paintDial(bc.getContext("2d"), 380, 285, 170, 56, true);
 };
-dialEl.addEventListener("pointerup", ev => { ev.stopPropagation(); openStones(); });
-dialEl.addEventListener("click", openStones);
+tapOn(dialEl, openStones);
 // Tester shortcut: tap the health box 5 times quickly
 let testTaps = [];
 document.getElementById("hud").addEventListener("click", () => {
