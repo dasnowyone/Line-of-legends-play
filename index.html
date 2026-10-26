@@ -77,6 +77,9 @@ button {
 button:focus-visible { outline: 3px solid var(--xp); outline-offset: 2px; }
 button:disabled { opacity: .45; }
 #mapbox { top: calc(8px + env(safe-area-inset-top, 0px)); right: max(10px, env(safe-area-inset-right, 0px)); display: grid; gap: 6px; justify-items: end; }
+/* Lee: sideways, the box around the minimap and quest list reached over the Store button and stones picture and ate their taps.
+   Only the things inside it take taps now */
+#mapbox { pointer-events: none; } #mapbox > * { pointer-events: auto; }
 #stoneDial { position: absolute; right: 126px; top: 0; width: 40px; height: 40px; cursor: pointer; }
 #stoneDial[hidden] { display: none; }
 body.desk #stoneDial { position: absolute; right: 162px; top: 0; width: 64px; height: 64px; }
@@ -5317,7 +5320,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 125; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 126; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
