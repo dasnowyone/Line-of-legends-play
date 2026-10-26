@@ -379,7 +379,7 @@ body.cine #hud, body.cine #menu, body.cine #mapbox, body.cine #pad, body.cine #p
   <button id="btnChar" type="button">Hero</button>
   <button id="btnRide" type="button" hidden>Ride</button>
   <button id="btnSound" type="button" aria-label="Sound on">&#9835;</button>
-  <button id="btnMore" type="button">More</button>
+  <button id="btnMore" type="button">Store</button>
 </div>
 <div id="mapbox" class="ui">
   <canvas id="minimap" width="192" height="256" aria-label="Minimap. Tap for the full map."></canvas>
@@ -5082,7 +5082,7 @@ function showCredits() {
     <p>Made by <b>SnowyOne</b>.</p>
     <p>Stuck, lost a hero, or a purchase didn't arrive? Write to <a href="mailto:lineoflegends.help@gmail.com">lineoflegends.help@gmail.com</a> or visit the <a href="https://dasnowyone.github.io/Line-of-legends-play/support.html" target="_blank" rel="noopener">help page</a>.</p>
     <p class="soft"><a href="https://dasnowyone.github.io/Line-of-legends-play/privacy.html" target="_blank" rel="noopener">Privacy policy</a> &middot; Thanks for playing!</p>
-    <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag() });
+    <div class="row"><button type="button" data-act="sound">Sound ${soundOn ? "on" : "off"}</button><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), sound: () => { btnSound.click(); showCredits(); } });
 }
 function showBag(confirmReset, tab) {
   if (tab) bagTab = tab;
@@ -5228,7 +5228,7 @@ function inkPassDaily() {
 setInterval(() => { if (iapLive() && window.__started && player.cls) iapSubs(window.LOL_IAP.subs); }, 60000);
 addEventListener("lol-iap", e => { if (window.__started && player.cls) iapSubs(e.detail.subs); });
 // the bridge from the iPhone app: buy answers true only once Apple and RevenueCat confirm
-if (window.LOL_IAP && window.LOL_IAP.buy && !window.lolIAP) window.lolIAP = { buy: pid => window.LOL_IAP.ready.then(() => window.LOL_IAP.buy(pid)).then(r => { if (!r.ok && r.error) toast(r.error); return r.ok; }) };
+if (window.LOL_IAP && window.LOL_IAP.buy && !window.lolIAP) window.lolIAP = { buy: pid => Promise.resolve(window.LOL_IAP.ready).then(() => window.LOL_IAP.available ? window.LOL_IAP.buy(pid) : { ok: false, error: "Purchases aren't switched on in this build yet" }).then(r => { if (!r.ok && r.error) toast(r.error); return r.ok; }) };
 function iapBuy(pid) {
   if (!IAP[pid] || (IAP[pid].once && iapOwned(pid))) return;
   if (window.lolIAP && window.lolIAP.buy) return Promise.resolve(window.lolIAP.buy(pid)).then(ok => { if (ok) { iapGrant(pid); if (!panel.hidden && sheet.querySelector('[data-act="iap"]')) showStore(); } }).catch(() => toast("The purchase didn't go through. You weren't charged"));
@@ -5315,7 +5315,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 123; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 124; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
@@ -6383,7 +6383,7 @@ const press = (id, fn) => document.getElementById(id).addEventListener("pointerd
 document.getElementById("btnQuests").addEventListener("click", showQuestLog);
 const btnSound = document.getElementById("btnSound");
 function syncSoundBtn() { btnSound.style.opacity = soundOn ? 1 : 0.45; btnSound.setAttribute("aria-label", soundOn ? "Sound on" : "Sound off"); btnSound.style.textDecoration = soundOn ? "none" : "line-through"; }
-document.getElementById("btnMore").addEventListener("click", () => showMore());
+document.getElementById("btnMore").addEventListener("click", () => showStore());
 btnSound.addEventListener("click", () => { soundOn = !soundOn; try { localStorage.setItem("lol-sound", soundOn ? "on" : "off"); } catch {} audioCtx(); syncSoundBtn(); });
 syncSoundBtn();
 document.getElementById("btnBag").addEventListener("click", () => { dropAsk = null; showBag(); });
@@ -6425,12 +6425,16 @@ function paintDial(g, cx, cy, R, r0, big) {
   g.fillStyle = "#fffef8"; g.beginPath(); g.arc(cx, cy, r0 - 2, 0, 7); g.fill(); g.stroke();
   g.fillStyle = "#2c3e7a"; g.font = `${Math.round(20 * (big ? 2 : 1))}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(big ? `${stoneCount()}/${n}` : `${stoneCount()}`, cx, cy + 1);
 }
-dialEl.addEventListener("click", () => {
-  openPanel(`<h2>The Seven Stones</h2><canvas id="bigDial" width="760" height="560" style="display:block;width:100%;max-width:600px;margin:4px auto 0;border:none;background:none;box-shadow:none" aria-label="The Seven Stones wheel"></canvas>
+// Lee: on the iPhone app the stones picture didn't open sideways. It now opens on the tap itself, not only on the click iPhones can drop
+let dialAt = 0;
+const openStones = () => { if (performance.now() - dialAt < 600) return; dialAt = performance.now();
+  openPanel(`<h2>The Seven Stones</h2><canvas id="bigDial" width="760" height="560" style="display:block;width:100%;max-width:min(600px, calc((100dvh - 190px) * 1.357));margin:4px auto 0;border:none;background:none;box-shadow:none" aria-label="The Seven Stones wheel"></canvas>
   <p class="soft" style="text-align:center">Each dungeon holds a stone, won on your first clear. Set all seven in the gate of the Inkstone Keep and it opens.</p>
   <div class="row"><button data-act="close" type="button">Close</button></div>`);
   const bc = document.getElementById("bigDial"); if (bc) paintDial(bc.getContext("2d"), 380, 285, 170, 56, true);
-});
+};
+dialEl.addEventListener("pointerup", ev => { ev.stopPropagation(); openStones(); });
+dialEl.addEventListener("click", openStones);
 // Tester shortcut: tap the health box 5 times quickly
 let testTaps = [];
 document.getElementById("hud").addEventListener("click", () => {
