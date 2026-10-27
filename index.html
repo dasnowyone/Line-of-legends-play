@@ -5311,7 +5311,6 @@ function showStore() {
     <p>Crafting</p><div class="list">
       ${player.pouch < 2 ? `<div class="item"><div>${player.pouch ? "Large" : "Bigger"} materials pouch<small>Room for ${[120, 250][player.pouch]} materials instead of ${pouchCap()}. Gems buy room, never materials</small></div><button type="button" data-act="pouch" ${player.gems >= [150, 300][player.pouch] ? "" : "disabled"}>&#9670; ${[150, 300][player.pouch]}</button></div>` : ""}
       ${Object.entries(GLOWS).map(([k, [name, c, gems]]) => { const has = player.gemRec.includes(k); return `<div class="item"><div><span class="swatch" style="background:${c}"></span>${name} recipe<small>Alchemist Fizz brews it into a weapon glow. Looks only</small></div><button type="button" data-act="glowrec" data-arg="${k}" ${!has && player.gems >= gems ? "" : "disabled"}>${has ? "Known" : "&#9670; " + gems}</button></div>`; }).join("")}</div>
-    <p>Free</p><div class="list">${card("Bonus coins", "Watch an optional ad for 100 coins, up to 5 a day.", "Free", true)}</div>
     <div class="row"><button type="button" data-act="back">Back to bag</button><button data-act="close" type="button">Close</button></div>`, { back: () => showBag(), iap: pid => iapBuy(pid), restore: () => iapRestore(), manage: () => window.LOL_IAP && window.LOL_IAP.manage(),
       pouch: () => { const c = [150, 300][player.pouch]; if (player.pouch >= 2 || player.gems < c) return; buyPouch(); showStore(); },
       glowrec: k => { const c = GLOWS[k][2]; if (player.gemRec.includes(k) || player.gems < c) return; player.gems -= c; player.gemRec.push(k); sfx("rare"); toast(`${GLOWS[k][0]} recipe learned. Alchemist Fizz can brew it`); save(); showStore(); },
@@ -5320,7 +5319,7 @@ function showStore() {
 const SHOP_TABS = [["mount", "Steeds"], ["coat", "Coats"], ["weapon", "Weapons"], ["head", "Head"], ["body", "Body"], ["hands", "Hands"], ["feet", "Feet"], ["use", "Potions"], ["dye", "Dyes"], ["recipe", "Patterns"], ["sell", "Sell"], ["forge", "Forge"]];
 const shopCat = id => ITEMS[id].slot || (ITEMS[id].scroll ? "recipe" : ITEMS[id].dye ? "dye" : ITEMS[id].mount ? "mount" : ITEMS[id].coat ? "coat" : "use");
 let shopTab = {};
-const GAME_VER = 126; // shown in the Bag so Lee can tell which version the phone has
+const GAME_VER = 127; // shown in the Bag so Lee can tell which version the phone has
 // Sell all (Lee): every spare gear piece in the bag; never worn gear, quest items, materials or blueprints
 let sellAllAsk = false;
 const sellGear = () => Object.entries(player.bag).filter(([id, c]) => c > 0 && ITEMS[id].slot && !ITEMS[id].quest && !questKeeps(id));
